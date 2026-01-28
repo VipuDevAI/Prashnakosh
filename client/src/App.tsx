@@ -127,6 +127,9 @@ function Router() {
       <Route path="/admin/exam-frameworks">
         <ProtectedRoute component={ExamFrameworksPage} />
       </Route>
+      <Route path="/admin/exams">
+        <ProtectedRoute component={ExamConfigsPage} />
+      </Route>
       <Route path="/admin/blueprint-governance">
         <ProtectedRoute component={BlueprintGovernancePage} />
       </Route>
@@ -140,6 +143,9 @@ function Router() {
         <ProtectedRoute component={ReferenceLibraryPage} />
       </Route>
       <Route path="/admin/storage-governance">
+        <ProtectedRoute component={StorageGovernancePage} />
+      </Route>
+      <Route path="/admin/storage">
         <ProtectedRoute component={StorageGovernancePage} />
       </Route>
       <Route path="/student/reference-materials">
