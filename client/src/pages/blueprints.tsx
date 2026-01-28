@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Check, FileText, Layers, Plus, Target, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, FileText, Layers, Plus, Target, Trash2, GraduationCap, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import logoImg from "@/assets/logo.png";
@@ -25,6 +25,7 @@ interface Blueprint {
   sections: BlueprintSection[];
   status: string;
   createdAt: string;
+  examConfigId?: string;
 }
 
 interface BlueprintSection {
@@ -40,6 +41,31 @@ interface Subject {
   name: string;
   classLevel: string;
 }
+
+interface AdminExamConfig {
+  id: string;
+  wing: string;
+  examName: string;
+  totalMarks: number;
+  durationMinutes: number;
+  examType: string;
+  isActive: boolean;
+}
+
+// Wing configuration for grade mapping
+const wingGradeMapping: Record<string, string[]> = {
+  primary: ["1", "2", "3", "4", "5"],
+  middle: ["6", "7", "8"],
+  secondary: ["9", "10"],
+  senior_secondary: ["11", "12"],
+};
+
+const wingLabels: Record<string, string> = {
+  primary: "Primary (1-5)",
+  middle: "Middle (6-8)",
+  secondary: "Secondary (9-10)",
+  senior_secondary: "Senior Secondary (11-12)",
+};
 
 const QUESTION_TYPES = [
   { value: "mcq", label: "Multiple Choice (MCQ)" },
