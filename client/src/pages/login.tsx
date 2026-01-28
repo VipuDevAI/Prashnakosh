@@ -174,9 +174,8 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
-
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         </div>
       </div>
       <footer className="py-4 px-4 sm:px-6 text-sm text-slate-500 dark:text-slate-400">
