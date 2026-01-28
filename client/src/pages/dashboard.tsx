@@ -1619,7 +1619,7 @@ function AdminDashboard() {
     ? adminSubjectsData.map(s => s.name) 
     : ["English", "Mathematics", "Science", "Social Studies", "Hindi", "Tamil", "Sanskrit", "French", "Physics", "Chemistry", "Biology", "Computer Science"];
 
-  const { data: schools = [] } = useQuery<{name: string; code: string; principal: string; status: string}[]>({
+  const { data: schools = [] } = useQuery<{id: string; name: string; code: string; principal: string; status: string}[]>({
     queryKey: ['/api/admin/schools'],
   });
 
