@@ -1900,18 +1900,22 @@ function AdminDashboard() {
               <CardDescription>Manage academic years, exam frameworks, and blueprint governance</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <CoinButton color="blue" onClick={() => navigate("/admin/academic-years")} data-testid="button-academic-years" className="w-full justify-start">
                   <Calendar className="w-5 h-5 mr-2" />
                   Academic Years
                 </CoinButton>
-                <CoinButton color="gold" onClick={() => navigate("/admin/exam-frameworks")} data-testid="button-exam-master" className="w-full justify-start">
+                <CoinButton color="gold" onClick={() => navigate("/admin/exams")} data-testid="button-exam-config" className="w-full justify-start">
                   <FileText className="w-5 h-5 mr-2" />
-                  Exam Master
+                  Exam Configuration
                 </CoinButton>
                 <CoinButton color="green" onClick={() => navigate("/admin/blueprint-governance")} data-testid="button-blueprint-governance" className="w-full justify-start">
                   <Lock className="w-5 h-5 mr-2" />
                   Blueprint Governance
+                </CoinButton>
+                <CoinButton color="purple" onClick={() => navigate("/admin/storage")} data-testid="button-storage-governance" className="w-full justify-start">
+                  <Building2 className="w-5 h-5 mr-2" />
+                  Storage Governance
                 </CoinButton>
               </div>
             </CardContent>
