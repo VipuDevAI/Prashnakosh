@@ -84,11 +84,16 @@ export default function BlueprintsPage() {
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
   
+  // Blueprint form state
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [classLevel, setClassLevel] = useState("");
   const [totalMarks, setTotalMarks] = useState<"40" | "80">("40");
   const [sections, setSections] = useState<BlueprintSection[]>([]);
+  
+  // Wing and Exam selection state
+  const [selectedWing, setSelectedWing] = useState<string>("");
+  const [selectedExamId, setSelectedExamId] = useState<string>("");
 
   const { data: blueprints = [], isLoading } = useQuery<Blueprint[]>({
     queryKey: ['/api/blueprints'],
@@ -97,6 +102,46 @@ export default function BlueprintsPage() {
   const { data: subjects = [] } = useQuery<Subject[]>({
     queryKey: ['/api/subjects'],
   });
+
+  // Fetch exams configured by Super Admin for blueprint dropdown
+  const { data: adminExamConfigs = [] } = useQuery<AdminExamConfig[]>({
+    queryKey: ['/api/exams/for-blueprint'],
+    queryFn: async () => {
+      const response = await fetch('/api/exams/for-blueprint', {
+        headers: { Authorization: `Bearer ${localStorage.getItem("safal_token")}` },
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  // Filter exams by selected wing
+  const filteredExams = adminExamConfigs.filter(
+    exam => !selectedWing || exam.wing === selectedWing
+  );
+
+  // Get grades available for selected wing
+  const availableGrades = selectedWing 
+    ? wingGradeMapping[selectedWing] || [] 
+    : [...Array(12)].map((_, i) => String(i + 1));
+
+  // When exam is selected, update total marks automatically
+  const handleExamSelect = (examId: string) => {
+    setSelectedExamId(examId);
+    const exam = adminExamConfigs.find(e => e.id === examId);
+    if (exam) {
+      if (exam.totalMarks === 40 || exam.totalMarks === 80) {
+        setTotalMarks(String(exam.totalMarks) as "40" | "80");
+      }
+    }
+  };
+
+  // Reset form when wing changes
+  const handleWingChange = (wing: string) => {
+    setSelectedWing(wing);
+    setSelectedExamId("");
+    setClassLevel("");
+  };
 
   const createBlueprintMutation = useMutation({
     mutationFn: async (data: any) => {
