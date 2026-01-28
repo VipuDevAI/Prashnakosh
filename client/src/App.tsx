@@ -43,6 +43,7 @@ import ChangePasswordPage from "@/pages/change-password";
 import AcademicYearsPage from "@/pages/admin/academic-years";
 import GradeConfigsPage from "@/pages/admin/grade-configs";
 import ExamFrameworksPage from "@/pages/admin/exam-frameworks";
+import ExamConfigsPage from "@/pages/admin/exam-configs";
 import BlueprintGovernancePage from "@/pages/admin/blueprint-governance";
 import BlueprintPoliciesPage from "@/pages/admin/blueprint-policies";
 import UserBulkUploadPage from "@/pages/admin/user-bulk-upload";
