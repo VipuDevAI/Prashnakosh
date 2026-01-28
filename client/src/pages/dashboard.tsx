@@ -1566,6 +1566,11 @@ function AdminDashboard() {
   const [newLanguage, setNewLanguage] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState(["Tamil", "Hindi", "Sanskrit", "French"]);
   
+  // School selection state - persisted in localStorage
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(() => {
+    return localStorage.getItem("superadmin_selected_school") || "";
+  });
+  
   type WingLanguagePool = {
     availableLanguages: string[];
   };
