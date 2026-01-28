@@ -336,6 +336,24 @@ export interface IStorage {
   getStorageUsage(tenantId: string): Promise<StorageUsage | undefined>;
   updateStorageUsage(tenantId: string, data: Partial<StorageUsage>): Promise<StorageUsage | undefined>;
   recalculateStorageUsage(tenantId: string): Promise<StorageUsage>;
+  
+  // =====================================================
+  // SUPER ADMIN EXAM CONFIGURATION
+  // =====================================================
+  
+  // Admin Exam Configs
+  getAdminExamConfig(id: string): Promise<AdminExamConfig | undefined>;
+  getAdminExamConfigsByTenant(tenantId: string, wing?: WingType): Promise<AdminExamConfig[]>;
+  getActiveExamsForBlueprint(tenantId: string): Promise<AdminExamConfig[]>;
+  getMockTestExams(tenantId: string): Promise<AdminExamConfig[]>;
+  createAdminExamConfig(config: InsertAdminExamConfig): Promise<AdminExamConfig>;
+  updateAdminExamConfig(id: string, data: Partial<AdminExamConfig>): Promise<AdminExamConfig | undefined>;
+  softDeleteAdminExamConfig(id: string, deletedBy: string): Promise<boolean>;
+  isExamConfigInUse(examConfigId: string): Promise<boolean>;
+  
+  // School Storage Configs
+  getSchoolStorageConfig(tenantId: string): Promise<SchoolStorageConfig | undefined>;
+  createOrUpdateSchoolStorageConfig(tenantId: string, data: Partial<SchoolStorageConfig>): Promise<SchoolStorageConfig>;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
