@@ -289,6 +289,7 @@ export default function BlueprintsPage() {
       tenantId: user.tenantId,
       createdBy: user.id,
       status: "active",
+      examConfigId: selectedExamId || undefined,
     });
   };
 
