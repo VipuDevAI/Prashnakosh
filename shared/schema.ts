@@ -433,7 +433,8 @@ export const blueprints = pgTable("blueprints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
   academicYearId: varchar("academic_year_id"), // Link to academic year for governance
-  examFrameworkId: varchar("exam_framework_id"), // Link to specific exam type
+  examFrameworkId: varchar("exam_framework_id"), // Link to specific exam type (legacy)
+  examConfigId: varchar("exam_config_id"), // Link to admin exam config
   name: text("name").notNull(),
   subject: text("subject").notNull(),
   grade: text("grade").notNull(),
