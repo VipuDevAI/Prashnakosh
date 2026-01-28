@@ -387,7 +387,7 @@ export default function BlueprintsPage() {
                     <Label>Blueprint Name *</Label>
                     <Input
                       value={name}
-                      onChange={(e) => setName(e.target.value)}}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="e.g., Mid-Term Math Blueprint"
                       data-testid="input-blueprint-name"
                     />
