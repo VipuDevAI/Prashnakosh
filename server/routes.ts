@@ -107,6 +107,7 @@ export async function registerRoutes(
     try {
       const tenants = await storage.getAllTenants();
       const schools = tenants.map(t => ({
+        id: t.id,
         name: t.name,
         code: t.code,
         principal: t.principalName || "",
