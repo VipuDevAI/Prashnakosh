@@ -1634,6 +1634,41 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* School Selection Dropdown - MANDATORY at TOP */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-4">
+            <Label className="text-base font-semibold whitespace-nowrap">Select School:</Label>
+            <Select 
+              value={selectedSchoolId} 
+              onValueChange={(value) => {
+                setSelectedSchoolId(value);
+                localStorage.setItem("superadmin_selected_school", value);
+              }}
+            >
+              <SelectTrigger className="w-[400px]" data-testid="select-school-dropdown">
+                <SelectValue placeholder="-- Select a School to Manage --" />
+              </SelectTrigger>
+              <SelectContent>
+                {schools.map((school) => (
+                  <SelectItem key={school.id} value={school.id}>
+                    {school.name} ({school.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedSchoolId && (
+              <Badge variant="default" className="ml-2">
+                School Selected
+              </Badge>
+            )}
+          </div>
+          {!selectedSchoolId && (
+            <p className="text-sm text-amber-600 mt-2">⚠️ Please select a school to manage its data</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Admin Dashboard</CardTitle>
