@@ -6,7 +6,7 @@ interface School {
   id: string;
   name: string;
   code: string;
-  active: boolean;
+  active?: boolean;
 }
 
 interface SchoolContextType {
@@ -24,17 +24,28 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = user?.role === "super_admin";
   const [selectedSchool, setSelectedSchoolState] = useState<School | null>(null);
 
+  // Fetch schools for Super Admin
   const { data: schools = [], isLoading } = useQuery<School[]>({
-    queryKey: ["/api/tenants"],
+    queryKey: ["/api/admin/schools"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/schools", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("safal_token")}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
     enabled: isSuperAdmin,
   });
 
+  // Restore selection from localStorage
   useEffect(() => {
     if (isSuperAdmin && schools.length > 0 && !selectedSchool) {
-      const savedSchoolId = localStorage.getItem("selectedSchoolId");
-      const savedSchool = schools.find(s => s.id === savedSchoolId);
-      if (savedSchool) {
-        setSelectedSchoolState(savedSchool);
+      const savedSchoolId = localStorage.getItem("superadmin_selected_school");
+      if (savedSchoolId) {
+        const savedSchool = schools.find(s => s.id === savedSchoolId);
+        if (savedSchool) {
+          setSelectedSchoolState(savedSchool);
+        }
       }
     }
   }, [isSuperAdmin, schools, selectedSchool]);
@@ -42,9 +53,9 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const setSelectedSchool = (school: School | null) => {
     setSelectedSchoolState(school);
     if (school) {
-      localStorage.setItem("selectedSchoolId", school.id);
+      localStorage.setItem("superadmin_selected_school", school.id);
     } else {
-      localStorage.removeItem("selectedSchoolId");
+      localStorage.removeItem("superadmin_selected_school");
     }
   };
 
