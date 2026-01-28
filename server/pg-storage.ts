@@ -1791,7 +1791,7 @@ export class PgStorage implements IStorage {
     // Check if any blueprint references this exam config
     const allBlueprints = await db.select().from(blueprints);
     for (const bp of allBlueprints) {
-      if (bp.examId === examConfigId) {
+      if (bp.examConfigId === examConfigId) {
         return true;
       }
     }
