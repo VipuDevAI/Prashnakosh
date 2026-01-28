@@ -4466,6 +4466,173 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // ============= SUPER ADMIN EXAM CONFIGURATION API =============
+  
+  // Get all exam configs for a school (with optional wing filter)
+  app.get("/api/admin/exam-configs", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { tenantId, wing } = req.query;
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      const configs = await storage.getAdminExamConfigsByTenant(
+        tenantId as string, 
+        wing as any
+      );
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single exam config
+  app.get("/api/admin/exam-configs/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const config = await storage.getAdminExamConfig(req.params.id);
+      if (!config) {
+        return res.status(404).json({ error: "Exam configuration not found" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create exam config
+  app.post("/api/admin/exam-configs", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user as AuthUser;
+      const config = await storage.createAdminExamConfig({
+        ...req.body,
+        createdBy: user.id,
+      });
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update exam config
+  app.patch("/api/admin/exam-configs/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user as AuthUser;
+      const config = await storage.updateAdminExamConfig(req.params.id, {
+        ...req.body,
+        updatedBy: user.id,
+      });
+      if (!config) {
+        return res.status(404).json({ error: "Exam configuration not found" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Soft delete exam config
+  app.delete("/api/admin/exam-configs/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user as AuthUser;
+      
+      // Check if exam is in use
+      const inUse = await storage.isExamConfigInUse(req.params.id);
+      if (inUse) {
+        return res.status(400).json({ 
+          error: "This exam is already in use and cannot be deleted.",
+          inUse: true
+        });
+      }
+      
+      const deleted = await storage.softDeleteAdminExamConfig(req.params.id, user.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Exam configuration not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active exams for HOD blueprint dropdown
+  app.get("/api/exams/for-blueprint", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = getTenantId(req);
+      const configs = await storage.getActiveExamsForBlueprint(tenantId);
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get mock test exams for student
+  app.get("/api/exams/mock-tests", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = getTenantId(req);
+      const configs = await storage.getMockTestExams(tenantId);
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============= SCHOOL STORAGE CONFIGURATION API =============
+  
+  // Get storage config for a school
+  app.get("/api/admin/storage-configs", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { tenantId } = req.query;
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      const config = await storage.getSchoolStorageConfig(tenantId as string);
+      res.json(config || { tenantId, isConfigured: false });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create or update storage config
+  app.post("/api/admin/storage-configs", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user as AuthUser;
+      const { tenantId, ...data } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      const config = await storage.createOrUpdateSchoolStorageConfig(tenantId, {
+        ...data,
+        updatedBy: user.id,
+        isConfigured: !!(data.s3BucketName && data.s3FolderPath),
+      });
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all storage configs (for overview)
+  app.get("/api/admin/all-storage-configs", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      const configs = await Promise.all(
+        tenants.map(async (tenant) => {
+          const storageConfig = await storage.getSchoolStorageConfig(tenant.id);
+          const usageData = await storage.getStorageUsage(tenant.id);
+          return {
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            tenantCode: tenant.code,
+            ...storageConfig,
+            usage: usageData,
+          };
+        })
+      );
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 function parseCSVContent(csvContent: string): string[][] {
