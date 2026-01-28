@@ -91,13 +91,13 @@ export default function LoginPage() {
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">Assessment & Practice Platform</p>
           </div>
 
-        <Card className="card-premium border-0 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.4)]">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl font-semibold text-[#0F172A] dark:text-[#F1F5F9]">Sign In</CardTitle>
-            <CardDescription className="text-[#64748B] dark:text-[#94A3B8]">Enter your school code and credentials</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <Form {...form}>
+          <Card className="card-premium border-0 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.4)]">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-xl font-semibold text-[#0F172A] dark:text-[#F1F5F9]">Sign In</CardTitle>
+              <CardDescription className="text-[#64748B] dark:text-[#94A3B8]">Enter your school code and credentials</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <FormField
                   control={form.control}
