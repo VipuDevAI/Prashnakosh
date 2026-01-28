@@ -24,6 +24,9 @@ import {
   type ReferenceLibrary, type InsertReferenceLibrary,
   type PaperGenerationAudit, type InsertPaperGenerationAudit,
   type StorageUsage, type InsertStorageUsage,
+  type AdminExamConfig, type InsertAdminExamConfig,
+  type SchoolStorageConfig, type InsertSchoolStorageConfig,
+  type WingType,
   type GradeGroup,
   type AuthUser,
   type QuestionStatus,
@@ -52,6 +55,8 @@ import {
   referenceLibrary,
   paperGenerationAudit,
   storageUsage,
+  adminExamConfigs,
+  schoolStorageConfigs,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
