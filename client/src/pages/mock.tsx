@@ -254,6 +254,53 @@ export default function MockPage() {
 
       <PageContent>
         <div className="max-w-3xl mx-auto">
+          {/* Mock Exam Configs (from Super Admin) */}
+          {mockExamConfigs.length > 0 && (
+            <Card className="mb-6 border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <GraduationCap className="w-5 h-5 text-primary" />
+                  Available Mock Exams
+                </CardTitle>
+                <CardDescription>
+                  Official mock exams configured by administration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {mockExamConfigs.map((exam) => (
+                    <Card key={exam.id} className="bg-background">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-medium">{exam.examName}</h4>
+                            <Badge variant="outline" className="mt-1">
+                              {wingLabels[exam.wing] || exam.wing}
+                            </Badge>
+                          </div>
+                          <Badge variant="secondary">{exam.examType}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {exam.durationMinutes}m
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Trophy className="w-3 h-3" />
+                            {exam.totalMarks} marks
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-4">
+                  These exams appear automatically when Super Admin enables &quot;Allow Mock Test&quot;
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <ContentCard title="Available Mock Tests">
             {isLoading ? (
               <div className="text-center py-8">
