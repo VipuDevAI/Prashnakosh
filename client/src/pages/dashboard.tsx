@@ -1681,6 +1681,34 @@ function AdminDashboard() {
         </CardHeader>
       </Card>
 
+      {/* PROMINENT EXAM CONFIGURATION CARD */}
+      <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
+        <CardContent className="py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/20">
+                <GraduationCap className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Exam Configuration (Governance)</h3>
+                <p className="text-sm text-muted-foreground">
+                  Create & manage wing-wise exams. Appears in HOD Blueprint & Mock Tests.
+                </p>
+              </div>
+            </div>
+            <CoinButton 
+              color="gold" 
+              onClick={() => navigate("/admin/exams")} 
+              data-testid="btn-exam-config-main"
+              className="px-6"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              Open Exam Configuration
+            </CoinButton>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="schools">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="schools" data-testid="tab-schools">Schools</TabsTrigger>
