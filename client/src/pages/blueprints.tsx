@@ -332,12 +332,62 @@ export default function BlueprintsPage() {
                 <DialogTitle>Create Exam Blueprint</DialogTitle>
               </DialogHeader>
               <div className="space-y-6 mt-4">
+                {/* Wing and Exam Selection - CRITICAL: Only Super Admin created exams appear here */}
+                <div className="p-4 bg-muted/50 rounded-lg border space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <GraduationCap className="w-4 h-4" />
+                    <span>Select Wing and Exam (as configured by Super Admin)</span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Wing *</Label>
+                      <Select value={selectedWing} onValueChange={handleWingChange}>
+                        <SelectTrigger data-testid="select-wing">
+                          <SelectValue placeholder="Select wing first" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(wingLabels).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Exam *</Label>
+                      <Select 
+                        value={selectedExamId} 
+                        onValueChange={handleExamSelect}
+                        disabled={!selectedWing}
+                      >
+                        <SelectTrigger data-testid="select-exam">
+                          <SelectValue placeholder={selectedWing ? "Select exam" : "Select wing first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredExams.length === 0 ? (
+                            <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                              No exams configured for this wing.
+                              <br />
+                              Contact Super Admin to create exams.
+                            </div>
+                          ) : (
+                            filteredExams.map((exam) => (
+                              <SelectItem key={exam.id} value={exam.id}>
+                                {exam.examName} ({exam.totalMarks} marks, {exam.durationMinutes} min)
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Blueprint Name *</Label>
                     <Input
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => setName(e.target.value)}}
                       placeholder="e.g., Mid-Term Math Blueprint"
                       data-testid="input-blueprint-name"
                     />
