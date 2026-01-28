@@ -420,15 +420,19 @@ export default function BlueprintsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Class *</Label>
-                    <Select value={classLevel} onValueChange={setClassLevel}>
+                    <Label>Grade *</Label>
+                    <Select 
+                      value={classLevel} 
+                      onValueChange={setClassLevel}
+                      disabled={!selectedWing && availableGrades.length === 0}
+                    >
                       <SelectTrigger data-testid="select-class">
-                        <SelectValue placeholder="Select class" />
+                        <SelectValue placeholder={selectedWing ? "Select grade" : "Select wing first"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {[...Array(12)].map((_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>
-                            Class {i + 1}
+                        {availableGrades.map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            Grade {grade}
                           </SelectItem>
                         ))}
                       </SelectContent>
