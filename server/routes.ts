@@ -3729,10 +3729,16 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/academic-years", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+  app.post("/api/admin/academic-years", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
+      // Super Admin can pass tenantId in body
+      let tenantId = req.body.tenantId;
+      if (!tenantId && req.user?.role !== "super_admin") {
+        tenantId = (req as any).tenantId;
+      }
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
       const { name, startDate, endDate, isActive } = req.body;
       
       if (!name || !startDate || !endDate) {
