@@ -860,6 +860,7 @@ export class MemStorage implements IStorage {
       grade: insertTest.grade,
       section: insertTest.section || null,
       chapterId: insertTest.chapterId || null,
+      examConfigId: insertTest.examConfigId || null,
       duration,
       totalMarks,
       questionCount: insertTest.questionCount || 50,
