@@ -237,6 +237,7 @@ export const tests = pgTable("tests", {
   grade: text("grade").notNull(),
   section: text("section"),
   chapterId: varchar("chapter_id"),
+  examConfigId: varchar("exam_config_id"), // Links to adminExamConfigs
   duration: integer("duration").default(60),
   totalMarks: integer("total_marks").default(100),
   questionCount: integer("question_count").default(50),
