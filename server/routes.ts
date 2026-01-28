@@ -3760,25 +3760,24 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/admin/academic-years/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+  app.patch("/api/admin/academic-years/:id", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
       const { id } = req.params;
       
       const existing = await storage.getAcademicYear(id);
-      if (!existing || existing.tenantId !== tenantId) {
+      if (!existing) {
         return res.status(404).json({ error: "Academic year not found" });
       }
       if (existing.isLocked) {
         return res.status(400).json({ error: "Cannot modify a locked academic year" });
       }
       
-      const { name, startDate, endDate } = req.body;
+      const { name, startDate, endDate, isActive } = req.body;
       const updated = await storage.updateAcademicYear(id, {
         ...(name && { name }),
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
+        ...(isActive !== undefined && { isActive }),
       });
       res.json(updated);
     } catch (error: any) {
@@ -3786,13 +3785,16 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/academic-years/:id/activate", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+  app.post("/api/admin/academic-years/:id/activate", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
       const { id } = req.params;
       
-      const year = await storage.activateAcademicYear(tenantId, id);
+      const existing = await storage.getAcademicYear(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Academic year not found" });
+      }
+      
+      const year = await storage.activateAcademicYear(existing.tenantId, id);
       if (!year) {
         return res.status(404).json({ error: "Academic year not found" });
       }
@@ -3802,15 +3804,13 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/academic-years/:id/lock", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+  app.post("/api/admin/academic-years/:id/lock", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
       const { id } = req.params;
       const user = req.user as any;
       
       const existing = await storage.getAcademicYear(id);
-      if (!existing || existing.tenantId !== tenantId) {
+      if (!existing) {
         return res.status(404).json({ error: "Academic year not found" });
       }
       
