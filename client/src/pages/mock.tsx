@@ -5,13 +5,13 @@ import { PageLayout, PageHeader, PageContent, ContentCard } from "@/components/p
 import { CoinButton } from "@/components/coin-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ExamEngine } from "@/components/exam-engine";
 import { ExamResults } from "@/components/exam-results";
 import {
-  ArrowLeft, Clock, FileText, PlayCircle, Trophy, Users, BookOpen
+  ArrowLeft, Clock, FileText, PlayCircle, Trophy, Users, BookOpen, GraduationCap
 } from "lucide-react";
 import type { Question, Test } from "@shared/schema";
 
@@ -58,6 +58,23 @@ interface QuestionAnalysis {
   difficulty: string;
   bloomLevel: string;
 }
+
+interface MockExamConfig {
+  id: string;
+  wing: string;
+  examName: string;
+  totalMarks: number;
+  durationMinutes: number;
+  examType: string;
+  allowMockTest: boolean;
+}
+
+const wingLabels: Record<string, string> = {
+  primary: "Primary (1-5)",
+  middle: "Middle (6-8)",
+  secondary: "Secondary (9-10)",
+  senior_secondary: "Senior Secondary (11-12)",
+};
 
 export default function MockPage() {
   const [, navigate] = useLocation();
