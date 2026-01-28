@@ -3701,10 +3701,16 @@ export function registerPaperGenerationRoutes(app: Express) {
   });
 
   // ============= Academic Years API =============
-  app.get("/api/admin/academic-years", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+  app.get("/api/admin/academic-years", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
+      // Super Admin can pass tenantId as query param
+      let tenantId = req.query.tenantId as string;
+      if (!tenantId && req.user?.role !== "super_admin") {
+        tenantId = (req as any).tenantId;
+      }
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
       const years = await storage.getAcademicYearsByTenant(tenantId);
       res.json(years);
     } catch (error: any) {
