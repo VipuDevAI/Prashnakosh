@@ -92,8 +92,21 @@ export default function MockPage() {
   const [results, setResults] = useState<ExamResultsData | null>(null);
   const [questionAnalysis, setQuestionAnalysis] = useState<QuestionAnalysis[]>([]);
 
+  // Existing tests available for mock
   const { data: availableTests = [], isLoading } = useQuery<Test[]>({
     queryKey: ["/api/mock/available"],
+  });
+
+  // Mock exam configs (exams with allowMockTest=true from Super Admin)
+  const { data: mockExamConfigs = [] } = useQuery<MockExamConfig[]>({
+    queryKey: ["/api/exams/mock-tests"],
+    queryFn: async () => {
+      const response = await fetch('/api/exams/mock-tests', {
+        headers: { Authorization: `Bearer ${localStorage.getItem("safal_token")}` },
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
   });
 
   const startMutation = useMutation({
