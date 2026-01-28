@@ -191,6 +191,8 @@ export default function BlueprintsPage() {
     setClassLevel("");
     setTotalMarks("40");
     setSections([]);
+    setSelectedWing("");
+    setSelectedExamId("");
   };
 
   if (!user) {
