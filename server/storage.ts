@@ -2468,6 +2468,113 @@ export class MemStorage implements IStorage {
   async recalculateStorageUsage(tenantId: string): Promise<StorageUsage> {
     throw new Error("MemStorage: recalculateStorageUsage not implemented");
   }
+
+  // =====================================================
+  // SUPER ADMIN EXAM CONFIGURATION (Stub Implementations)
+  // =====================================================
+
+  private adminExamConfigs = new Map<string, AdminExamConfig>();
+  private schoolStorageConfigs = new Map<string, SchoolStorageConfig>();
+
+  async getAdminExamConfig(id: string): Promise<AdminExamConfig | undefined> {
+    return this.adminExamConfigs.get(id);
+  }
+
+  async getAdminExamConfigsByTenant(tenantId: string, wing?: WingType): Promise<AdminExamConfig[]> {
+    return Array.from(this.adminExamConfigs.values()).filter(c => 
+      c.tenantId === tenantId && !c.isDeleted && (!wing || c.wing === wing)
+    );
+  }
+
+  async getActiveExamsForBlueprint(tenantId: string): Promise<AdminExamConfig[]> {
+    return Array.from(this.adminExamConfigs.values()).filter(c => 
+      c.tenantId === tenantId && !c.isDeleted && c.isActive
+    );
+  }
+
+  async getMockTestExams(tenantId: string): Promise<AdminExamConfig[]> {
+    return Array.from(this.adminExamConfigs.values()).filter(c => 
+      c.tenantId === tenantId && !c.isDeleted && c.isActive && c.allowMockTest
+    );
+  }
+
+  async createAdminExamConfig(config: InsertAdminExamConfig): Promise<AdminExamConfig> {
+    const id = randomUUID();
+    const created: AdminExamConfig = {
+      id,
+      tenantId: config.tenantId,
+      wing: config.wing,
+      examName: config.examName,
+      academicYearId: config.academicYearId,
+      durationMinutes: config.durationMinutes || 60,
+      totalMarks: config.totalMarks || 100,
+      examType: config.examType || "unit",
+      allowMockTest: config.allowMockTest || false,
+      watermarkText: config.watermarkText || null,
+      logoUrl: config.logoUrl || null,
+      isActive: config.isActive ?? true,
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      createdAt: new Date(),
+      createdBy: config.createdBy || null,
+      updatedAt: new Date(),
+      updatedBy: null,
+    };
+    this.adminExamConfigs.set(id, created);
+    return created;
+  }
+
+  async updateAdminExamConfig(id: string, data: Partial<AdminExamConfig>): Promise<AdminExamConfig | undefined> {
+    const config = this.adminExamConfigs.get(id);
+    if (!config) return undefined;
+    const updated = { ...config, ...data, updatedAt: new Date() };
+    this.adminExamConfigs.set(id, updated);
+    return updated;
+  }
+
+  async softDeleteAdminExamConfig(id: string, deletedBy: string): Promise<boolean> {
+    const config = this.adminExamConfigs.get(id);
+    if (!config) return false;
+    this.adminExamConfigs.set(id, { ...config, isDeleted: true, deletedAt: new Date(), deletedBy, isActive: false });
+    return true;
+  }
+
+  async isExamConfigInUse(examConfigId: string): Promise<boolean> {
+    for (const bp of this.blueprints.values()) {
+      if (bp.examConfigId === examConfigId) return true;
+    }
+    for (const test of this.tests.values()) {
+      if (test.examConfigId === examConfigId) return true;
+    }
+    return false;
+  }
+
+  async getSchoolStorageConfig(tenantId: string): Promise<SchoolStorageConfig | undefined> {
+    return this.schoolStorageConfigs.get(tenantId);
+  }
+
+  async createOrUpdateSchoolStorageConfig(tenantId: string, data: Partial<SchoolStorageConfig>): Promise<SchoolStorageConfig> {
+    const existing = this.schoolStorageConfigs.get(tenantId);
+    if (existing) {
+      const updated = { ...existing, ...data, updatedAt: new Date() };
+      this.schoolStorageConfigs.set(tenantId, updated);
+      return updated;
+    }
+    const created: SchoolStorageConfig = {
+      id: randomUUID(),
+      tenantId,
+      s3BucketName: data.s3BucketName || null,
+      s3FolderPath: data.s3FolderPath || null,
+      maxStorageBytes: data.maxStorageBytes || 5 * 1024 * 1024 * 1024,
+      isConfigured: data.isConfigured || false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      updatedBy: data.updatedBy || null,
+    };
+    this.schoolStorageConfigs.set(tenantId, created);
+    return created;
+  }
 }
 
 import { pgStorage } from "./pg-storage";
