@@ -672,3 +672,67 @@ export const storageUsage = pgTable("storage_usage", {
 export const insertStorageUsageSchema = createInsertSchema(storageUsage).omit({ id: true });
 export type InsertStorageUsage = z.infer<typeof insertStorageUsageSchema>;
 export type StorageUsage = typeof storageUsage.$inferSelect;
+
+// =====================================================
+// SUPER ADMIN EXAM CONFIGURATION
+// =====================================================
+
+// Wing Types - School structure
+export const wingTypes = ["primary", "middle", "secondary", "senior_secondary"] as const;
+export type WingType = typeof wingTypes[number];
+
+// Wing Grade Mappings
+export const wingGradeMapping: Record<WingType, string[]> = {
+  primary: ["1", "2", "3", "4", "5"],
+  middle: ["6", "7", "8"],
+  secondary: ["9", "10"],
+  senior_secondary: ["11", "12"],
+};
+
+// Admin Exam Config Types
+export const adminExamTypes = ["unit", "term", "annual", "practice"] as const;
+export type AdminExamType = typeof adminExamTypes[number];
+
+// Admin Exam Configuration - Super Admin creates exams per school/wing
+export const adminExamConfigs = pgTable("admin_exam_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  wing: text("wing").$type<WingType>().notNull(),
+  examName: text("exam_name").notNull(),
+  academicYearId: varchar("academic_year_id").notNull(),
+  durationMinutes: integer("duration_minutes").notNull().default(60),
+  totalMarks: integer("total_marks").notNull().default(100),
+  examType: text("exam_type").$type<AdminExamType>().notNull().default("unit"),
+  allowMockTest: boolean("allow_mock_test").default(false),
+  watermarkText: text("watermark_text"),
+  logoUrl: text("logo_url"),
+  isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: varchar("deleted_by"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  createdBy: varchar("created_by"),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+  updatedBy: varchar("updated_by"),
+});
+
+export const insertAdminExamConfigSchema = createInsertSchema(adminExamConfigs).omit({ id: true });
+export type InsertAdminExamConfig = z.infer<typeof insertAdminExamConfigSchema>;
+export type AdminExamConfig = typeof adminExamConfigs.$inferSelect;
+
+// School Storage Configuration - S3 bucket/folder mapping per school
+export const schoolStorageConfigs = pgTable("school_storage_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().unique(),
+  s3BucketName: text("s3_bucket_name"),
+  s3FolderPath: text("s3_folder_path"),
+  maxStorageBytes: integer("max_storage_bytes").default(5368709120), // 5GB default
+  isConfigured: boolean("is_configured").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+  updatedBy: varchar("updated_by"),
+});
+
+export const insertSchoolStorageConfigSchema = createInsertSchema(schoolStorageConfigs).omit({ id: true });
+export type InsertSchoolStorageConfig = z.infer<typeof insertSchoolStorageConfigSchema>;
+export type SchoolStorageConfig = typeof schoolStorageConfigs.$inferSelect;
