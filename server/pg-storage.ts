@@ -1722,6 +1722,110 @@ export class PgStorage implements IStorage {
     const [created] = await db.insert(storageUsage).values({ tenantId, totalBytes: 0, questionImageBytes: 0, uploadFileBytes: 0, referenceFileBytes: 0 }).returning();
     return created;
   }
+
+  // =====================================================
+  // SUPER ADMIN EXAM CONFIGURATION
+  // =====================================================
+
+  async getAdminExamConfig(id: string): Promise<AdminExamConfig | undefined> {
+    const [config] = await db.select().from(adminExamConfigs)
+      .where(and(eq(adminExamConfigs.id, id), eq(adminExamConfigs.isDeleted, false)));
+    return config;
+  }
+
+  async getAdminExamConfigsByTenant(tenantId: string, wing?: WingType): Promise<AdminExamConfig[]> {
+    let conditions = [eq(adminExamConfigs.tenantId, tenantId), eq(adminExamConfigs.isDeleted, false)];
+    if (wing) conditions.push(eq(adminExamConfigs.wing, wing));
+    return db.select().from(adminExamConfigs)
+      .where(and(...conditions))
+      .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
+  }
+
+  async getActiveExamsForBlueprint(tenantId: string): Promise<AdminExamConfig[]> {
+    return db.select().from(adminExamConfigs)
+      .where(and(
+        eq(adminExamConfigs.tenantId, tenantId),
+        eq(adminExamConfigs.isDeleted, false),
+        eq(adminExamConfigs.isActive, true)
+      ))
+      .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
+  }
+
+  async getMockTestExams(tenantId: string): Promise<AdminExamConfig[]> {
+    return db.select().from(adminExamConfigs)
+      .where(and(
+        eq(adminExamConfigs.tenantId, tenantId),
+        eq(adminExamConfigs.isDeleted, false),
+        eq(adminExamConfigs.isActive, true),
+        eq(adminExamConfigs.allowMockTest, true)
+      ))
+      .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
+  }
+
+  async createAdminExamConfig(config: InsertAdminExamConfig): Promise<AdminExamConfig> {
+    const [created] = await db.insert(adminExamConfigs).values({
+      ...config,
+      isActive: config.isActive ?? true,
+      isDeleted: false,
+    }).returning();
+    return created;
+  }
+
+  async updateAdminExamConfig(id: string, data: Partial<AdminExamConfig>): Promise<AdminExamConfig | undefined> {
+    const [updated] = await db.update(adminExamConfigs)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(adminExamConfigs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async softDeleteAdminExamConfig(id: string, deletedBy: string): Promise<boolean> {
+    const [updated] = await db.update(adminExamConfigs)
+      .set({ isDeleted: true, deletedAt: new Date(), deletedBy, isActive: false })
+      .where(eq(adminExamConfigs.id, id))
+      .returning();
+    return !!updated;
+  }
+
+  async isExamConfigInUse(examConfigId: string): Promise<boolean> {
+    // Check if any blueprint references this exam config
+    const allBlueprints = await db.select().from(blueprints);
+    for (const bp of allBlueprints) {
+      if (bp.examId === examConfigId) {
+        return true;
+      }
+    }
+    // Check if any test references this exam config
+    const allTests = await db.select().from(tests);
+    for (const test of allTests) {
+      if (test.examConfigId === examConfigId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // School Storage Configs
+  async getSchoolStorageConfig(tenantId: string): Promise<SchoolStorageConfig | undefined> {
+    const [config] = await db.select().from(schoolStorageConfigs)
+      .where(eq(schoolStorageConfigs.tenantId, tenantId));
+    return config;
+  }
+
+  async createOrUpdateSchoolStorageConfig(tenantId: string, data: Partial<SchoolStorageConfig>): Promise<SchoolStorageConfig> {
+    const existing = await this.getSchoolStorageConfig(tenantId);
+    if (existing) {
+      const [updated] = await db.update(schoolStorageConfigs)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(schoolStorageConfigs.tenantId, tenantId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(schoolStorageConfigs)
+      .values({ tenantId, ...data } as InsertSchoolStorageConfig)
+      .returning();
+    return created;
+  }
 }
 
 export const pgStorage = new PgStorage();
