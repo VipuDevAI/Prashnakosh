@@ -26,6 +26,8 @@ import {
   type StorageUsage, type InsertStorageUsage,
   type AdminExamConfig, type InsertAdminExamConfig,
   type SchoolStorageConfig, type InsertSchoolStorageConfig,
+  type SchoolWing, type InsertSchoolWing,
+  type SchoolExam, type InsertSchoolExam,
   type WingType,
   type GradeGroup,
   type AuthUser,
@@ -57,6 +59,8 @@ import {
   storageUsage,
   adminExamConfigs,
   schoolStorageConfigs,
+  schoolWings,
+  schoolExams,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
