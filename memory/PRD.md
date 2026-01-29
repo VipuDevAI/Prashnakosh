@@ -134,6 +134,7 @@ users (
 ## Known Limitations
 - Currently using MemStorage (in-memory) for development - data resets on server restart
 - S3 storage configuration is saved but actual S3 operations require AWS credentials
+- Principal Analytics dashboard pending implementation
 
 ## Development Notes
 - Frontend runs on port 3000 (Vite dev server)
