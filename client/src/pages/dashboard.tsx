@@ -82,9 +82,19 @@ export default function DashboardPage() {
     <PageLayout>
       <PageHeader>
         <div className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4">
-          <Logo size="md" />
+          <div className="flex items-center gap-3">
+            <img 
+              src={BRAND.logo} 
+              alt={BRAND.name}
+              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
+            />
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">{BRAND.name}</h1>
+            </div>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             <Button variant="ghost" size="icon" disabled title="Notifications coming soon" data-testid="button-notifications" className="hidden sm:flex">
               <Bell className="w-5 h-5" />
             </Button>
