@@ -9,7 +9,9 @@ Build a brand-new Super Admin Dashboard from scratch with:
 2. Add School Module with full CRUD for schools
 3. Admin Settings Module with school selection, Wing Management, and Exam Management
 4. S3 Storage Module for allocating S3 buckets per school
-5. Automatic system behavior where Super Admin exams appear in Student Mock Tests and HOD blueprints
+5. Users Module with bulk upload for Teachers and Students
+6. Premium design with dark/light toggle and multi-color gradients
+7. Principal Analytics Dashboard with PowerBI-style insights
 
 ## Tech Stack
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, Shadcn UI, TanStack Query
