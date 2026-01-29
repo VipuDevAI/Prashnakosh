@@ -5032,7 +5032,8 @@ export function registerPaperGenerationRoutes(app: Express) {
   app.delete("/api/superadmin/users/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
       const { id } = req.params;
-      const success = await storage.softDeleteUser(id);
+      const currentUser = req.user as AuthUser;
+      const success = await storage.softDeleteUser(id, currentUser.id);
       if (!success) {
         return res.status(404).json({ error: "User not found" });
       }
