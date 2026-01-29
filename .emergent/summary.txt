@@ -1,0 +1,347 @@
+<analysis>**original_problem_statement:**
+The user, having moved from Replit, provided a ZIP file of an existing education governance application named Prashnakosh.
+
+**Phase 1:** The initial task was to extract the zip, run the project locally, analyze the codebase (data model, roles, flows), and provide a summary of its status and confirm its deployability on Render with a Neon PostgreSQL database. The user explicitly stated not to redesign, add features, or assume requirements at this stage.
+
+**Phase 2 & 3 (Revised Scope):** Following the initial review, the user provided detailed instructions to implement a Super Admin Dashboard for exam configuration governance. After several implementation attempts and user feedback indicating dissatisfaction with modifying existing screens, the user gave final, non-negotiable instructions to create a **brand-new, completely separate Super Admin dashboard from scratch**.
+
+**PRODUCT REQUIREMENTS (Final):**
+1.  **New Super Admin Landing Page:** A clean UI with an encouraging message and three primary buttons: Add School, Admin Settings, S3 Storage.
+2.  **Add School Module:** Full CRUD (Create, Edit, Soft Delete) for schools with fields like School Name, Address, Principal details, etc.
+3.  **Admin Settings Module:**
+    *   Must start with a mandatory School selection dropdown.
+    *   **Wing Management:** Ability to Create/Edit/Delete Wings (e.g., Primary, Middle) for the selected school.
+    *   **Exam Management:** Under each Wing, allow CRUD for exams with fields like Exam Name, Academic Year, Marks, Duration, Subjects, etc.
+4.  **S3 Storage Module:** A UI to allocate an S3 bucket/folder for each school.
+5.  **Automatic System Behavior:** Exams created by the Super Admin must automatically appear in the Student Mock Tests and be the single source of truth for HOD blueprint creation, ensuring consistency in marks and duration across the platform.
+
+**User's preferred language**: English
+
+**what currently exists?**
+The agent has completed an initial analysis of the provided codebase. Based on user feedback, the agent has pivoted to building a brand-new Super Admin section from the ground up. The basic file structure for this new section has been created, including new pages under , new API endpoints in , and corresponding database schema additions in . The previous attempts to modify the old admin dashboard have been abandoned.
+
+**Last working item**:
+*   **Last item agent was working:** Creating the foundational files, API endpoints, and database schema for the new, from-scratch Super Admin dashboard as per the user's final detailed instructions. This includes scaffolding for School, Wing, and Exam management.
+*   **Status:** IN PROGRESS
+*   **Agent Testing Done:** N
+*   **User Testing Done:** N
+*   **Which testing method agent to use?** both. This is a significant new feature set requiring full end-to-end testing. Both frontend and backend testing agents should be used to validate the new UI, API endpoints, and database interactions.
+
+**All Pending/In progress Issue list**:
+*   **Issue 1:** The application's CSS is not loading or processing correctly, causing pages (like the login page) to appear completely unstyled. (Priority: P0)
+
+**Issues Detail:**
+*   **Issue 1: CSS Build/Rendering Failure**
+    *   **Attempted fixes:** The agent identified that Tailwind CSS directives were not being processed and added a  file. While this seemed to work in the local build environment (the CSS file size increased), the user reported the issue persisted after deployment, indicating a more complex build or configuration problem.
+    *   **Next debug checklist:**
+        1.  Verify the  path in  correctly includes all relevant source files (e.g., ).
+        2.  Check  for any misconfigurations related to CSS handling or PostCSS.
+        3.  Ensure  is correctly imported at the very top of the application's entry point ().
+        4.  Confirm the  is in the project root () and has the correct content ().
+    *   **Why fix this issue and what will be achieved with the fix?** The application is visually broken and unusable. Fixing this is critical to enable any further frontend development or testing.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Frontend. Use the screenshot tool on the login page to confirm styles are applied correctly.
+    *   **Blocked on other issue:** No
+
+**In progress Task List**:
+*   **Task 1: Complete the New Super Admin Dashboard Implementation** (Priority: P0)
+    *   **Where to resume:**
+        1.  Implement the UI for the newly created pages: , , and  inside .
+        2.  Wire up the frontend components to the new backend API endpoints for full CRUD functionality.
+        3.  Add the new routes for  to the main router in .
+        4.  Ensure school selection persists across pages using .
+    *   **What will be achieved with this?** This will deliver the core governance feature as specified by the user, forming the foundation of the application's structure.
+    *   **Status:** IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?** Both
+    *   **Blocked on something:** Blocked by the CSS rendering issue, as the new UI cannot be developed or tested without styles.
+
+**Upcoming and Future Tasks**
+*   **Upcoming Tasks:**
+    *   **P0: Integrate Super Admin Exams into HOD Blueprint Flow:** Update the HOD's blueprint creation page () to fetch exams exclusively from the new Super Admin configuration.
+    *   **P1: Integrate Super Admin Exams into Student Mock Tests:** Update the student's mock test page () to display exams where Allow Mock Test is enabled by the Super Admin.
+    *   **P2: Run Database Migrations:** The database schema is out of sync with the code. After setting up the DB connection, run 
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts' to apply the new  table and other changes.
+*   **Future Tasks:**
+    *   Create a database seed script to provision the initial  user in the PostgreSQL database.
+    *   Review and refactor/remove the old, now obsolete, admin pages under .
+    *   Address the pre-existing TypeScript errors present in the original codebase.
+
+**Completed work in this session**
+- **Codebase Analysis:** Analyzed the initial codebase and provided a summary to the user.
+- **New Super Admin Scaffolding:** Created the necessary files, API endpoints, and database schema changes for the new Super Admin dashboard, following a complete scope change from the user.
+
+**Earlier issues found/mentioned but not fixed**
+*   **Issue 1: Pre-existing TypeScript Errors**
+    *   **Debug checklist:** Run client/src/pages/admin/blueprint-policies.tsx(113,9): error TS2322: Type '{ title: string; subtitle: string; actions: Element; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+client/src/pages/admin/reference-library.tsx(182,9): error TS2322: Type '{ title: string; subtitle: string; actions: Element; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+client/src/pages/admin/user-bulk-upload.tsx(113,9): error TS2322: Type '{ title: string; subtitle: string; actions: Element; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+client/src/pages/chapters.tsx(50,24): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/pages/practice.tsx(46,24): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/pages/practice.tsx(48,11): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/pg-storage.ts(77,14): error TS2420: Class 'PgStorage' incorrectly implements interface 'IStorage'.
+  Type 'PgStorage' is missing the following properties from type 'IStorage': softDeleteTenant, getWingsByTenant, getWing, createWing, and 7 more.
+server/pg-storage.ts(259,47): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "type"; tableName: "questions"; dataType: "string"; columnType: "PgText"; data: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; ... 9 more ...; generated: undefined; }, {}, { ...; }>, right: SQLWrapper | ... 6 more ... | "long_answer"): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'SQLWrapper | "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "type"; tableName: "questions"; dataType: "string"; columnType: "PgText"; data: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; ... 9 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "type"; tableName: "questions"; dataType: "string"; columnType: "PgText"; data: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; ... 9 more ...; generated: undefined; }, {}, { ...; }>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "type"; tableName: "questions"; dataType: "string"; columnType: "PgText"; data: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; ... 9 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'never'.
+server/pg-storage.ts(293,49): error TS2802: Type 'Map<string, { id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; tenantId: string; ... 25 more ...; rejectionReason: string | null; }[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/pg-storage.ts(822,60): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { name: string | SQL<unknown> | Placeholder<string, any>; tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 16 more ...; isApproved?: boolean | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ name: string; tenantId: string; grade: string; subject: string; totalMarks: number; isLocked?: boolean | null | undefined; lockedAt?: Date | null | undefined; lockedBy?: string | null | undefined; ... 10 more ...; isApproved?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ name: string | SQL<unknown> | Placeholder<string, any>; tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; ... 16 more ...; isApproved?: boolean | ... 3 more ... | undefined; }'.
+      Types of property 'sections' are incompatible.
+        Type '{ [x: number]: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: unknown; chapters?: unknown; instructions?: unknown; }; length: number; toString: () => string; toLocaleString: { (): string; (locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | ...' is not assignable to type 'SQL<unknown> | BlueprintSection[] | Placeholder<string, any> | null | undefined'.
+          Type '{ [x: number]: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: unknown; chapters?: unknown; instructions?: unknown; }; length: number; toString: () => string; toLocaleString: { (): string; (locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | ...' is not assignable to type 'SQL<unknown> | BlueprintSection[] | Placeholder<string, any> | null | undefined'.
+            Type '{ [x: number]: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: unknown; chapters?: unknown; instructions?: unknown; }; length: number; toString: () => string; toLocaleString: { (): string; (locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | ...' is not assignable to type 'BlueprintSection[]'.
+              The types returned by 'pop()' are incompatible between these types.
+                Type 'unknown' is not assignable to type 'BlueprintSection | undefined'.
+  Overload 2 of 2, '(values: { name: string | SQL<unknown> | Placeholder<string, any>; tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 16 more ...; isApproved?: boolean | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ name: string; tenantId: string; grade: string; subject: string; totalMarks: number; isLocked?: boolean | null | undefined; lockedAt?: Date | null | undefined; lockedBy?: string | null | undefined; ... 10 more ...; isApproved?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ name: string | SQL<unknown> | Placeholder<string, any>; tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; ... 16 more ...; isApproved?: boolean | ... 3 more ... | undefined; }[]'.
+      Type '{ name: string; tenantId: string; grade: string; subject: string; totalMarks: number; isLocked?: boolean | null | undefined; lockedAt?: Date | null | undefined; lockedBy?: string | null | undefined; ... 10 more ...; isApproved?: boolean | ... 1 more ... | undefined; }' is missing the following properties from type '{ name: string | SQL<unknown> | Placeholder<string, any>; tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; ... 16 more ...; isApproved?: boolean | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(848,63): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { questionId: string | SQL<unknown> | Placeholder<string, any>; reviewerId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; status?: SQL<...> | ... 5 more ... | undefined; reviewedAt?: SQL<...> | ... 3 more ... | undefined; comments?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Type 'string' is not assignable to type 'SQL<unknown> | "pending" | "approved" | "rejected" | Placeholder<string, any> | null | undefined'.
+  Overload 2 of 2, '(values: { questionId: string | SQL<unknown> | Placeholder<string, any>; reviewerId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; status?: SQL<...> | ... 5 more ... | undefined; reviewedAt?: SQL<...> | ... 3 more ... | undefined; comments?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'questionId' does not exist in type '{ questionId: string | SQL<unknown> | Placeholder<string, any>; reviewerId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; status?: SQL<...> | ... 5 more ... | undefined; reviewedAt?: SQL<...> | ... 3 more ... | undefined; comments?: string | ... 3 more ....'.
+server/pg-storage.ts(1037,62): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; examId: string | SQL<unknown> | Placeholder<string, any>; toState: SQL<unknown> | "active" | ... 11 more ... | Placeholder<...>; ... 5 more ...; timestamp?: SQL<...> | ... 2 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; examId: string; toState: string; actorId: string; actorRole: string; comments?: string | null | undefined; fromState?: any; timestamp?: Date | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; examId: string | SQL<unknown> | Placeholder<string, any>; toState: SQL<unknown> | "active" | ... 11 more ... | Placeholder<...>; ... 5 more ...; timestamp?: SQL<...> | ... 2 more ... | undefined; }'.
+      Types of property 'toState' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "active" | "draft" | "locked" | "submitted" | "pending_hod" | "hod_approved" | "hod_rejected" | "pending_principal" | "principal_approved" | "principal_rejected" | "sent_to_committee" | "archived" | Placeholder<...>'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; examId: string | SQL<unknown> | Placeholder<string, any>; toState: SQL<unknown> | "active" | ... 11 more ... | Placeholder<...>; ... 5 more ...; timestamp?: SQL<...> | ... 2 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; examId: string; toState: string; actorId: string; actorRole: string; comments?: string | null | undefined; fromState?: any; timestamp?: Date | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; examId: string | SQL<unknown> | Placeholder<string, any>; toState: SQL<unknown> | "active" | ... 11 more ... | Placeholder<...>; ... 5 more ...; timestamp?: SQL<...> | ... 2 more ... | undefined; }[]'.
+      Type '{ tenantId: string; examId: string; toState: string; actorId: string; actorRole: string; comments?: string | null | undefined; fromState?: any; timestamp?: Date | undefined; }' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; examId: string | SQL<unknown> | Placeholder<string, any>; toState: SQL<unknown> | "active" | ... 11 more ... | Placeholder<...>; ... 5 more ...; timestamp?: SQL<...> | ... 2 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1133,76): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { message: string | SQL<unknown> | Placeholder<string, any>; type: SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>; ... 7 more ...; isRead?: boolean | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ message: string; type: string; tenantId: string; title: string; studentId: string; createdAt?: Date | null | undefined; testId?: string | null | undefined; attemptId?: string | null | undefined; isRead?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ message: string | SQL<unknown> | Placeholder<string, any>; type: SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>; ... 7 more ...; isRead?: boolean | ... 3 more ... | undefined; }'.
+      Types of property 'type' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { message: string | SQL<unknown> | Placeholder<string, any>; type: SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>; ... 7 more ...; isRead?: boolean | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ message: string; type: string; tenantId: string; title: string; studentId: string; createdAt?: Date | null | undefined; testId?: string | null | undefined; attemptId?: string | null | undefined; isRead?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ message: string | SQL<unknown> | Placeholder<string, any>; type: SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>; ... 7 more ...; isRead?: boolean | ... 3 more ... | undefined; }[]'.
+      Type '{ message: string; type: string; tenantId: string; title: string; studentId: string; createdAt?: Date | null | undefined; testId?: string | null | undefined; attemptId?: string | null | undefined; isRead?: boolean | ... 1 more ... | undefined; }' is missing the following properties from type '{ message: string | SQL<unknown> | Placeholder<string, any>; type: SQL<unknown> | "test_unlocked" | "exam_submitted" | "result_published" | Placeholder<string, any>; ... 7 more ...; isRead?: boolean | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1462,60): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<...> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }'.
+      Types of property 'gradeGroup' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<string, any> | null | undefined'.
+          Type 'string' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<string, any> | null | undefined'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<...> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1468,49): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<...> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }[]' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }'.
+      Type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }[]' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }': tenantId, academicYearId, grade
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<...> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }[]' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }' is not assignable to type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<...>; ... 4 more ...; displayName?: string | ... 3 more ... | undefined; }'.
+        Types of property 'gradeGroup' are incompatible.
+          Type 'string | null | undefined' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<string, any> | null | undefined'.
+            Type 'string' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<string, any> | null | undefined'.
+server/pg-storage.ts(1602,62): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; gradeGroup: SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<...>; ... 13 more ...; isVisible?: boolean | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; gradeGroup: string; examName: string; startDate?: Date | null | undefined; endDate?: Date | null | undefined; isActive?: boolean | null | undefined; ... 8 more ...; isVisible?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; gradeGroup: SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<...>; ... 13 more ...; isVisible?: boolean | ... 3 more ... | undefined; }'.
+      Types of property 'gradeGroup' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; gradeGroup: SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<...>; ... 13 more ...; isVisible?: boolean | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; gradeGroup: string; examName: string; startDate?: Date | null | undefined; endDate?: Date | null | undefined; isActive?: boolean | null | undefined; ... 8 more ...; isVisible?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; gradeGroup: SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<...>; ... 13 more ...; isVisible?: boolean | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; academicYearId: string; gradeGroup: string; examName: string; startDate?: Date | null | undefined; endDate?: Date | null | undefined; isActive?: boolean | null | undefined; ... 8 more ...; isVisible?: boolean | ... 1 more ... | undefined; }' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; gradeGroup: SQL<unknown> | "primary" | "middle" | "senior" | Placeholder<...>; ... 13 more ...; isVisible?: boolean | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1630,65): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 5 more ...; updatedBy?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; createdAt?: Date | null | undefined; isBlueprintMandatory?: boolean | null | undefined; blueprintMode?: string | null | undefined; allowEditAfterLock?: boolean | ... 1 more ... | undefined; updatedAt?: Date | ... 1 more ... | undefined; updatedBy?: string | ... 1 more ... ...' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 5 more ...; updatedBy?: string | ... 3 more ... | undefined; }'.
+      Types of property 'blueprintMode' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'SQL<unknown> | "academic_year" | "exam_specific" | Placeholder<string, any> | null | undefined'.
+          Type 'string' is not assignable to type 'SQL<unknown> | "academic_year" | "exam_specific" | Placeholder<string, any> | null | undefined'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 5 more ...; updatedBy?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; academicYearId: string; createdAt?: Date | null | undefined; isBlueprintMandatory?: boolean | null | undefined; blueprintMode?: string | null | undefined; allowEditAfterLock?: boolean | ... 1 more ... | undefined; updatedAt?: Date | ... 1 more ... | undefined; updatedBy?: string | ... 1 more ... ...' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 5 more ...; updatedBy?: string | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; academicYearId: string; createdAt?: Date | null | undefined; isBlueprintMandatory?: boolean | null | undefined; blueprintMode?: string | null | undefined; allowEditAfterLock?: boolean | ... 1 more ... | undefined; updatedAt?: Date | ... 1 more ... | undefined; updatedBy?: string | ... 1 more ... ...' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 5 more ...; updatedBy?: string | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1665,64): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; title: string | SQL<unknown> | Placeholder<...>; ... 14 more ...; year?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; grade: string; title: string; subject: string; referenceType: string; fileUrl: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; ... 8 more ...; year?: string | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; title: string | SQL<unknown> | Placeholder<...>; ... 14 more ...; year?: string | ... 3 more ... | undefined; }'.
+      Types of property 'referenceType' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "question_paper" | "notes" | "model_answer" | "study_material" | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; title: string | SQL<unknown> | Placeholder<...>; ... 14 more ...; year?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; grade: string; title: string; subject: string; referenceType: string; fileUrl: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; ... 8 more ...; year?: string | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; title: string | SQL<unknown> | Placeholder<...>; ... 14 more ...; year?: string | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; grade: string; title: string; subject: string; referenceType: string; fileUrl: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; ... 8 more ...; year?: string | ... 1 more ... | undefined; }' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; grade: string | SQL<unknown> | Placeholder<string, any>; title: string | SQL<unknown> | Placeholder<...>; ... 14 more ...; year?: string | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1692,68): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; testId: string | SQL<unknown> | Placeholder<string, any>; userRole: SQL<unknown> | "super_admin" | ... 7 more ... | Placeholder<...>; ... 5 more ...; metadata?: SQL<...> | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; testId: string; userRole: string; action: string; setNumber: number; generatedBy: string; generatedAt?: Date | undefined; metadata?: { [x: string]: [any, ...any[]]; } | null | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; testId: string | SQL<unknown> | Placeholder<string, any>; userRole: SQL<unknown> | "super_admin" | ... 7 more ... | Placeholder<...>; ... 5 more ...; metadata?: SQL<...> | ... 3 more ... | undefined; }'.
+      Types of property 'userRole' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "super_admin" | "admin" | "hod" | "principal" | "exam_committee" | "teacher" | "student" | "parent" | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; testId: string | SQL<unknown> | Placeholder<string, any>; userRole: SQL<unknown> | "super_admin" | ... 7 more ... | Placeholder<...>; ... 5 more ...; metadata?: SQL<...> | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ tenantId: string; testId: string; userRole: string; action: string; setNumber: number; generatedBy: string; generatedAt?: Date | undefined; metadata?: { [x: string]: [any, ...any[]]; } | null | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; testId: string | SQL<unknown> | Placeholder<string, any>; userRole: SQL<unknown> | "super_admin" | ... 7 more ... | Placeholder<...>; ... 5 more ...; metadata?: SQL<...> | ... 3 more ... | undefined; }[]'.
+      Type '{ tenantId: string; testId: string; userRole: string; action: string; setNumber: number; generatedBy: string; generatedAt?: Date | undefined; metadata?: { [x: string]: [any, ...any[]]; } | null | undefined; }' is missing the following properties from type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; testId: string | SQL<unknown> | Placeholder<string, any>; userRole: SQL<unknown> | "super_admin" | ... 7 more ... | Placeholder<...>; ... 5 more ...; metadata?: SQL<...> | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+server/pg-storage.ts(1770,57): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; examName: string | SQL<...> | Placeholder<...>; ... 15 more ...; allowMockTest?: boolean | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ isActive: boolean; isDeleted: false; tenantId: string; academicYearId: string; examName: string; wing: string; createdAt?: Date | null | undefined; deletedAt?: Date | null | undefined; ... 9 more ...; allowMockTest?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; examName: string | SQL<...> | Placeholder<...>; ... 15 more ...; allowMockTest?: boolean | ... 3 more ... | undefined; }'.
+      Types of property 'wing' are incompatible.
+        Type 'string' is not assignable to type 'SQL<unknown> | "primary" | "middle" | "secondary" | "senior_secondary" | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; examName: string | SQL<...> | Placeholder<...>; ... 15 more ...; allowMockTest?: boolean | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'isActive' does not exist in type '{ tenantId: string | SQL<unknown> | Placeholder<string, any>; academicYearId: string | SQL<unknown> | Placeholder<string, any>; examName: string | SQL<...> | Placeholder<...>; ... 15 more ...; allowMockTest?: boolean | ... 3 more ... | undefined; }[]'.
+server/routes.ts(1089,36): error TS2339: Property 'getUpload' does not exist on type 'IStorage'.
+server/routes.ts(2693,40): error TS2802: Type 'Map<string, { passage: any; questions: { id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; ... 26 more ...; rejectionReason: string | null; }[]; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/routes.ts(2874,40): error TS2802: Type 'Map<string, { passage: any; questions: { id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; ... 26 more ...; rejectionReason: string | null; }[]; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/routes.ts(3292,20): error TS2322: Type 'string' is not assignable to type '[any, ...any[]]'.
+server/routes.ts(3323,20): error TS2322: Type 'string' is not assignable to type '[any, ...any[]]'.
+server/routes.ts(3442,38): error TS2339: Property 'getSubmission' does not exist on type 'IStorage'.
+server/routes.ts(3459,38): error TS2339: Property 'getSubmission' does not exist on type 'IStorage'.
+server/routes.ts(3752,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+server/routes.ts(3753,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+server/routes.ts(3848,9): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type '{ tenantId: string; academicYearId: string; grade: string; isActive?: boolean | null | undefined; createdAt?: Date | null | undefined; gradeGroup?: string | null | undefined; displayName?: string | ... 1 more ... | undefined; }'.
+server/routes.ts(3987,37): error TS2307: Cannot find module 'bcryptjs' or its corresponding type declarations.
+server/routes.ts(3994,35): error TS2307: Cannot find module 'bcryptjs' or its corresponding type declarations.
+server/routes.ts(4019,35): error TS2307: Cannot find module 'bcryptjs' or its corresponding type declarations.
+server/routes.ts(4112,36): error TS2339: Property 'getUpload' does not exist on type 'IStorage'.
+server/routes.ts(4427,35): error TS2307: Cannot find module 'bcryptjs' or its corresponding type declarations.
+server/routes.ts(4574,64): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+server/routes.ts(4585,54): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+server/routes.ts(4658,46): error TS2339: Property 'isDeleted' does not exist on type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }'.
+server/routes.ts(4665,27): error TS2339: Property 'principalEmail' does not exist on type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }'.
+server/routes.ts(4666,27): error TS2551: Property 'principalPhone' does not exist on type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }'. Did you mean 'principalName'?
+server/routes.ts(4668,22): error TS2339: Property 'createdAt' does not exist on type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }'.
+server/routes.ts(4693,9): error TS2353: Object literal may only specify known properties, and 'principalEmail' does not exist in type '{ name: string; code: string; logo?: string | null | undefined; active?: boolean | null | undefined; principalName?: string | null | undefined; address?: string | null | undefined; city?: string | ... 1 more ... | undefined; ... 10 more ...; userCodeCounter?: number | ... 1 more ... | undefined; }'.
+server/routes.ts(4896,32): error TS2339: Property 'isDeleted' does not exist on type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }'.
+server/routes.ts(4939,50): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+server/storage.ts(395,14): error TS2420: Class 'MemStorage' incorrectly implements interface 'IStorage'.
+  Type 'MemStorage' is missing the following properties from type 'IStorage': softDeleteTenant, getWingsByTenant, getWing, createWing, and 7 more.
+server/storage.ts(444,11): error TS2739: Type '{ id: string; tenantId: null; email: string; password: string; name: string; role: "super_admin"; grade: null; avatar: null; parentOf: null; active: true; assignedQuestions: {}; sessionToken: null; }' is missing the following properties from type '{ id: string; name: string; active: boolean | null; email: string; tenantId: string | null; grade: string | null; userCode: string | null; password: string; role: "super_admin" | "admin" | ... 5 more ... | "parent"; ... 7 more ...; deletedBy: string | null; }': userCode, mustChangePassword, isDeleted, deletedAt, deletedBy
+server/storage.ts(529,11): error TS2739: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; tenantId: string | null; email: string; password: string; name: string; role: "super_admin" | "admin" | "hod" | "principal" | "exam_committee" | "teacher" | "student" | "parent"; ... 5 more ...; sessionToken: string | null; }' is missing the following properties from type '{ id: string; name: string; active: boolean | null; email: string; tenantId: string | null; grade: string | null; userCode: string | null; password: string; role: "super_admin" | "admin" | ... 5 more ... | "parent"; ... 7 more ...; deletedBy: string | null; }': userCode, mustChangePassword, isDeleted, deletedAt, deletedBy
+server/storage.ts(573,11): error TS2740: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; name: string; code: string; logo: string | null; active: boolean; }' is missing the following properties from type '{ id: string; name: string; code: string; logo: string | null; active: boolean | null; principalName: string | null; address: string | null; city: string | null; state: string | null; ... 9 more ...; userCodeCounter: number | null; }': principalName, address, city, state, and 10 more.
+server/storage.ts(677,49): error TS2802: Type 'Map<string, { id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; tenantId: string; ... 25 more ...; rejectionReason: string | null; }[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(735,11): error TS2740: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; tenantId: string; content: string; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; options: string[] | null; ... 19 more ...; status: string; }' is missing the following properties from type '{ id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; tenantId: string; ... 25 more ...; rejectionReason: string | null; }': isDeleted, deletedAt, deletedBy, reviewedBy, and 2 more.
+server/storage.ts(1010,11): error TS2739: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; tenantId: string; filename: string; source: string; subject: string | null; grade: string | null; questionCount: number; uploadedBy: string | null; uploadedAt: Date; }' is missing the following properties from type '{ id: string; tenantId: string; grade: string | null; isDeleted: boolean | null; deletedAt: Date | null; deletedBy: string | null; subject: string | null; questionCount: number | null; filename: string; source: string; uploadedBy: string | null; uploadedAt: Date | null; }': isDeleted, deletedAt, deletedBy
+server/storage.ts(1421,11): error TS2740: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; tenantId: string; name: string; subject: string; grade: string; totalMarks: number; sections: any; createdBy: string | null; approvedBy: string | null; isApproved: boolean; createdAt: Date; }' is missing the following properties from type '{ id: string; name: string; tenantId: string; isLocked: boolean | null; lockedAt: Date | null; lockedBy: string | null; createdAt: Date | null; academicYearId: string | null; ... 11 more ...; isApproved: boolean | null; }': isLocked, lockedAt, lockedBy, academicYearId, and 5 more.
+server/storage.ts(1871,7): error TS2322: Type 'string' is not assignable to type '"active" | "draft" | "locked" | "submitted" | "pending_hod" | "hod_approved" | "hod_rejected" | "pending_principal" | "principal_approved" | "principal_rejected" | "sent_to_committee" | "archived"'.
+server/storage.ts(1873,7): error TS2322: Type 'string' is not assignable to type '"super_admin" | "admin" | "hod" | "principal" | "exam_committee" | "teacher" | "student" | "parent"'.
+server/storage.ts(1964,7): error TS2322: Type 'string' is not assignable to type '"test_unlocked" | "exam_submitted" | "result_published"'.
+server/storage.ts(2349,24): error TS2802: Type 'MapIterator<{ id: string; type: "unit_test" | "review_test" | "quarterly" | "half_yearly" | "revision" | "preparatory" | "annual" | "mock"; tenantId: string; isActive: boolean | null; grade: string; ... 24 more ...; answerKeyUrl: string | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2356,24): error TS2802: Type 'MapIterator<{ id: string; type: "unit_test" | "review_test" | "quarterly" | "half_yearly" | "revision" | "preparatory" | "annual" | "mock"; tenantId: string; isActive: boolean | null; grade: string; ... 24 more ...; answerKeyUrl: string | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2363,21): error TS2802: Type 'MapIterator<{ id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; tenantId: string; ... 25 more ...; rejectionReason: string | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2366,21): error TS2802: Type 'MapIterator<{ id: string; status: "submitted" | "in_progress" | "absent" | "marked" | null; tenantId: string; totalMarks: number | null; testId: string; studentId: string; assignedQuestionIds: string[] | null; ... 9 more ...; manualScores: Record<...> | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2373,21): error TS2802: Type 'MapIterator<{ id: string; options: string[] | null; type: "mcq" | "true_false" | "fill_blank" | "matching" | "numerical" | "short_answer" | "long_answer"; status: string | null; tenantId: string; ... 25 more ...; rejectionReason: string | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2530,7): error TS2322: Type 'string' is not assignable to type '"primary" | "middle" | "secondary" | "senior_secondary"'.
+server/storage.ts(2535,7): error TS2322: Type 'string' is not assignable to type '"annual" | "unit" | "term" | "practice"'.
+server/storage.ts(2568,22): error TS2802: Type 'MapIterator<{ id: string; name: string; tenantId: string; isLocked: boolean | null; lockedAt: Date | null; lockedBy: string | null; createdAt: Date | null; academicYearId: string | null; ... 11 more ...; isApproved: boolean | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2571,24): error TS2802: Type 'MapIterator<{ id: string; type: "unit_test" | "review_test" | "quarterly" | "half_yearly" | "revision" | "preparatory" | "annual" | "mock"; tenantId: string; isActive: boolean | null; grade: string; ... 24 more ...; answerKeyUrl: string | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(2610,5): error TS2740: Type 'MemStorage' is missing the following properties from type 'IStorage': softDeleteTenant, getWingsByTenant, getWing, createWing, and 7 more.
+server/storage.ts(2613,3): error TS2740: Type 'PgStorage' is missing the following properties from type 'IStorage': softDeleteTenant, getWingsByTenant, getWing, createWing, and 7 more. to see all errors. Many seem to be in the original codebase (e.g., ). They should be fixed to ensure a stable build.
+    *   **Why to solve this issue and what will be achieved with this?** A clean build is necessary for long-term stability and reliable testing.
+    *   **Should Test frontend/backend/both after fix:** Both (regression testing).
+    *   **Is recurring issue?** Y
+
+**Known issue recurrence from previous fork**
+- N/A
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+*   **Frontend:** React, TypeScript, Vite, Tailwind CSS, Shadcn UI, TanStack Query
+*   **Backend:** Node.js, Express.js
+*   **Database:** PostgreSQL, Drizzle ORM
+*   **Authentication:** JWT
+
+**key DB schema**
+*   :  (Schools)
+*   : 
+*   :  (**New**)
+*   : Schema to be finalized, will link to wings and contain exam details.
+*   : 
+
+**changes in tech stack**
+- None.
+
+**All files of reference**
+*   **New Pages (to be completed):**
+    *   
+    *   
+    *   
+    *   
+*   **Key Modified Files:**
+    *   : Added the  table.
+    *   : Added multiple  endpoints.
+*   **Files for Debugging:**
+    *    (shows the styling bug)
+    *    (part of the attempted fix)
+    *   
+
+**Areas that need refactoring**:
+- The old admin pages located at  are now superseded by the new  flow and should be removed to prevent confusion.
+- Multiple pages are fetching school/tenant data independently. A robust, centralized  or equivalent state management solution should be implemented to provide this data to all Super Admin pages consistently.
+
+**key api endpoints**
+*   
+*   
+*   
+*   
+
+**Critical Info for New Agent**
+*   You **MUST** work on the new dashboard located at . Do not modify the old pages under . The user was very clear about starting fresh.
+*   The highest priority is to fix the CSS rendering issue. Without it, no frontend work is possible.
+*   The routes for the new superadmin pages have not been added to . This must be done to make the pages accessible.
+*   The database is not migrated. 
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts' must be run once the environment is set up.
+
+**documents and test reports created in this job**
+- None.
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User:** Requests a brand-new Super Admin dashboard with specific features. **Status: In Progress**.
+2.  **User:** Asks to save to GitHub. **Status: Responded**.
+3.  **User:** Reports a blank page via screenshot. **Status: In Progress**.
+4.  **User:** Expresses frustration about repeated errors. **Status: Responded**.
+5.  **User:** Asks agent to save to GitHub. **Status: Responded**.
+6.  **User:** Reports no changes visible on the live site. **Status: Responded**.
+7.  **User:** Asks for Super Admin credentials. **Status: Responded**.
+8.  **User:** Reports a broken login page via screenshot (the CSS issue). **Status: In Progress**.
+9.  **User:** Asks to initialize GitHub. **Status: Responded**.
+10. **User:** Provides the final, detailed specification for the new Super Admin dashboard. **Status: In Progress**.
+
+**Project Health Check:**
+*   **Broken:**
+    *   Frontend rendering/styling is completely broken.
+    *   Database schema is not migrated and is out of sync with the code.
+*   **Mocked:** N/A
+
+**3rd Party Integrations**
+*   **AWS S3:** Intended for file storage (logos, documents). Configuration will be managed via the new Super Admin UI. Requires user-provided credentials.
+
+**Testing status**
+*   **Testing agent used after significant changes:** NO
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None
+*   **Known regressions:** The login page styling, which was presumably working in the original ZIP, is now broken.
+
+**Credentials to test flow:**
+*   **Role:** Super Admin
+*   **Email:** 
+*   **Password:** 
+*   **Note:** These credentials are for the in-memory development storage () only. They will not work in a production PostgreSQL environment until a database seed script is created and run.
+
+**What agent forgot to execute**
+*   The agent created the new Super Admin pages but forgot to add their routes to the main router in , making them inaccessible.
+*   A successful database migration (
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts') has never been performed, so the database does not reflect the latest schema changes (like the new  table).
+*   The agent has consistently ignored pre-existing TypeScript errors, which could compromise build stability.</analysis>
