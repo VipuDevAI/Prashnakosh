@@ -716,6 +716,8 @@ export type SchoolWing = typeof schoolWings.$inferSelect;
 
 // =====================================================
 // SUPER ADMIN - EXAMS TABLE (Under wings)
+// This is the SINGLE SOURCE OF TRUTH for exams
+// Used by: HOD Blueprint, Student Mock Tests, Principal Analytics
 // =====================================================
 export const schoolExams = pgTable("school_exams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -731,6 +733,7 @@ export const schoolExams = pgTable("school_exams", {
   watermarkText: text("watermark_text"),
   logoUrl: text("logo_url"),
   pageSize: text("page_size").default("A4"),
+  allowMockTest: boolean("allow_mock_test").default(false), // When true, students can take this as mock test
   isActive: boolean("is_active").default(true),
   isDeleted: boolean("is_deleted").default(false),
   createdAt: timestamp("created_at").default(sql`now()`),
