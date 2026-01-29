@@ -24,6 +24,14 @@ PRINCIPAL_CREDS = {
 }
 
 
+def get_auth_token(creds):
+    """Helper to get auth token"""
+    response = requests.post(f"{BASE_URL}/api/auth/login", json=creds)
+    if response.status_code == 200:
+        return response.json().get("token")
+    return None
+
+
 class TestAuthentication:
     """Test login for Super Admin and Principal"""
     
@@ -34,6 +42,7 @@ class TestAuthentication:
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
         assert "user" in data, "Response should contain user"
+        assert "token" in data, "Response should contain token"
         assert data["user"]["role"] == "super_admin", "User should be super_admin"
         print(f"Super Admin logged in: {data['user']['name']}")
     
@@ -44,6 +53,7 @@ class TestAuthentication:
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
         assert "user" in data, "Response should contain user"
+        assert "token" in data, "Response should contain token"
         assert data["user"]["role"] == "principal", "User should be principal"
         print(f"Principal logged in: {data['user']['name']}")
 
@@ -54,16 +64,18 @@ class TestPrincipalDashboard:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Login as principal before each test"""
-        self.session = requests.Session()
-        response = self.session.post(f"{BASE_URL}/api/auth/login", json=PRINCIPAL_CREDS)
+        response = requests.post(f"{BASE_URL}/api/auth/login", json=PRINCIPAL_CREDS)
         if response.status_code != 200:
             pytest.skip(f"Principal login failed: {response.text}")
-        self.user = response.json().get("user")
+        data = response.json()
+        self.token = data.get("token")
+        self.user = data.get("user")
+        self.headers = {"Authorization": f"Bearer {self.token}"}
         print(f"Logged in as Principal: {self.user.get('name')}")
     
     def test_principal_snapshot_api(self):
         """Test /api/principal/snapshot returns real data"""
-        response = self.session.get(f"{BASE_URL}/api/principal/snapshot")
+        response = requests.get(f"{BASE_URL}/api/principal/snapshot", headers=self.headers)
         print(f"Snapshot API response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -82,10 +94,11 @@ class TestPrincipalDashboard:
         
         # According to task, test school has 2 students
         print(f"Total students in school: {data['totalStudents']}")
+        assert data["totalStudents"] == 2, f"Expected 2 students, got {data['totalStudents']}"
     
     def test_principal_grade_performance_api(self):
         """Test /api/principal/grade-performance returns real data"""
-        response = self.session.get(f"{BASE_URL}/api/principal/grade-performance")
+        response = requests.get(f"{BASE_URL}/api/principal/grade-performance", headers=self.headers)
         print(f"Grade Performance API response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -106,7 +119,7 @@ class TestPrincipalDashboard:
     
     def test_principal_subject_health_api(self):
         """Test /api/principal/subject-health returns real data"""
-        response = self.session.get(f"{BASE_URL}/api/principal/subject-health")
+        response = requests.get(f"{BASE_URL}/api/principal/subject-health", headers=self.headers)
         print(f"Subject Health API response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -125,7 +138,7 @@ class TestPrincipalDashboard:
     
     def test_principal_at_risk_students_api(self):
         """Test /api/principal/at-risk-students returns real data"""
-        response = self.session.get(f"{BASE_URL}/api/principal/at-risk-students")
+        response = requests.get(f"{BASE_URL}/api/principal/at-risk-students", headers=self.headers)
         print(f"At-Risk Students API response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -144,7 +157,7 @@ class TestPrincipalDashboard:
     
     def test_principal_risk_alerts_api(self):
         """Test /api/principal/risk-alerts returns real data"""
-        response = self.session.get(f"{BASE_URL}/api/principal/risk-alerts")
+        response = requests.get(f"{BASE_URL}/api/principal/risk-alerts", headers=self.headers)
         print(f"Risk Alerts API response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -157,7 +170,7 @@ class TestPrincipalDashboard:
     def test_no_hardcoded_demo_data(self):
         """Verify no hardcoded names like 'Mr. Sharma' or 'Ms. Gupta' appear"""
         # Check at-risk students
-        response = self.session.get(f"{BASE_URL}/api/principal/at-risk-students")
+        response = requests.get(f"{BASE_URL}/api/principal/at-risk-students", headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         
@@ -169,7 +182,7 @@ class TestPrincipalDashboard:
                 assert hardcoded.lower() not in name.lower(), f"Found hardcoded name '{hardcoded}' in at-risk students"
         
         # Check risk alerts
-        response = self.session.get(f"{BASE_URL}/api/principal/risk-alerts")
+        response = requests.get(f"{BASE_URL}/api/principal/risk-alerts", headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         
@@ -181,36 +194,24 @@ class TestPrincipalDashboard:
         print("No hardcoded demo names found - data is from real database")
 
 
-class TestSuperAdminDashboard:
-    """Test Super Admin Dashboard - should have 5 cards including Reference Library"""
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Login as super admin before each test"""
-        self.session = requests.Session()
-        response = self.session.post(f"{BASE_URL}/api/auth/login", json=SUPER_ADMIN_CREDS)
-        if response.status_code != 200:
-            pytest.skip(f"Super Admin login failed: {response.text}")
-        self.user = response.json().get("user")
-        print(f"Logged in as Super Admin: {self.user.get('name')}")
-
-
 class TestReferenceMaterialsCRUD:
     """Test Reference Materials CRUD operations for Super Admin"""
     
     @pytest.fixture(autouse=True)
     def setup(self):
         """Login as super admin before each test"""
-        self.session = requests.Session()
-        response = self.session.post(f"{BASE_URL}/api/auth/login", json=SUPER_ADMIN_CREDS)
+        response = requests.post(f"{BASE_URL}/api/auth/login", json=SUPER_ADMIN_CREDS)
         if response.status_code != 200:
             pytest.skip(f"Super Admin login failed: {response.text}")
-        self.user = response.json().get("user")
+        data = response.json()
+        self.token = data.get("token")
+        self.user = data.get("user")
+        self.headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
         print(f"Logged in as Super Admin: {self.user.get('name')}")
     
     def test_get_reference_materials_list(self):
         """Test GET /api/superadmin/reference-materials"""
-        response = self.session.get(f"{BASE_URL}/api/superadmin/reference-materials")
+        response = requests.get(f"{BASE_URL}/api/superadmin/reference-materials", headers=self.headers)
         print(f"Get Reference Materials response: {response.status_code}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
@@ -232,9 +233,10 @@ class TestReferenceMaterialsCRUD:
             "mimeType": "application/pdf"
         }
         
-        response = self.session.post(
+        response = requests.post(
             f"{BASE_URL}/api/superadmin/reference-materials",
-            json=material_data
+            json=material_data,
+            headers=self.headers
         )
         print(f"Create Reference Material response: {response.status_code}")
         assert response.status_code in [200, 201], f"Expected 200/201, got {response.status_code}: {response.text}"
@@ -245,8 +247,6 @@ class TestReferenceMaterialsCRUD:
         assert data["grade"] == material_data["grade"], "Grade should match"
         print(f"Created reference material with ID: {data['id']}")
         
-        # Store ID for cleanup
-        self.created_material_id = data["id"]
         return data["id"]
     
     def test_create_and_verify_persistence(self):
@@ -264,16 +264,17 @@ class TestReferenceMaterialsCRUD:
             "mimeType": "application/pdf"
         }
         
-        create_response = self.session.post(
+        create_response = requests.post(
             f"{BASE_URL}/api/superadmin/reference-materials",
-            json=material_data
+            json=material_data,
+            headers=self.headers
         )
         assert create_response.status_code in [200, 201], f"Create failed: {create_response.text}"
         created = create_response.json()
         material_id = created["id"]
         
         # Verify by fetching list
-        list_response = self.session.get(f"{BASE_URL}/api/superadmin/reference-materials")
+        list_response = requests.get(f"{BASE_URL}/api/superadmin/reference-materials", headers=self.headers)
         assert list_response.status_code == 200
         materials = list_response.json()
         
@@ -292,9 +293,10 @@ class TestReferenceMaterialsCRUD:
             "fileName": "test_chem_paper.pdf"
         }
         
-        create_response = self.session.post(
+        create_response = requests.post(
             f"{BASE_URL}/api/superadmin/reference-materials",
-            json=material_data
+            json=material_data,
+            headers=self.headers
         )
         assert create_response.status_code in [200, 201]
         created = create_response.json()
@@ -306,9 +308,10 @@ class TestReferenceMaterialsCRUD:
             "description": "Updated description"
         }
         
-        update_response = self.session.patch(
+        update_response = requests.patch(
             f"{BASE_URL}/api/superadmin/reference-materials/{material_id}",
-            json=update_data
+            json=update_data,
+            headers=self.headers
         )
         print(f"Update Reference Material response: {update_response.status_code}")
         assert update_response.status_code == 200, f"Expected 200, got {update_response.status_code}: {update_response.text}"
@@ -328,23 +331,25 @@ class TestReferenceMaterialsCRUD:
             "fileName": "test_bio_paper.pdf"
         }
         
-        create_response = self.session.post(
+        create_response = requests.post(
             f"{BASE_URL}/api/superadmin/reference-materials",
-            json=material_data
+            json=material_data,
+            headers=self.headers
         )
         assert create_response.status_code in [200, 201]
         created = create_response.json()
         material_id = created["id"]
         
         # Delete the material
-        delete_response = self.session.delete(
-            f"{BASE_URL}/api/superadmin/reference-materials/{material_id}"
+        delete_response = requests.delete(
+            f"{BASE_URL}/api/superadmin/reference-materials/{material_id}",
+            headers=self.headers
         )
         print(f"Delete Reference Material response: {delete_response.status_code}")
         assert delete_response.status_code in [200, 204], f"Expected 200/204, got {delete_response.status_code}: {delete_response.text}"
         
         # Verify deletion by checking list
-        list_response = self.session.get(f"{BASE_URL}/api/superadmin/reference-materials")
+        list_response = requests.get(f"{BASE_URL}/api/superadmin/reference-materials", headers=self.headers)
         assert list_response.status_code == 200
         materials = list_response.json()
         
@@ -360,14 +365,16 @@ class TestCleanup:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Login as super admin"""
-        self.session = requests.Session()
-        response = self.session.post(f"{BASE_URL}/api/auth/login", json=SUPER_ADMIN_CREDS)
+        response = requests.post(f"{BASE_URL}/api/auth/login", json=SUPER_ADMIN_CREDS)
         if response.status_code != 200:
             pytest.skip(f"Super Admin login failed: {response.text}")
+        data = response.json()
+        self.token = data.get("token")
+        self.headers = {"Authorization": f"Bearer {self.token}"}
     
     def test_cleanup_test_materials(self):
         """Clean up TEST_ prefixed materials"""
-        response = self.session.get(f"{BASE_URL}/api/superadmin/reference-materials")
+        response = requests.get(f"{BASE_URL}/api/superadmin/reference-materials", headers=self.headers)
         if response.status_code != 200:
             print("Could not fetch materials for cleanup")
             return
@@ -376,8 +383,9 @@ class TestCleanup:
         test_materials = [m for m in materials if m.get("title", "").startswith("TEST_")]
         
         for material in test_materials:
-            delete_response = self.session.delete(
-                f"{BASE_URL}/api/superadmin/reference-materials/{material['id']}"
+            delete_response = requests.delete(
+                f"{BASE_URL}/api/superadmin/reference-materials/{material['id']}",
+                headers=self.headers
             )
             if delete_response.status_code in [200, 204]:
                 print(f"Cleaned up test material: {material['title']}")
