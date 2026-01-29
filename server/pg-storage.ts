@@ -62,6 +62,7 @@ import {
   schoolStorageConfigs,
   schoolWings,
   schoolExams,
+  referenceMaterials,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
