@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AppLogo } from "@/components/app-logo";
+import { AppFooter } from "@/components/app-footer";
 import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles } from "lucide-react";
 
 export default function SuperAdminDashboard() {
@@ -15,15 +17,13 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-300">
       {/* Premium Header with Gradient */}
       <header className="relative border-b border-white/20 dark:border-slate-800/50 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900 text-white shadow-xl shadow-indigo-500/20 dark:shadow-indigo-900/30">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
         <div className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
-              <Shield className="w-7 h-7 text-white" />
-            </div>
+            <AppLogo size="lg" showText={false} />
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Prashnakosh</h1>
               <p className="text-sm text-white/80">Super Admin Control Center</p>
@@ -52,10 +52,10 @@ export default function SuperAdminDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-12">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full">
         {/* Welcome Section with Gradient Text */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white mb-6 shadow-2xl shadow-purple-500/30 animate-pulse">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white mb-6 shadow-2xl shadow-purple-500/30">
             <Sparkles className="w-10 h-10" />
           </div>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
@@ -152,32 +152,10 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Stats Section */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
-            <p className="text-3xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">0</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Schools</p>
-          </div>
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
-            <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">0</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Users</p>
-          </div>
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
-            <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">0</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Exams</p>
-          </div>
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">0</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Questions</p>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-        <p>© 2026 Prashnakosh. All rights reserved.</p>
-      </footer>
+      <AppFooter />
     </div>
   );
 }
