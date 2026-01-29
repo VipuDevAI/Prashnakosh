@@ -158,29 +158,30 @@ export default function StoragePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-purple-50 to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
       <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/superadmin")} data-testid="btn-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white">
-                <HardDrive className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">S3 Storage Configuration</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Allocate storage per school</p>
-              </div>
+            <img 
+              src={BRAND.logo} 
+              alt={BRAND.name}
+              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">S3 Storage Configuration</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Allocate storage per school</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-8 space-y-8 w-full">
         {/* Overview Table */}
         <Card>
           <CardHeader>
