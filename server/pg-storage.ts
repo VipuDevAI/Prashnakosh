@@ -133,6 +133,15 @@ export class PgStorage implements IStorage {
     return db.select().from(users).where(eq(users.tenantId, tenantId));
   }
 
+  async getUserByEmailAndTenant(email: string, tenantId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users)
+      .where(and(
+        ilike(users.email, email),
+        eq(users.tenantId, tenantId)
+      ));
+    return user;
+  }
+
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users);
   }
