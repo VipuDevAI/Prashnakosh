@@ -116,10 +116,14 @@ users (
   - Password: `SuperAdmin@123`
 
 ## Upcoming Tasks (P1)
-1. **Integrate Super Admin Exams into HOD Blueprint Flow**
-   - Update HOD's blueprint creation page to fetch exams from Super Admin configuration
-2. **Integrate Super Admin Exams into Student Mock Tests**
-   - Display exams where "Allow Mock Test" is enabled
+1. **Principal Analytics Dashboard** - PowerBI-style insights including:
+   - Student performance trends
+   - Subject-wise analysis
+   - Teacher performance metrics
+   - Exam completion rates
+   - Class/Section comparisons
+2. **Integrate Super Admin Exams into HOD Blueprint Flow**
+3. **Integrate Super Admin Exams into Student Mock Tests**
 
 ## Future Tasks (P2)
 1. Database seed script for initial superadmin user
