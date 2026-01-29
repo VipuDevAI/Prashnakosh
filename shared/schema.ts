@@ -779,7 +779,8 @@ export const schoolStorageConfigs = pgTable("school_storage_configs", {
   tenantId: varchar("tenant_id").notNull().unique(),
   s3BucketName: text("s3_bucket_name"),
   s3FolderPath: text("s3_folder_path"),
-  maxStorageBytes: integer("max_storage_bytes").default(5368709120), // 5GB default
+  maxStorageBytes: bigint("max_storage_bytes", { mode: "number" }).default(107374182400), // 100GB default
+  usedStorageBytes: bigint("used_storage_bytes", { mode: "number" }).default(0),
   isConfigured: boolean("is_configured").default(false),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
@@ -789,3 +790,54 @@ export const schoolStorageConfigs = pgTable("school_storage_configs", {
 export const insertSchoolStorageConfigSchema = createInsertSchema(schoolStorageConfigs).omit({ id: true });
 export type InsertSchoolStorageConfig = z.infer<typeof insertSchoolStorageConfigSchema>;
 export type SchoolStorageConfig = typeof schoolStorageConfigs.$inferSelect;
+
+// Global Reference Materials - For Class 10 & 12 students only
+export const referenceMaterials = pgTable("reference_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  grade: text("grade").notNull(), // "10" or "12" only
+  subject: text("subject"),
+  category: text("category").notNull(), // "question_paper", "reference_notes", "answer_key", "syllabus"
+  academicYear: text("academic_year"), // e.g., "2023-24", "2022-23"
+  fileUrl: text("file_url"), // S3 URL when configured
+  fileName: text("file_name").notNull(),
+  fileSize: bigint("file_size", { mode: "number" }).default(0),
+  mimeType: text("mime_type"),
+  s3Key: text("s3_key"), // S3 object key for future retrieval
+  isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  createdBy: varchar("created_by"),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const insertReferenceMaterialSchema = createInsertSchema(referenceMaterials).omit({ id: true });
+export type InsertReferenceMaterial = z.infer<typeof insertReferenceMaterialSchema>;
+export type ReferenceMaterial = typeof referenceMaterials.$inferSelect;
+
+// File Metadata - Track all uploaded files (school-specific and global)
+export const fileMetadata = pgTable("file_metadata", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id"), // null for global files
+  fileType: text("file_type").notNull(), // "logo", "watermark", "question_paper", "answer_key", "diagram", "reference"
+  fileName: text("file_name").notNull(),
+  originalName: text("original_name").notNull(),
+  fileSize: bigint("file_size", { mode: "number" }).default(0),
+  mimeType: text("mime_type"),
+  s3Bucket: text("s3_bucket"),
+  s3Key: text("s3_key"),
+  s3Url: text("s3_url"),
+  isUploaded: boolean("is_uploaded").default(false), // true when actually in S3
+  linkedEntityType: text("linked_entity_type"), // "exam", "blueprint", "question", "reference_material"
+  linkedEntityId: varchar("linked_entity_id"),
+  isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  createdBy: varchar("created_by"),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const insertFileMetadataSchema = createInsertSchema(fileMetadata).omit({ id: true });
+export type InsertFileMetadata = z.infer<typeof insertFileMetadataSchema>;
+export type FileMetadata = typeof fileMetadata.$inferSelect;
