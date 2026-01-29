@@ -4819,7 +4819,7 @@ export function registerPaperGenerationRoutes(app: Express) {
   app.post("/api/superadmin/exams", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
       const user = req.user as AuthUser;
-      const { tenantId, wingId, examName, academicYear, totalMarks, durationMinutes, examDate, subjects, questionPaperSets, watermarkText, logoUrl, pageSize } = req.body;
+      const { tenantId, wingId, examName, academicYear, totalMarks, durationMinutes, examDate, subjects, questionPaperSets, watermarkText, logoUrl, pageSize, allowMockTest } = req.body;
       if (!tenantId || !wingId || !examName || !academicYear) {
         return res.status(400).json({ error: "tenantId, wingId, examName, and academicYear are required" });
       }
@@ -4836,6 +4836,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         watermarkText: watermarkText || null,
         logoUrl: logoUrl || null,
         pageSize: pageSize || "A4",
+        allowMockTest: allowMockTest || false,
         isActive: true,
         createdBy: user.id,
       });
