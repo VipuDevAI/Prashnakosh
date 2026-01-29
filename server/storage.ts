@@ -2744,6 +2744,66 @@ export class MemStorage implements IStorage {
     this.schoolStorageConfigs.set(tenantId, created);
     return created;
   }
+
+  // =====================================================
+  // REFERENCE MATERIALS - Global Content Library
+  // =====================================================
+  private referenceMaterialsStore = new Map<string, ReferenceMaterial>();
+
+  async getReferenceMaterials(grade?: string, category?: string): Promise<ReferenceMaterial[]> {
+    let materials = Array.from(this.referenceMaterialsStore.values()).filter(m => !m.isDeleted);
+    if (grade) {
+      materials = materials.filter(m => m.grade === grade);
+    }
+    if (category) {
+      materials = materials.filter(m => m.category === category);
+    }
+    return materials.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }
+
+  async createReferenceMaterial(material: InsertReferenceMaterial): Promise<ReferenceMaterial> {
+    const id = randomUUID();
+    const created: ReferenceMaterial = {
+      id,
+      title: material.title,
+      description: material.description || null,
+      grade: material.grade,
+      subject: material.subject || null,
+      category: material.category,
+      academicYear: material.academicYear || null,
+      fileUrl: material.fileUrl || null,
+      fileName: material.fileName,
+      fileSize: material.fileSize || 0,
+      mimeType: material.mimeType || null,
+      s3Key: material.s3Key || null,
+      isActive: material.isActive ?? true,
+      isDeleted: false,
+      createdAt: new Date(),
+      createdBy: material.createdBy || null,
+      updatedAt: new Date(),
+    };
+    this.referenceMaterialsStore.set(id, created);
+    return created;
+  }
+
+  async updateReferenceMaterial(id: string, data: Partial<ReferenceMaterial>): Promise<ReferenceMaterial | undefined> {
+    const material = this.referenceMaterialsStore.get(id);
+    if (!material || material.isDeleted) return undefined;
+    const updated = { ...material, ...data, updatedAt: new Date() };
+    this.referenceMaterialsStore.set(id, updated);
+    return updated;
+  }
+
+  async softDeleteReferenceMaterial(id: string): Promise<boolean> {
+    const material = this.referenceMaterialsStore.get(id);
+    if (!material || material.isDeleted) return false;
+    this.referenceMaterialsStore.set(id, { ...material, isDeleted: true, isActive: false, updatedAt: new Date() });
+    return true;
+  }
 }
 
 let pgStorageModule: { pgStorage: IStorage } | null = null;
