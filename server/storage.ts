@@ -509,6 +509,12 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(u => u.tenantId === tenantId);
   }
 
+  async getUserByEmailAndTenant(email: string, tenantId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.tenantId === tenantId
+    );
+  }
+
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
   }
