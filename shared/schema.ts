@@ -691,7 +691,55 @@ export const wingGradeMapping: Record<WingType, string[]> = {
   senior_secondary: ["11", "12"],
 };
 
-// Admin Exam Config Types
+// =====================================================
+// SUPER ADMIN - WINGS TABLE (Dynamic per school)
+// =====================================================
+export const schoolWings = pgTable("school_wings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull(),
+  grades: jsonb("grades").$type<string[]>().default([]),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const insertSchoolWingSchema = createInsertSchema(schoolWings).omit({ id: true });
+export type InsertSchoolWing = z.infer<typeof insertSchoolWingSchema>;
+export type SchoolWing = typeof schoolWings.$inferSelect;
+
+// =====================================================
+// SUPER ADMIN - EXAMS TABLE (Under wings)
+// =====================================================
+export const schoolExams = pgTable("school_exams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  wingId: varchar("wing_id").notNull(),
+  examName: text("exam_name").notNull(),
+  academicYear: text("academic_year").notNull(),
+  totalMarks: integer("total_marks").notNull().default(100),
+  durationMinutes: integer("duration_minutes").notNull().default(60),
+  examDate: timestamp("exam_date"),
+  subjects: jsonb("subjects").$type<string[]>().default([]),
+  questionPaperSets: integer("question_paper_sets").default(1),
+  watermarkText: text("watermark_text"),
+  logoUrl: text("logo_url"),
+  pageSize: text("page_size").default("A4"),
+  isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+  createdBy: varchar("created_by"),
+});
+
+export const insertSchoolExamSchema = createInsertSchema(schoolExams).omit({ id: true });
+export type InsertSchoolExam = z.infer<typeof insertSchoolExamSchema>;
+export type SchoolExam = typeof schoolExams.$inferSelect;
+
+// Admin Exam Config Types (legacy - keeping for compatibility)
 export const adminExamTypes = ["unit", "term", "annual", "practice"] as const;
 export type AdminExamType = typeof adminExamTypes[number];
 
