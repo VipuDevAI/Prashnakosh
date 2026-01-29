@@ -5064,7 +5064,7 @@ export function registerPaperGenerationRoutes(app: Express) {
   // Bulk upload users
   app.post("/api/superadmin/users/bulk", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
-      const { tenantId, role, users: usersData } = req.body;
+      const { tenantId, role, users: usersData, wingMapping } = req.body;
       
       if (!tenantId) {
         return res.status(400).json({ error: "tenantId is required" });
@@ -5085,7 +5085,7 @@ export function registerPaperGenerationRoutes(app: Express) {
 
       for (const userData of usersData) {
         try {
-          const { name, email, password, grade, roll_number, subject } = userData;
+          const { name, email, password } = userData;
           
           if (!name || !email || !password) {
             errors.push(`Row skipped: Missing required fields for ${email || name || "unknown"}`);
@@ -5101,13 +5101,60 @@ export function registerPaperGenerationRoutes(app: Express) {
             continue;
           }
 
+          // Handle teacher-specific fields
+          let wingId = null;
+          let subjects: string[] = [];
+          if (role === "teacher") {
+            const wingName = userData.wing?.trim().toLowerCase();
+            if (!wingName) {
+              errors.push(`${email}: Wing is required for teachers`);
+              failed++;
+              continue;
+            }
+            wingId = wingMapping?.[wingName];
+            if (!wingId) {
+              errors.push(`${email}: Invalid wing "${userData.wing}"`);
+              failed++;
+              continue;
+            }
+            // Parse subjects (comma-separated)
+            const subjectsStr = userData.subjects?.trim();
+            if (!subjectsStr) {
+              errors.push(`${email}: Subjects are required for teachers`);
+              failed++;
+              continue;
+            }
+            subjects = subjectsStr.split(",").map((s: string) => s.trim()).filter((s: string) => s);
+            if (subjects.length === 0) {
+              errors.push(`${email}: At least one subject is required`);
+              failed++;
+              continue;
+            }
+          }
+
+          // Handle student-specific fields
+          let grade = null;
+          let section = null;
+          if (role === "student") {
+            grade = userData.class?.toString().trim() || userData.grade?.toString().trim();
+            if (!grade) {
+              errors.push(`${email}: Class is required for students`);
+              failed++;
+              continue;
+            }
+            section = userData.section?.trim() || null;
+          }
+
           await storage.createUser({
             tenantId,
             email,
             name,
             password,
             role,
-            grade: grade || null,
+            grade,
+            section,
+            wingId,
+            subjects,
             userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
           });
           created++;
