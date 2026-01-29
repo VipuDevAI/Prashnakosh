@@ -4985,7 +4985,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       // Get tenant to create user code
-      const tenant = await storage.getTenantById(tenantId);
+      const tenant = await storage.getTenant(tenantId);
       const schoolCode = tenant?.code || "SCH";
 
       const user = await storage.createUser({
