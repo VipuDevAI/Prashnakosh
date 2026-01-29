@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Settings, HardDrive, LogOut, Shield } from "lucide-react";
+import { Building2, Settings, HardDrive, LogOut, Shield, Users } from "lucide-react";
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
