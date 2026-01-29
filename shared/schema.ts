@@ -84,6 +84,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: text("role").notNull().$type<UserRole>(),
   grade: text("grade").default("V"),
+  section: text("section"), // For students: A, B, C, etc.
+  wingId: varchar("wing_id"), // For teachers: assigned wing
+  subjects: jsonb("subjects").$type<string[]>().default([]), // For teachers: multiple subjects
   avatar: text("avatar"),
   parentOf: varchar("parent_of"),
   active: boolean("active").default(true),
