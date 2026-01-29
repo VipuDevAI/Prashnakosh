@@ -5,7 +5,7 @@ Prashnakosh is an education governance application for exam configuration and as
 
 ## Original Problem Statement
 Build a brand-new Super Admin Dashboard from scratch with:
-1. Landing page with three primary buttons: Add School, Admin Settings, S3 Storage
+1. Landing page with primary management cards
 2. Add School Module with full CRUD for schools
 3. Admin Settings Module with school selection, Wing Management, and Exam Management
 4. S3 Storage Module for allocating S3 buckets per school
@@ -17,175 +17,136 @@ Build a brand-new Super Admin Dashboard from scratch with:
 ## Tech Stack
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, Shadcn UI, TanStack Query
 - **Backend:** Node.js, Express.js
-- **Database:** PostgreSQL (via Drizzle ORM), with MemStorage for development
+- **Database:** PostgreSQL (via Drizzle ORM) - **ONLY source of truth**
 - **Authentication:** JWT-based
 
-## Architecture
-```
-/app
-├── client/                # React frontend (Vite)
-│   ├── src/
-│   │   ├── components/
-│   │   ├── lib/
-│   │   ├── pages/
-│   │   │   ├── admin/        # Old admin pages (obsolete)
-│   │   │   └── superadmin/   # NEW Super Admin pages
-│   │   │       ├── dashboard.tsx
-│   │   │       ├── schools.tsx
-│   │   │       ├── settings.tsx
-│   │   │       ├── storage.tsx
-│   │   │       ├── users.tsx
-│   │   │       └── reference-materials.tsx  # NEW
-│   │   ├── App.tsx           # Main router
-│   │   └── main.tsx
-├── server/                # Express.js backend
-│   ├── routes.ts          # API definitions
-│   ├── storage.ts         # Storage interface + MemStorage
-│   └── pg-storage.ts      # PostgreSQL storage
-├── shared/                # Drizzle schema
-│   └── schema.ts
-└── vite.config.ts
+## Critical Architecture Decisions
+
+### 1. PostgreSQL-Only Storage (MemStorage REMOVED)
+- MemStorage has been **completely removed** from the codebase
+- PostgreSQL is the **only source of truth** for all business data
+- No in-memory fallback exists - database failure = application failure
+- This ensures data integrity for sensitive student records and exam governance
+
+### 2. Exam Configuration Authority (Single Source of Truth)
+- **Super Admin creates all exams** via Admin Settings → Wing → Exams
+- **school_exams** table is the single authoritative definition
+- All roles consume from this same source:
+  - **HOD Blueprint Flow**: Uses `getActiveExamsForBlueprint()` → queries `school_exams`
+  - **Student Mock Tests**: Uses `getMockTestExams()` → queries `school_exams` where `allowMockTest=true`
+  - **Principal Analytics**: References same exam structure
+- **NO independent exam definitions** in any dashboard
+
+### 3. Schema Stability
+- All schema changes must be backward compatible
+- Run `npm run db:push` ONCE after schema is finalized
+- No repeated schema churn
+
+## Database Schema
+
+### Core Tables
+```sql
+-- Super Admin configures schools
+tenants (id, name, code, active, ...)
+
+-- Wings under each school
+school_wings (id, tenantId, name, displayName, grades, ...)
+
+-- Exams under each wing (SINGLE SOURCE OF TRUTH)
+school_exams (
+  id, tenantId, wingId, examName, academicYear,
+  totalMarks, durationMinutes, examDate, subjects,
+  allowMockTest,  -- When true, appears in Student Mock Tests
+  watermarkText, logoUrl, pageSize, isActive, ...
+)
+
+-- Users with role-based access
+users (id, tenantId, email, role, wingId, subjects, section, ...)
+
+-- Reference materials for Class 10 & 12
+reference_materials (id, title, grade, subject, category, fileName, ...)
 ```
 
 ## What's Been Implemented
 
-### Phase 1: Super Admin Dashboard (COMPLETED - Jan 29, 2026)
-- [x] Fixed CSS/styling issue by configuring Vite proxy and supervisor
-- [x] Super Admin login redirects to `/superadmin`
-- [x] Premium gradient header and colorful cards design
-- [x] Schools Management - Create, Edit, Soft Delete
-- [x] Admin Settings - Wings and Exams management
-- [x] S3 Storage Configuration
+### Phase 1: Super Admin Dashboard (COMPLETED)
+- [x] Schools Management - CRUD operations
+- [x] Wings Management - Per-school wing configuration
+- [x] Exams Management - Per-wing exam configuration with allowMockTest toggle
+- [x] S3 Storage Configuration UI
+- [x] Users Management with bulk upload
 
-### Phase 2: Teacher & Student Onboarding (COMPLETED - Jan 29, 2026)
-- [x] **Teacher onboarding with:**
-  - Wing assignment (mandatory, single wing)
-  - Subject assignment (mandatory, multiple subjects)
-  - Bulk upload with CSV template
-- [x] **Student onboarding with:**
-  - Class/Grade assignment (mandatory)
-  - Section assignment (optional)
-  - Bulk upload with CSV template
-- [x] Updated database schema with new fields: `wingId`, `subjects`, `section`
-- [x] Updated Users Management UI with new fields
+### Phase 2: Teacher & Student Onboarding (COMPLETED)
+- [x] Teacher onboarding with wing and subjects
+- [x] Student onboarding with class and section
+- [x] CSV bulk upload with templates
 
-### Phase 3: Design Improvements (COMPLETED - Jan 29, 2026)
-- [x] **Theme Provider** with dark/light/system toggle
-- [x] Theme preference persisted in localStorage
-- [x] **Multi-color gradients** on:
-  - Header (purple-pink gradient)
-  - Action cards (emerald, orange, blue, purple)
-  - Stats section (glassmorphism)
-- [x] Smooth hover animations and transitions
-- [x] Premium modern look
+### Phase 3: Design Improvements (COMPLETED)
+- [x] Dark/Light theme toggle
+- [x] Multi-color gradient cards
+- [x] Prashnakosh logo and footer
+- [x] Premium UI with glassmorphism
 
-### Phase 4: Principal Dashboard Fix (COMPLETED - Jan 29, 2026)
-- [x] **CRITICAL FIX**: Removed ALL hardcoded demo data (Mr. Sharma, Ms. Gupta, fake percentages)
-- [x] Principal Dashboard now uses REAL PostgreSQL APIs:
-  - `/api/principal/snapshot` - School snapshot (total students, tests, avg score, at-risk count)
-  - `/api/principal/grade-performance` - Grade-wise performance from actual exams
-  - `/api/principal/subject-health` - Subject-wise health analysis
-  - `/api/principal/at-risk-students` - Students with 2+ low scores
-  - `/api/principal/risk-alerts` - Tab switches, absences, score drops
-- [x] New UI tabs: Overview, Grade Performance, Subject Health, At-Risk Students, Risk Alerts
-- [x] Empty states display when no data (instead of fake data)
-- [x] Header message confirms: "All data shown is from your PostgreSQL database - no demo or mock data"
+### Phase 4: Principal Dashboard Fix (COMPLETED)
+- [x] Removed ALL hardcoded demo data
+- [x] Connected to real PostgreSQL APIs
+- [x] Shows actual student/exam metrics
 
-### Phase 5: Reference Materials Library (COMPLETED - Jan 29, 2026)
-- [x] **Super Admin Dashboard** updated with 5th card: "Reference Library"
-- [x] **Reference Materials page** with:
-  - Stats cards (Total, Class 10, Class 12, Question Papers)
-  - Filter by Grade (10, 12) and Category
-  - Search functionality
-  - Full CRUD operations
-- [x] **Backend APIs:**
-  - `GET /api/superadmin/reference-materials` - List materials
-  - `POST /api/superadmin/reference-materials` - Create material
-  - `PATCH /api/superadmin/reference-materials/:id` - Update
-  - `DELETE /api/superadmin/reference-materials/:id` - Soft delete
-- [x] **Categories supported:** question_paper, reference_notes, answer_key, syllabus
-- [x] **Grades restricted to:** Class 10 and Class 12 only
-- [x] **Academic years:** Last 10 years (2024-25 to 2015-16)
-- [x] Schema includes: title, description, grade, subject, category, academicYear, fileName, s3Key
+### Phase 5: Reference Materials Library (COMPLETED)
+- [x] Super Admin CRUD for reference materials
+- [x] Filter by grade (10/12) and category
+- [x] Student read-only access
 
-## Database Schema
+### Phase 6: PostgreSQL-Only Storage (COMPLETED - Jan 29, 2026)
+- [x] **Removed MemStorage class entirely**
+- [x] **PostgreSQL is now the ONLY storage engine**
+- [x] **Seed script creates Super Admin on startup**
+- [x] **No fallback logic - database is mandatory**
 
-### Reference Materials Table (NEW)
-```sql
-reference_materials (
-  id, title, description, grade, subject, category,
-  academicYear, fileUrl, fileName, fileSize, mimeType,
-  s3Key, isActive, isDeleted, createdAt, createdBy, updatedAt
-)
-```
-
-### Users Table (Updated)
-```sql
-users (
-  id, tenantId, userCode, email, password, name, role,
-  grade,        -- For students: class 1-12
-  section,      -- For students: A, B, C, etc.
-  wingId,       -- For teachers: assigned wing ID
-  subjects,     -- For teachers: array of subjects
-  avatar, parentOf, active, ...
-)
-```
+### Phase 7: Exam Authority Consolidation (COMPLETED - Jan 29, 2026)
+- [x] **school_exams is the single source of truth**
+- [x] **getActiveExamsForBlueprint() now queries school_exams**
+- [x] **getMockTestExams() now queries school_exams with allowMockTest=true**
+- [x] **Admin Settings UI shows Mock Test column**
+- [x] **Add Exam form includes allowMockTest checkbox**
 
 ## API Endpoints
 
 ### Super Admin APIs
-- `GET, POST /api/superadmin/schools` - List and create schools
-- `PATCH, DELETE /api/superadmin/schools/:id` - Update and delete schools
-- `GET, POST /api/superadmin/wings` - List and create wings
-- `PATCH, DELETE /api/superadmin/wings/:id` - Update and delete wings
-- `GET, POST /api/superadmin/exams` - List and create exams
-- `PATCH, DELETE /api/superadmin/exams/:id` - Update and delete exams
-- `GET, POST /api/superadmin/users` - List and create users
-- `PATCH, DELETE /api/superadmin/users/:id` - Update and delete users
-- `POST /api/superadmin/users/bulk` - Bulk upload users (teachers/students)
-- `GET, POST /api/superadmin/storage` - Storage configuration
+- `POST /api/auth/login` - Authentication
+- `GET, POST /api/tenants` - Schools CRUD
+- `GET, POST /api/superadmin/wings` - Wings CRUD
+- `GET, POST /api/superadmin/exams` - Exams CRUD (includes allowMockTest)
+- `GET, POST /api/superadmin/users` - Users CRUD
+- `POST /api/superadmin/users/bulk` - Bulk upload
 - `GET, POST /api/superadmin/reference-materials` - Reference materials CRUD
-- `PATCH, DELETE /api/superadmin/reference-materials/:id` - Update/delete materials
 
-### Principal APIs
-- `GET /api/principal/snapshot` - School metrics snapshot
-- `GET /api/principal/grade-performance` - Grade-wise performance
-- `GET /api/principal/subject-health` - Subject health analysis
-- `GET /api/principal/at-risk-students` - At-risk student list
-- `GET /api/principal/risk-alerts` - Behavioral alerts
-
-### Student APIs
-- `GET /api/student/reference-materials` - View reference materials (Class 10/12 only, read-only)
+### Role-based APIs
+- `GET /api/exams/for-blueprint` - HOD gets active exams (from school_exams)
+- `GET /api/exams/mock-tests` - Students get mock test exams (where allowMockTest=true)
+- `GET /api/principal/snapshot` - Principal analytics
 
 ## Test Credentials
-- **Super Admin:**
-  - School Code: `SUPERADMIN`
-  - Email: `superadmin@safal.com`
-  - Password: `SuperAdmin@123`
-- **Test Principal:**
-  - School Code: `TESTSCHOOL`
-  - Email: `principal@testschool.com`
-  - Password: `Principal@123`
+- **Super Admin:** SUPERADMIN / superadmin@safal.com / SuperAdmin@123
+
+## Environment Configuration
+```env
+DATABASE_URL=postgresql://user:password@host:5432/prashnakosh
+NODE_ENV=development
+PORT=8001
+```
+
+## Deployment Notes
+1. PostgreSQL is **REQUIRED** - application will not start without it
+2. Run `npm run db:push` ONCE after deployment to sync schema
+3. Super Admin user is seeded automatically on first startup
 
 ## Upcoming Tasks (P1)
-1. **Build Full Principal Analytics Dashboard** - PowerBI-style interactive dashboard with:
-   - Student performance trends (charts)
-   - Subject-wise analysis (bar charts)
-   - Teacher performance metrics
-   - Exam completion rates
-   - Class/Section comparisons
-2. **Integrate Super Admin Exams into HOD Blueprint Flow**
-3. **Integrate Super Admin Exams into Student Mock Tests**
+1. **Build Full Principal Analytics Dashboard** - PowerBI-style with charts
+2. **Verify HOD Blueprint consumes school_exams correctly**
+3. **Verify Student Mock Tests consume school_exams correctly**
 
 ## Future Tasks (P2)
-1. **Phase B:** Full PostgreSQL migration - remove MemStorage fallback
-2. **Phase C:** AWS S3 integration for actual file uploads
-3. Database seed script for initial superadmin user
-4. Clean up obsolete old admin pages (`/pages/admin/`)
-5. Fix pre-existing TypeScript errors in original codebase
-
-## Important Notes for Future Development
-1. **Database Migration Reminder:** After schema changes, run `npm run db:push` on Render shell
-2. **Storage Parity:** Always implement new storage methods in BOTH `MemStorage` AND `PgStorage`
-3. **No Demo Data Policy:** All dashboards must show real data or proper empty states - no hardcoded/mock data
-4. **Authentication:** Use localStorage token for API calls from frontend components
+1. AWS S3 integration for file uploads
+2. Clean up obsolete `/pages/admin/` pages
+3. Fix pre-existing TypeScript errors
