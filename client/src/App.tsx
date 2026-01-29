@@ -51,6 +51,12 @@ import ReferenceLibraryPage from "@/pages/admin/reference-library";
 import StorageGovernancePage from "@/pages/admin/storage-governance";
 import StudentReferenceMaterialsPage from "@/pages/student/reference-materials";
 
+// Super Admin Pages
+import SuperAdminDashboard from "@/pages/superadmin/dashboard";
+import SuperAdminSchools from "@/pages/superadmin/schools";
+import SuperAdminSettings from "@/pages/superadmin/settings";
+import SuperAdminStorage from "@/pages/superadmin/storage";
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
 
