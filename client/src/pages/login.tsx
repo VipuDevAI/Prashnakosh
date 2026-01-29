@@ -64,7 +64,13 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: `Logged in as ${data.user.name}`,
       });
-      navigate("/dashboard");
+      
+      // Redirect super_admin to their dashboard
+      if (data.user.role === "super_admin") {
+        navigate("/superadmin");
+      } else {
+        navigate("/dashboard");
+      }
     },
     onError: (error: any) => {
       toast({
