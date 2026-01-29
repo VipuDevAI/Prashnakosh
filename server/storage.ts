@@ -305,6 +305,28 @@ export interface IStorage {
   softDeleteUser(id: string, deletedBy: string): Promise<boolean>;
   softDeleteUpload(id: string, deletedBy: string): Promise<boolean>;
   
+  // Tenant soft delete
+  softDeleteTenant(id: string): Promise<boolean>;
+  updateTenant(id: string, data: Partial<Tenant>): Promise<Tenant | undefined>;
+  
+  // =====================================================
+  // NEW: SCHOOL WINGS
+  // =====================================================
+  getWingsByTenant(tenantId: string): Promise<SchoolWing[]>;
+  getWing(id: string): Promise<SchoolWing | undefined>;
+  createWing(wing: InsertSchoolWing): Promise<SchoolWing>;
+  updateWing(id: string, data: Partial<SchoolWing>): Promise<SchoolWing | undefined>;
+  softDeleteWing(id: string): Promise<boolean>;
+  
+  // =====================================================
+  // NEW: SCHOOL EXAMS
+  // =====================================================
+  getSchoolExams(tenantId: string, wingId?: string): Promise<SchoolExam[]>;
+  getSchoolExam(id: string): Promise<SchoolExam | undefined>;
+  createSchoolExam(exam: InsertSchoolExam): Promise<SchoolExam>;
+  updateSchoolExam(id: string, data: Partial<SchoolExam>): Promise<SchoolExam | undefined>;
+  softDeleteSchoolExam(id: string): Promise<boolean>;
+  
   // =====================================================
   // PHASE 2+3: SUPER ADMIN GOVERNANCE
   // =====================================================
