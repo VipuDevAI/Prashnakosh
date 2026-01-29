@@ -802,6 +802,20 @@ function ExamFormDialog({ isOpen, onClose, exam, onSubmit, isLoading }: {
             <Label>Logo URL (PNG)</Label>
             <Input value={formData.logoUrl} onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })} placeholder="https://..." data-testid="input-exam-logo" />
           </div>
+          <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg border">
+            <input
+              type="checkbox"
+              id="allow-mock-test"
+              checked={formData.allowMockTest}
+              onChange={(e) => setFormData({ ...formData, allowMockTest: e.target.checked })}
+              className="w-4 h-4 rounded border-gray-300"
+              data-testid="checkbox-allow-mock-test"
+            />
+            <Label htmlFor="allow-mock-test" className="cursor-pointer">
+              <span className="font-medium">Allow Mock Test</span>
+              <p className="text-xs text-muted-foreground">When enabled, students can take this exam as a practice mock test</p>
+            </Label>
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={isLoading}>{exam ? "Update Exam" : "Create Exam"}</Button>
