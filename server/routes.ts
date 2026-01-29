@@ -5042,6 +5042,68 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Bulk upload users
+  app.post("/api/superadmin/users/bulk", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { tenantId, role, users: usersData } = req.body;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      if (!role || !["teacher", "student"].includes(role)) {
+        return res.status(400).json({ error: "role must be 'teacher' or 'student'" });
+      }
+      if (!usersData || !Array.isArray(usersData) || usersData.length === 0) {
+        return res.status(400).json({ error: "users array is required" });
+      }
+
+      const tenant = await storage.getTenant(tenantId);
+      const schoolCode = tenant?.code || "SCH";
+
+      let created = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const userData of usersData) {
+        try {
+          const { name, email, password, grade, roll_number, subject } = userData;
+          
+          if (!name || !email || !password) {
+            errors.push(`Row skipped: Missing required fields for ${email || name || "unknown"}`);
+            failed++;
+            continue;
+          }
+
+          // Check if email already exists
+          const existingUser = await storage.getUserByEmailAndTenant(email, tenantId);
+          if (existingUser) {
+            errors.push(`${email}: User already exists`);
+            failed++;
+            continue;
+          }
+
+          await storage.createUser({
+            tenantId,
+            email,
+            name,
+            password,
+            role,
+            grade: grade || null,
+            userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
+          });
+          created++;
+        } catch (err: any) {
+          errors.push(`${userData.email || "unknown"}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      res.json({ created, failed, errors: errors.slice(0, 20) });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 function parseCSVContent(csvContent: string): string[][] {
