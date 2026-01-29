@@ -1830,6 +1830,122 @@ export class PgStorage implements IStorage {
       .returning();
     return created;
   }
+
+  // =====================================================
+  // SOFT DELETE TENANT (School)
+  // =====================================================
+  async softDeleteTenant(id: string): Promise<boolean> {
+    const [updated] = await db.update(tenants)
+      .set({ active: false })
+      .where(eq(tenants.id, id))
+      .returning();
+    return !!updated;
+  }
+
+  // =====================================================
+  // SCHOOL WINGS CRUD
+  // =====================================================
+  async getWingsByTenant(tenantId: string): Promise<SchoolWing[]> {
+    return db.select().from(schoolWings)
+      .where(and(
+        eq(schoolWings.tenantId, tenantId),
+        eq(schoolWings.isDeleted, false)
+      ))
+      .orderBy(schoolWings.sortOrder);
+  }
+
+  async getWing(id: string): Promise<SchoolWing | undefined> {
+    const [wing] = await db.select().from(schoolWings)
+      .where(and(
+        eq(schoolWings.id, id),
+        eq(schoolWings.isDeleted, false)
+      ));
+    return wing;
+  }
+
+  async createWing(wing: InsertSchoolWing): Promise<SchoolWing> {
+    const [created] = await db.insert(schoolWings).values({
+      ...wing,
+      isActive: wing.isActive ?? true,
+      isDeleted: false,
+    }).returning();
+    return created;
+  }
+
+  async updateWing(id: string, data: Partial<SchoolWing>): Promise<SchoolWing | undefined> {
+    const [updated] = await db.update(schoolWings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schoolWings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async softDeleteWing(id: string): Promise<boolean> {
+    // Soft delete the wing
+    const [updated] = await db.update(schoolWings)
+      .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
+      .where(eq(schoolWings.id, id))
+      .returning();
+    
+    if (updated) {
+      // Also soft-delete all exams under this wing
+      await db.update(schoolExams)
+        .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
+        .where(eq(schoolExams.wingId, id));
+    }
+    
+    return !!updated;
+  }
+
+  // =====================================================
+  // SCHOOL EXAMS CRUD
+  // =====================================================
+  async getSchoolExams(tenantId: string, wingId?: string): Promise<SchoolExam[]> {
+    let conditions = [
+      eq(schoolExams.tenantId, tenantId),
+      eq(schoolExams.isDeleted, false)
+    ];
+    if (wingId) {
+      conditions.push(eq(schoolExams.wingId, wingId));
+    }
+    return db.select().from(schoolExams)
+      .where(and(...conditions))
+      .orderBy(schoolExams.examName);
+  }
+
+  async getSchoolExam(id: string): Promise<SchoolExam | undefined> {
+    const [exam] = await db.select().from(schoolExams)
+      .where(and(
+        eq(schoolExams.id, id),
+        eq(schoolExams.isDeleted, false)
+      ));
+    return exam;
+  }
+
+  async createSchoolExam(exam: InsertSchoolExam): Promise<SchoolExam> {
+    const [created] = await db.insert(schoolExams).values({
+      ...exam,
+      isActive: exam.isActive ?? true,
+      isDeleted: false,
+    }).returning();
+    return created;
+  }
+
+  async updateSchoolExam(id: string, data: Partial<SchoolExam>): Promise<SchoolExam | undefined> {
+    const [updated] = await db.update(schoolExams)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schoolExams.id, id))
+      .returning();
+    return updated;
+  }
+
+  async softDeleteSchoolExam(id: string): Promise<boolean> {
+    const [updated] = await db.update(schoolExams)
+      .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
+      .where(eq(schoolExams.id, id))
+      .returning();
+    return !!updated;
+  }
 }
 
 export const pgStorage = new PgStorage();
