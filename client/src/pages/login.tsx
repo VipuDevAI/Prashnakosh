@@ -16,14 +16,19 @@ import { Logo, LogoMark } from "@/components/logo";
 
 export default function LoginPage() {
   const [location, navigate] = useLocation();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { user, login, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate("/dashboard");
+    if (!isLoading && isAuthenticated && user) {
+      // Redirect based on user role
+      if (user.role === "super_admin") {
+        navigate("/superadmin");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, navigate, user]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
