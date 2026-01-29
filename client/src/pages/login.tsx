@@ -96,11 +96,15 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8" data-testid="img-logo">
-            <LogoMark size="xl" className="mb-4" />
+            <img 
+              src={BRAND.logo} 
+              alt={BRAND.name}
+              className="w-20 h-20 rounded-full object-cover shadow-xl ring-4 ring-white/50 dark:ring-slate-700/50 mb-4"
+            />
             <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text text-transparent">
-              Prashnakosh
+              {BRAND.name}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">Assessment & Practice Platform</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">{BRAND.tagline}</p>
           </div>
 
           <Card className="card-premium border-0 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.4)]">
