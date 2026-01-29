@@ -479,6 +479,7 @@ export default function AdminSettingsPage() {
                               <TableHead>Marks</TableHead>
                               <TableHead>Duration</TableHead>
                               <TableHead>Subjects</TableHead>
+                              <TableHead>Mock Test</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -509,6 +510,13 @@ export default function AdminSettingsPage() {
                                       <Badge variant="outline" className="text-xs">+{exam.subjects.length - 2}</Badge>
                                     )}
                                   </div>
+                                </TableCell>
+                                <TableCell>
+                                  {exam.allowMockTest ? (
+                                    <Badge className="bg-green-100 text-green-700">Enabled</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-slate-400">Disabled</Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant={exam.isActive ? "default" : "secondary"}>
