@@ -275,14 +275,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <SchoolProvider>
-            <Toaster />
-            <Router />
-          </SchoolProvider>
-        </AuthProvider>
-      </TooltipProvider>
+      <ThemeProvider defaultTheme="system" storageKey="prashnakosh-theme">
+        <TooltipProvider>
+          <AuthProvider>
+            <SchoolProvider>
+              <Toaster />
+              <Router />
+            </SchoolProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
