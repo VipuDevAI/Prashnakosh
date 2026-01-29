@@ -139,7 +139,7 @@ export default function DashboardPage() {
         {user.role === "exam_committee" && <ExamCommitteeDashboard />}
         {(user.role === "admin" || user.role === "super_admin") && <AdminDashboard />}
       </PageContent>
-      <PageFooter />
+      <AppFooter />
     </PageLayout>
   );
 }
