@@ -1178,18 +1178,67 @@ function PrincipalDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: activityStats = { totalQuestions: 0, pendingHOD: 0, pendingCommittee: 0, examsGenerated: 0, upcomingTests: 0 } } = useQuery<{totalQuestions: number; pendingHOD: number; pendingCommittee: number; examsGenerated: number; upcomingTests: number}>({
-    queryKey: ['/api/principal/stats', user?.id],
+  // Real data from PostgreSQL via Principal Analytics APIs
+  const { data: snapshot = { totalStudents: 0, testsThisMonth: 0, averageScore: 0, atRiskCount: 0 }, isLoading: snapshotLoading } = useQuery<{
+    totalStudents: number;
+    testsThisMonth: number;
+    averageScore: number;
+    atRiskCount: number;
+  }>({
+    queryKey: ['/api/principal/snapshot'],
     enabled: !!user?.id,
   });
 
-  const { data: riskAlerts = [] } = useQuery<{type: string; message: string}[]>({
-    queryKey: ['/api/principal/alerts', user?.id],
+  const { data: gradePerformance = [], isLoading: gradeLoading } = useQuery<{
+    grade: string;
+    averageScore: number;
+    passPercentage: number;
+    totalAttempts: number;
+    trend: 'up' | 'down' | 'stable';
+  }[]>({
+    queryKey: ['/api/principal/grade-performance'],
     enabled: !!user?.id,
   });
 
-  const { data: recentPapers = [] } = useQuery<{exam: string; className: string; subject: string; createdBy: string; status: string}[]>({
-    queryKey: ['/api/principal/papers', user?.id],
+  const { data: subjectHealth = [] } = useQuery<{
+    subject: string;
+    grade: string;
+    averagePercentage: number;
+    totalAttempts: number;
+    isWeak: boolean;
+  }[]>({
+    queryKey: ['/api/principal/subject-health'],
+    enabled: !!user?.id,
+  });
+
+  const { data: atRiskStudents = [], isLoading: riskLoading } = useQuery<{
+    studentId: string;
+    studentName: string;
+    grade: string;
+    lowScoreCount: number;
+    averagePercentage: number;
+    trend: 'declining' | 'stable' | 'improving';
+  }[]>({
+    queryKey: ['/api/principal/at-risk-students'],
+    enabled: !!user?.id,
+  });
+
+  const { data: riskAlerts = [] } = useQuery<{
+    type: 'tab_switch' | 'absence' | 'sudden_drop';
+    studentId: string;
+    studentName: string;
+    grade: string;
+    details: string;
+    count: number;
+    createdAt: string | null;
+  }[]>({
+    queryKey: ['/api/principal/risk-alerts'],
+    enabled: !!user?.id,
+  });
+
+  // Derive tests data from existing tests API
+  const { data: testsData = [] } = useQuery<any[]>({
+    queryKey: ['/api/tests'],
     enabled: !!user?.id,
   });
 
