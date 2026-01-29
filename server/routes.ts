@@ -5169,6 +5169,148 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // =====================================================
+  // SUPER ADMIN - REFERENCE MATERIALS (Global for Class 10 & 12)
+  // =====================================================
+
+  // Get all reference materials (Super Admin)
+  app.get("/api/superadmin/reference-materials", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { grade, category } = req.query;
+      const materials = await storage.getReferenceMaterials(
+        grade as string | undefined,
+        category as string | undefined
+      );
+      res.json(materials);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a reference material entry (file metadata - actual S3 upload handled separately)
+  app.post("/api/superadmin/reference-materials", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { title, description, grade, subject, category, academicYear, fileName, fileSize, mimeType } = req.body;
+      
+      // Enforce Class 10 & 12 only
+      if (!grade || !["10", "12"].includes(grade)) {
+        return res.status(400).json({ error: "Reference materials are only allowed for Class 10 and 12" });
+      }
+      
+      if (!title || !fileName) {
+        return res.status(400).json({ error: "Title and file name are required" });
+      }
+      
+      if (!category || !["question_paper", "reference_notes", "answer_key", "syllabus"].includes(category)) {
+        return res.status(400).json({ error: "Valid category is required (question_paper, reference_notes, answer_key, syllabus)" });
+      }
+
+      const currentUser = req.user as AuthUser;
+      const material = await storage.createReferenceMaterial({
+        title,
+        description,
+        grade,
+        subject,
+        category,
+        academicYear,
+        fileName,
+        fileSize: fileSize || 0,
+        mimeType,
+        createdBy: currentUser.id,
+        // S3 fields will be updated when S3 is configured
+        s3Key: `global/reference/grade-${grade}/${category}/${Date.now()}-${fileName}`,
+      });
+
+      res.status(201).json(material);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update a reference material
+  app.patch("/api/superadmin/reference-materials/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const material = await storage.updateReferenceMaterial(id, req.body);
+      if (!material) {
+        return res.status(404).json({ error: "Reference material not found" });
+      }
+      res.json(material);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a reference material (soft delete)
+  app.delete("/api/superadmin/reference-materials/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.softDeleteReferenceMaterial(id);
+      if (!success) {
+        return res.status(404).json({ error: "Reference material not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // STUDENT - GET REFERENCE MATERIALS (Class 10 & 12 only, Read-only)
+  // =====================================================
+  app.get("/api/student/reference-materials", requireAuth, async (req, res) => {
+    try {
+      const currentUser = req.user as AuthUser;
+      
+      // Only students can access
+      if (currentUser.role !== "student") {
+        return res.status(403).json({ error: "Only students can access reference materials" });
+      }
+      
+      // Enforce Class 10 & 12 only
+      const studentGrade = currentUser.grade;
+      if (!studentGrade || !["10", "12"].includes(studentGrade)) {
+        return res.status(403).json({ error: "Reference materials are only available for Class 10 and 12 students" });
+      }
+
+      const materials = await storage.getReferenceMaterials(studentGrade);
+      res.json(materials);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // SUPER ADMIN - PLATFORM STATS (Real data only)
+  // =====================================================
+  app.get("/api/superadmin/stats", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const schools = await storage.getTenants();
+      const activeSchools = schools.filter(s => s.active);
+      
+      // Get total users across all schools
+      let totalUsers = 0;
+      let totalTeachers = 0;
+      let totalStudents = 0;
+      
+      for (const school of activeSchools) {
+        const users = await storage.getUsersByTenant(school.id);
+        totalUsers += users.filter(u => u.role !== "super_admin" && u.active !== false).length;
+        totalTeachers += users.filter(u => u.role === "teacher" && u.active !== false).length;
+        totalStudents += users.filter(u => u.role === "student" && u.active !== false).length;
+      }
+
+      res.json({
+        totalSchools: activeSchools.length,
+        totalUsers,
+        totalTeachers,
+        totalStudents,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 function parseCSVContent(csvContent: string): string[][] {
