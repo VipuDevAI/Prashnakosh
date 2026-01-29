@@ -272,7 +272,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
       <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -280,21 +280,22 @@ export default function AdminSettingsPage() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/superadmin")} data-testid="btn-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                <Settings className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Admin Settings</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Configure Wings & Exams per School</p>
-              </div>
+            <img 
+              src={BRAND.logo} 
+              alt={BRAND.name}
+              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Admin Settings</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Configure Wings & Exams per School</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-8 space-y-6 w-full">
         {/* Step 1: School Selection */}
         <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50">
           <CardHeader className="pb-4">
