@@ -262,6 +262,9 @@ function Router() {
       <Route path="/superadmin/storage">
         <ProtectedRoute component={SuperAdminStorage} />
       </Route>
+      <Route path="/superadmin/users">
+        <ProtectedRoute component={SuperAdminUsers} />
+      </Route>
       
       <Route component={NotFound} />
     </Switch>
