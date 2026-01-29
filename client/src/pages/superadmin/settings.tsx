@@ -685,6 +685,7 @@ function ExamFormDialog({ isOpen, onClose, exam, onSubmit, isLoading }: {
     watermarkText: "",
     logoUrl: "",
     pageSize: "A4",
+    allowMockTest: false,
   });
 
   useEffect(() => {
@@ -700,6 +701,7 @@ function ExamFormDialog({ isOpen, onClose, exam, onSubmit, isLoading }: {
         watermarkText: exam.watermarkText || "",
         logoUrl: exam.logoUrl || "",
         pageSize: exam.pageSize || "A4",
+        allowMockTest: exam.allowMockTest || false,
       });
     } else {
       setFormData({
@@ -713,6 +715,7 @@ function ExamFormDialog({ isOpen, onClose, exam, onSubmit, isLoading }: {
         watermarkText: "",
         logoUrl: "",
         pageSize: "A4",
+        allowMockTest: false,
       });
     }
   }, [exam, isOpen]);
@@ -734,6 +737,7 @@ function ExamFormDialog({ isOpen, onClose, exam, onSubmit, isLoading }: {
       watermarkText: formData.watermarkText || null,
       logoUrl: formData.logoUrl || null,
       pageSize: formData.pageSize,
+      allowMockTest: formData.allowMockTest,
     });
   };
 
