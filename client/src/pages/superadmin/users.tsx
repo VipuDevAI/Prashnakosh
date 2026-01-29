@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
@@ -40,17 +40,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft, Plus, Edit, Trash2, Building2, Users, Mail, Shield, 
-  GraduationCap, UserCheck, AlertTriangle
+  GraduationCap, UserCheck, AlertTriangle, Upload, Download, FileSpreadsheet,
+  CheckCircle2, XCircle
 } from "lucide-react";
 
 interface School {
   id: string;
   name: string;
   code: string;
+  active?: boolean;
 }
 
 interface User {
@@ -74,6 +82,40 @@ const ROLES = [
 
 const GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
+// CSV Template generators
+const generateTeacherTemplate = () => {
+  const headers = ["name", "email", "password", "subject"];
+  const sampleData = [
+    ["John Smith", "john.smith@school.edu", "Teacher@123", "Mathematics"],
+    ["Jane Doe", "jane.doe@school.edu", "Teacher@123", "Science"],
+    ["Robert Wilson", "robert.wilson@school.edu", "Teacher@123", "English"],
+  ];
+  return [headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
+};
+
+const generateStudentTemplate = () => {
+  const headers = ["name", "email", "password", "grade", "roll_number"];
+  const sampleData = [
+    ["Alice Johnson", "alice@school.edu", "Student@123", "5", "501"],
+    ["Bob Smith", "bob@school.edu", "Student@123", "5", "502"],
+    ["Charlie Brown", "charlie@school.edu", "Student@123", "6", "601"],
+  ];
+  return [headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
+};
+
+const downloadTemplate = (type: "teacher" | "student") => {
+  const content = type === "teacher" ? generateTeacherTemplate() : generateStudentTemplate();
+  const blob = new Blob([content], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${type}_upload_template.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export default function SuperAdminUsersPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -82,7 +124,8 @@ export default function SuperAdminUsersPage() {
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>(() =>
     localStorage.getItem("superadmin_selected_school") || ""
   );
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
@@ -106,7 +149,7 @@ export default function SuperAdminUsersPage() {
   });
 
   // Fetch users for selected school
-  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/superadmin/users", selectedSchoolId],
     queryFn: async () => {
       if (!selectedSchoolId) return [];
@@ -119,6 +162,7 @@ export default function SuperAdminUsersPage() {
     enabled: !!selectedSchoolId,
   });
 
+  const activeSchools = schools.filter(s => s.active !== false);
   const selectedSchool = schools.find(s => s.id === selectedSchoolId);
 
   // Create user mutation
@@ -141,9 +185,9 @@ export default function SuperAdminUsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/superadmin/users"] });
       toast({ title: "User created successfully" });
-      setIsCreateOpen(false);
+      setIsCreateDialogOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -170,7 +214,7 @@ export default function SuperAdminUsersPage() {
       toast({ title: "User updated successfully" });
       setEditUser(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -193,7 +237,37 @@ export default function SuperAdminUsersPage() {
       toast({ title: "User deleted successfully" });
       setDeleteUser(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Bulk upload mutation
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (data: { users: any[]; role: string }) => {
+      const res = await fetch("/api/superadmin/users/bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("safal_token")}`,
+        },
+        body: JSON.stringify({ ...data, tenantId: selectedSchoolId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to upload users");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/users"] });
+      toast({ 
+        title: "Bulk Upload Complete", 
+        description: `${data.created} users created, ${data.failed} failed` 
+      });
+      setIsBulkUploadOpen(false);
+    },
+    onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -251,7 +325,7 @@ export default function SuperAdminUsersPage() {
                 <SelectValue placeholder="-- Choose a School --" />
               </SelectTrigger>
               <SelectContent>
-                {schools.filter(s => s.active !== false).map((school) => (
+                {activeSchools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4" />
@@ -275,7 +349,7 @@ export default function SuperAdminUsersPage() {
         {selectedSchoolId && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
@@ -285,10 +359,16 @@ export default function SuperAdminUsersPage() {
                     {users.length} user(s) in this school
                   </CardDescription>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)} data-testid="btn-add-user">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add User
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setIsBulkUploadOpen(true)} data-testid="btn-bulk-upload">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Bulk Upload
+                  </Button>
+                  <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="btn-add-user">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -303,10 +383,16 @@ export default function SuperAdminUsersPage() {
                   <p className="text-slate-500 dark:text-slate-400 mb-6">
                     Add principals, teachers, and students for this school
                   </p>
-                  <Button onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First User
-                  </Button>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <Button variant="outline" onClick={() => setIsBulkUploadOpen(true)}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Bulk Upload
+                    </Button>
+                    <Button onClick={() => setIsCreateDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First User
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
@@ -395,24 +481,72 @@ export default function SuperAdminUsersPage() {
         )}
       </main>
 
-      {/* Create/Edit User Dialog */}
-      <UserFormDialog
-        isOpen={isCreateOpen || !!editUser}
-        onClose={() => {
-          setIsCreateOpen(false);
-          setEditUser(null);
-        }}
-        user={editUser}
-        schoolCode={selectedSchool?.code || ""}
-        onSubmit={(data) => {
-          if (editUser) {
-            updateMutation.mutate({ ...data, id: editUser.id });
-          } else {
-            createMutation.mutate(data as any);
-          }
-        }}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-      />
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Create New User
+            </DialogTitle>
+            <DialogDescription>
+              Add a new user for school {selectedSchool?.code}
+            </DialogDescription>
+          </DialogHeader>
+          <UserForm
+            onSubmit={(data) => createMutation.mutate(data as any)}
+            onCancel={() => setIsCreateDialogOpen(false)}
+            isLoading={createMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              Edit User
+            </DialogTitle>
+            <DialogDescription>
+              Update user information
+            </DialogDescription>
+          </DialogHeader>
+          {editUser && (
+            <UserForm
+              user={editUser}
+              onSubmit={(data) => updateMutation.mutate({ ...data, id: editUser.id })}
+              onCancel={() => setEditUser(null)}
+              isLoading={updateMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Bulk Upload Users
+            </DialogTitle>
+            <DialogDescription>
+              Upload multiple teachers or students using CSV file
+            </DialogDescription>
+          </DialogHeader>
+          <BulkUploadForm
+            schoolId={selectedSchoolId}
+            schoolCode={selectedSchool?.code || ""}
+            onSuccess={() => {
+              refetchUsers();
+              setIsBulkUploadOpen(false);
+            }}
+            onCancel={() => setIsBulkUploadOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
@@ -443,179 +577,406 @@ export default function SuperAdminUsersPage() {
   );
 }
 
-// User Form Dialog Component
-function UserFormDialog({
-  isOpen,
-  onClose,
+// User Form Component
+function UserForm({
   user,
-  schoolCode,
   onSubmit,
+  onCancel,
   isLoading,
 }: {
-  isOpen: boolean;
-  onClose: () => void;
-  user: User | null;
-  schoolCode: string;
+  user?: User | null;
   onSubmit: (data: Partial<User> & { password?: string }) => void;
+  onCancel: () => void;
   isLoading: boolean;
 }) {
   const { toast } = useToast();
   const isEditing = !!user;
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "teacher",
-    grade: "",
-  });
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        password: "",
-        role: user.role || "teacher",
-        grade: user.grade || "",
-      });
-    } else {
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        role: "teacher",
-        grade: "",
-      });
-    }
-  }, [user, isOpen]);
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState(user?.role || "teacher");
+  const [grade, setGrade] = useState(user?.grade || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
+    if (!name.trim()) {
       toast({ title: "Name is required", variant: "destructive" });
       return;
     }
-    if (!formData.email.trim()) {
+    if (!email.trim()) {
       toast({ title: "Email is required", variant: "destructive" });
       return;
     }
-    if (!isEditing && !formData.password.trim()) {
+    if (!isEditing && !password.trim()) {
       toast({ title: "Password is required for new users", variant: "destructive" });
       return;
     }
     
     const data: any = {
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      grade: formData.grade || null,
+      name: name.trim(),
+      email: email.trim(),
+      role,
+      grade: grade || null,
     };
     
-    if (formData.password) {
-      data.password = formData.password;
+    if (password) {
+      data.password = password;
     }
     
     onSubmit(data);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isEditing ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-            {isEditing ? "Edit User" : "Create New User"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update user information" : `Add a new user for school ${schoolCode}`}
-          </DialogDescription>
-        </DialogHeader>
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
+        <Input
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., John Doe"
+          data-testid="input-user-name"
+        />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label>Full Name <span className="text-red-500">*</span></Label>
-            <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., John Doe"
-              data-testid="input-user-name"
-            />
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+        <Input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="e.g., john@school.edu"
+          data-testid="input-user-email"
+        />
+      </div>
 
-          <div className="space-y-2">
-            <Label>Email <span className="text-red-500">*</span></Label>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="e.g., john@school.edu"
-              data-testid="input-user-email"
-            />
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">
+          Password {!isEditing && <span className="text-red-500">*</span>}
+          {isEditing && <span className="text-slate-400 text-xs ml-2">(leave blank to keep current)</span>}
+        </Label>
+        <Input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={isEditing ? "Enter new password" : "Enter password"}
+          data-testid="input-user-password"
+        />
+      </div>
 
-          <div className="space-y-2">
-            <Label>
-              Password {!isEditing && <span className="text-red-500">*</span>}
-              {isEditing && <span className="text-slate-400 text-xs ml-2">(leave blank to keep current)</span>}
-            </Label>
-            <Input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder={isEditing ? "Enter new password" : "Enter password"}
-              data-testid="input-user-password"
-            />
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Role <span className="text-red-500">*</span></Label>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger data-testid="select-role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r.value} value={r.value}>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    {r.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Role <span className="text-red-500">*</span></Label>
-              <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v })}>
-                <SelectTrigger data-testid="select-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4" />
-                        {role.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="space-y-2">
+          <Label>Grade {role === "student" && <span className="text-red-500">*</span>}</Label>
+          <Select value={grade} onValueChange={setGrade}>
+            <SelectTrigger data-testid="select-grade">
+              <SelectValue placeholder="Select grade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">No Grade</SelectItem>
+              {GRADES.map((g) => (
+                <SelectItem key={g} value={g}>Grade {g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label>Grade {formData.role === "student" && <span className="text-red-500">*</span>}</Label>
-              <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
-                <SelectTrigger data-testid="select-grade">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No Grade</SelectItem>
-                  {GRADES.map((grade) => (
-                    <SelectItem key={grade} value={grade}>Grade {grade}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <DialogFooter className="mt-6">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading} data-testid="btn-submit-user">
+          {isLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
+          {isEditing ? "Update User" : "Create User"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+// Bulk Upload Form Component
+function BulkUploadForm({
+  schoolId,
+  schoolCode,
+  onSuccess,
+  onCancel,
+}: {
+  schoolId: string;
+  schoolCode: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadType, setUploadType] = useState<"teacher" | "student">("teacher");
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState<{ created: number; failed: number; errors: string[] } | null>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split("\n").filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({ title: "Invalid CSV", description: "File must have header row and at least one data row", variant: "destructive" });
+        return;
+      }
+
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const data = lines.slice(1).map(line => {
+        const values = line.split(",").map(v => v.trim());
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          obj[h] = values[i] || "";
+        });
+        return obj;
+      }).filter(row => row.name && row.email);
+
+      setParsedData(data);
+      setUploadResults(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleUpload = async () => {
+    if (parsedData.length === 0) {
+      toast({ title: "No data to upload", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadResults(null);
+
+    try {
+      const res = await fetch("/api/superadmin/users/bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("safal_token")}`,
+        },
+        body: JSON.stringify({
+          tenantId: schoolId,
+          role: uploadType,
+          users: parsedData,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      setUploadResults(result);
+      
+      if (result.created > 0) {
+        toast({ 
+          title: "Upload Complete", 
+          description: `${result.created} users created successfully${result.failed > 0 ? `, ${result.failed} failed` : ""}` 
+        });
+      }
+
+      if (result.failed === 0) {
+        setTimeout(() => onSuccess(), 1500);
+      }
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const clearFile = () => {
+    setParsedData([]);
+    setUploadResults(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-6 mt-4">
+      {/* Upload Type Tabs */}
+      <Tabs value={uploadType} onValueChange={(v) => { setUploadType(v as any); clearFile(); }}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="teacher" className="flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Teachers
+          </TabsTrigger>
+          <TabsTrigger value="student" className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            Students
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="teacher" className="mt-4">
+          <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Teacher CSV Format</h4>
+            <p className="text-sm text-green-700 dark:text-green-400 mb-3">
+              Required columns: <code className="bg-green-100 dark:bg-green-900 px-1 rounded">name, email, password</code>
+              <br />
+              Optional: <code className="bg-green-100 dark:bg-green-900 px-1 rounded">subject</code>
+            </p>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("teacher")}>
+              <Download className="w-4 h-4 mr-2" />
+              Download Teacher Template
             </Button>
-            <Button type="submit" disabled={isLoading} data-testid="btn-submit-user">
-              {isLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
-              {isEditing ? "Update User" : "Create User"}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="student" className="mt-4">
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+            <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">Student CSV Format</h4>
+            <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+              Required columns: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">name, email, password, grade</code>
+              <br />
+              Optional: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">roll_number</code>
+            </p>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("student")}>
+              <Download className="w-4 h-4 mr-2" />
+              Download Student Template
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* File Upload */}
+      <div className="space-y-2">
+        <Label>Upload CSV File</Label>
+        <div className="flex items-center gap-3">
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="flex-1"
+            data-testid="input-csv-file"
+          />
+          {parsedData.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFile}>
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Preview */}
+      {parsedData.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              Preview ({parsedData.length} rows)
+            </h4>
+          </div>
+          <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-800">
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  {uploadType === "student" && <TableHead>Grade</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parsedData.slice(0, 10).map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>{row.email}</TableCell>
+                    {uploadType === "student" && <TableCell>{row.grade || "-"}</TableCell>}
+                  </TableRow>
+                ))}
+                {parsedData.length > 10 && (
+                  <TableRow>
+                    <TableCell colSpan={uploadType === "student" ? 3 : 2} className="text-center text-slate-500">
+                      ... and {parsedData.length - 10} more rows
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Results */}
+      {uploadResults && (
+        <div className={`p-4 rounded-lg border ${
+          uploadResults.failed === 0 
+            ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
+            : "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800"
+        }`}>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+              <CheckCircle2 className="w-5 h-5" />
+              <span className="font-medium">{uploadResults.created} created</span>
+            </div>
+            {uploadResults.failed > 0 && (
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                <XCircle className="w-5 h-5" />
+                <span className="font-medium">{uploadResults.failed} failed</span>
+              </div>
+            )}
+          </div>
+          {uploadResults.errors && uploadResults.errors.length > 0 && (
+            <div className="text-sm text-red-600 dark:text-red-400 mt-2">
+              <p className="font-medium mb-1">Errors:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {uploadResults.errors.slice(0, 5).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+                {uploadResults.errors.length > 5 && (
+                  <li>... and {uploadResults.errors.length - 5} more errors</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleUpload} 
+          disabled={parsedData.length === 0 || isUploading}
+          data-testid="btn-upload-users"
+        >
+          {isUploading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
+          <Upload className="w-4 h-4 mr-2" />
+          Upload {parsedData.length} {uploadType === "teacher" ? "Teachers" : "Students"}
+        </Button>
+      </DialogFooter>
+    </div>
   );
 }
