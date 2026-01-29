@@ -4943,6 +4943,104 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // =====================================================
+  // SUPER ADMIN - USERS MANAGEMENT
+  // =====================================================
+
+  // Get users for a school
+  app.get("/api/superadmin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const schoolId = req.query.schoolId as string;
+      if (!schoolId) {
+        return res.status(400).json({ error: "schoolId is required" });
+      }
+      const users = await storage.getUsersByTenant(schoolId);
+      // Filter out super_admin users
+      res.json(users.filter(u => u.role !== "super_admin"));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a new user for a school
+  app.post("/api/superadmin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { tenantId, email, name, password, role, grade } = req.body;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      if (!email || !name || !password) {
+        return res.status(400).json({ error: "email, name, and password are required" });
+      }
+      if (!role || !["principal", "hod", "teacher", "student", "parent"].includes(role)) {
+        return res.status(400).json({ error: "Valid role is required (principal, hod, teacher, student, parent)" });
+      }
+
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmailAndTenant(email, tenantId);
+      if (existingUser) {
+        return res.status(400).json({ error: "A user with this email already exists in this school" });
+      }
+
+      // Get tenant to create user code
+      const tenant = await storage.getTenantById(tenantId);
+      const schoolCode = tenant?.code || "SCH";
+
+      const user = await storage.createUser({
+        tenantId,
+        email,
+        name,
+        password, // Note: In production, hash this!
+        role,
+        grade: grade || null,
+        userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
+      });
+
+      res.status(201).json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update a user
+  app.patch("/api/superadmin/users/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, email, password, role, grade, active } = req.body;
+
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (email !== undefined) updateData.email = email;
+      if (password) updateData.password = password; // In production, hash this!
+      if (role !== undefined) updateData.role = role;
+      if (grade !== undefined) updateData.grade = grade;
+      if (active !== undefined) updateData.active = active;
+
+      const user = await storage.updateUser(id, updateData);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete (soft delete) a user
+  app.delete("/api/superadmin/users/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.softDeleteUser(id);
+      if (!success) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 function parseCSVContent(csvContent: string): string[][] {
