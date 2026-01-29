@@ -46,12 +46,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft, Plus, Edit, Trash2, Building2, Users, Mail, Shield, 
   GraduationCap, UserCheck, AlertTriangle, Upload, Download, FileSpreadsheet,
-  CheckCircle2, XCircle
+  CheckCircle2, XCircle, BookOpen, Layers
 } from "lucide-react";
 
 interface School {
@@ -61,6 +62,13 @@ interface School {
   active?: boolean;
 }
 
+interface Wing {
+  id: string;
+  name: string;
+  displayName: string;
+  tenantId: string;
+}
+
 interface User {
   id: string;
   tenantId: string | null;
@@ -68,6 +76,9 @@ interface User {
   name: string;
   role: string;
   grade: string | null;
+  section: string | null;
+  wingId: string | null;
+  subjects: string[];
   active: boolean;
   userCode?: string;
 }
@@ -82,25 +93,55 @@ const ROLES = [
 
 const GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
+const COMMON_SUBJECTS = [
+  "Mathematics", "Science", "English", "Hindi", "Social Studies", 
+  "Physics", "Chemistry", "Biology", "Computer Science", "History",
+  "Geography", "Economics", "Political Science", "Accountancy", "Business Studies",
+  "Physical Education", "Art", "Music"
+];
+
 // CSV Template generators
 const generateTeacherTemplate = () => {
-  const headers = ["name", "email", "password", "subject"];
+  const headers = ["name", "email", "password", "wing", "subjects"];
   const sampleData = [
-    ["John Smith", "john.smith@school.edu", "Teacher@123", "Mathematics"],
-    ["Jane Doe", "jane.doe@school.edu", "Teacher@123", "Science"],
-    ["Robert Wilson", "robert.wilson@school.edu", "Teacher@123", "English"],
+    ["John Smith", "john.smith@school.edu", "Teacher@123", "Primary", "Mathematics,Science"],
+    ["Jane Doe", "jane.doe@school.edu", "Teacher@123", "Middle", "English,Hindi"],
+    ["Robert Wilson", "robert.wilson@school.edu", "Teacher@123", "Senior", "Physics,Chemistry,Mathematics"],
   ];
-  return [headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
+  const instructions = [
+    "# TEACHER UPLOAD TEMPLATE",
+    "# Instructions:",
+    "# - name: Full name of the teacher (Required)",
+    "# - email: Email address (Required)",
+    "# - password: Initial password (Required)",
+    "# - wing: Wing name - Primary/Middle/Senior (Required)",
+    "# - subjects: Comma-separated list of subjects (Required)",
+    "#",
+    "# Note: Wing must match exactly with wings created in Admin Settings",
+    ""
+  ];
+  return [...instructions, headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
 };
 
 const generateStudentTemplate = () => {
-  const headers = ["name", "email", "password", "grade", "roll_number"];
+  const headers = ["name", "email", "password", "class", "section", "roll_number"];
   const sampleData = [
-    ["Alice Johnson", "alice@school.edu", "Student@123", "5", "501"],
-    ["Bob Smith", "bob@school.edu", "Student@123", "5", "502"],
-    ["Charlie Brown", "charlie@school.edu", "Student@123", "6", "601"],
+    ["Alice Johnson", "alice@school.edu", "Student@123", "5", "A", "501"],
+    ["Bob Smith", "bob@school.edu", "Student@123", "5", "B", "502"],
+    ["Charlie Brown", "charlie@school.edu", "Student@123", "6", "A", "601"],
   ];
-  return [headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
+  const instructions = [
+    "# STUDENT UPLOAD TEMPLATE",
+    "# Instructions:",
+    "# - name: Full name of the student (Required)",
+    "# - email: Email address (Required)",
+    "# - password: Initial password (Required)",
+    "# - class: Grade/Class number 1-12 (Required)",
+    "# - section: Section name like A, B, C (Optional - Super Admin can fill)",
+    "# - roll_number: Roll number (Optional)",
+    ""
+  ];
+  return [...instructions, headers.join(","), ...sampleData.map(row => row.join(","))].join("\n");
 };
 
 const downloadTemplate = (type: "teacher" | "student") => {
@@ -146,6 +187,20 @@ export default function SuperAdminUsersPage() {
       if (!res.ok) return [];
       return res.json();
     },
+  });
+
+  // Fetch wings for selected school
+  const { data: wings = [] } = useQuery<Wing[]>({
+    queryKey: ["/api/superadmin/wings", selectedSchoolId],
+    queryFn: async () => {
+      if (!selectedSchoolId) return [];
+      const res = await fetch(`/api/superadmin/wings?schoolId=${selectedSchoolId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("safal_token")}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedSchoolId,
   });
 
   // Fetch users for selected school
@@ -242,36 +297,6 @@ export default function SuperAdminUsersPage() {
     },
   });
 
-  // Bulk upload mutation
-  const bulkUploadMutation = useMutation({
-    mutationFn: async (data: { users: any[]; role: string }) => {
-      const res = await fetch("/api/superadmin/users/bulk", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("safal_token")}`,
-        },
-        body: JSON.stringify({ ...data, tenantId: selectedSchoolId }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to upload users");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/users"] });
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `${data.created} users created, ${data.failed} failed` 
-      });
-      setIsBulkUploadOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
   const getRoleBadge = (role: string) => {
     const roleConfig = ROLES.find(r => r.value === role);
     return roleConfig ? (
@@ -279,6 +304,12 @@ export default function SuperAdminUsersPage() {
     ) : (
       <Badge variant="outline">{role}</Badge>
     );
+  };
+
+  const getWingName = (wingId: string | null) => {
+    if (!wingId) return null;
+    const wing = wings.find(w => w.id === wingId);
+    return wing?.displayName || wing?.name || null;
   };
 
   if (!user || user.role !== "super_admin") {
@@ -395,14 +426,15 @@ export default function SuperAdminUsersPage() {
                   </div>
                 </div>
               ) : (
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-lg overflow-hidden overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50 dark:bg-slate-800">
                         <TableHead className="font-semibold">User</TableHead>
                         <TableHead className="font-semibold">Email</TableHead>
                         <TableHead className="font-semibold">Role</TableHead>
-                        <TableHead className="font-semibold">Grade</TableHead>
+                        <TableHead className="font-semibold">Wing/Class</TableHead>
+                        <TableHead className="font-semibold">Subjects/Section</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold text-right">Actions</TableHead>
                       </TableRow>
@@ -431,10 +463,37 @@ export default function SuperAdminUsersPage() {
                           </TableCell>
                           <TableCell>{getRoleBadge(u.role)}</TableCell>
                           <TableCell>
-                            {u.grade ? (
-                              <Badge variant="outline">
+                            {u.role === "teacher" && u.wingId ? (
+                              <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30">
+                                <Layers className="w-3 h-3 mr-1" />
+                                {getWingName(u.wingId)}
+                              </Badge>
+                            ) : u.role === "student" && u.grade ? (
+                              <Badge variant="outline" className="bg-amber-50 dark:bg-amber-900/30">
                                 <GraduationCap className="w-3 h-3 mr-1" />
-                                Grade {u.grade}
+                                Class {u.grade}
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {u.role === "teacher" && u.subjects && u.subjects.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {u.subjects.slice(0, 2).map((subj, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {subj}
+                                  </Badge>
+                                ))}
+                                {u.subjects.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{u.subjects.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : u.role === "student" && u.section ? (
+                              <Badge variant="outline">
+                                Section {u.section}
                               </Badge>
                             ) : (
                               <span className="text-slate-400">-</span>
@@ -483,7 +542,7 @@ export default function SuperAdminUsersPage() {
 
       {/* Create User Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -494,6 +553,7 @@ export default function SuperAdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <UserForm
+            wings={wings}
             onSubmit={(data) => createMutation.mutate(data as any)}
             onCancel={() => setIsCreateDialogOpen(false)}
             isLoading={createMutation.isPending}
@@ -503,7 +563,7 @@ export default function SuperAdminUsersPage() {
 
       {/* Edit User Dialog */}
       <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5" />
@@ -516,6 +576,7 @@ export default function SuperAdminUsersPage() {
           {editUser && (
             <UserForm
               user={editUser}
+              wings={wings}
               onSubmit={(data) => updateMutation.mutate({ ...data, id: editUser.id })}
               onCancel={() => setEditUser(null)}
               isLoading={updateMutation.isPending}
@@ -526,7 +587,7 @@ export default function SuperAdminUsersPage() {
 
       {/* Bulk Upload Dialog */}
       <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload className="w-5 h-5" />
@@ -539,6 +600,7 @@ export default function SuperAdminUsersPage() {
           <BulkUploadForm
             schoolId={selectedSchoolId}
             schoolCode={selectedSchool?.code || ""}
+            wings={wings}
             onSuccess={() => {
               refetchUsers();
               setIsBulkUploadOpen(false);
@@ -580,11 +642,13 @@ export default function SuperAdminUsersPage() {
 // User Form Component
 function UserForm({
   user,
+  wings,
   onSubmit,
   onCancel,
   isLoading,
 }: {
   user?: User | null;
+  wings: Wing[];
   onSubmit: (data: Partial<User> & { password?: string }) => void;
   onCancel: () => void;
   isLoading: boolean;
@@ -597,6 +661,17 @@ function UserForm({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState(user?.role || "teacher");
   const [grade, setGrade] = useState(user?.grade || "");
+  const [section, setSection] = useState(user?.section || "");
+  const [wingId, setWingId] = useState(user?.wingId || "");
+  const [subjects, setSubjects] = useState<string[]>(user?.subjects || []);
+
+  const handleSubjectToggle = (subject: string) => {
+    setSubjects(prev => 
+      prev.includes(subject) 
+        ? prev.filter(s => s !== subject)
+        : [...prev, subject]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -613,12 +688,27 @@ function UserForm({
       toast({ title: "Password is required for new users", variant: "destructive" });
       return;
     }
+    if (role === "teacher" && !wingId) {
+      toast({ title: "Wing is required for teachers", variant: "destructive" });
+      return;
+    }
+    if (role === "teacher" && subjects.length === 0) {
+      toast({ title: "At least one subject is required for teachers", variant: "destructive" });
+      return;
+    }
+    if (role === "student" && !grade) {
+      toast({ title: "Class is required for students", variant: "destructive" });
+      return;
+    }
     
     const data: any = {
       name: name.trim(),
       email: email.trim(),
       role,
-      grade: grade || null,
+      grade: role === "student" ? grade : null,
+      section: role === "student" ? section || null : null,
+      wingId: role === "teacher" ? wingId : null,
+      subjects: role === "teacher" ? subjects : [],
     };
     
     if (password) {
@@ -668,41 +758,120 @@ function UserForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Role <span className="text-red-500">*</span></Label>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger data-testid="select-role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLES.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    {r.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Grade {role === "student" && <span className="text-red-500">*</span>}</Label>
-          <Select value={grade || "none"} onValueChange={(v) => setGrade(v === "none" ? "" : v)}>
-            <SelectTrigger data-testid="select-grade">
-              <SelectValue placeholder="Select grade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Grade</SelectItem>
-              {GRADES.map((g) => (
-                <SelectItem key={g} value={g}>Grade {g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label>Role <span className="text-red-500">*</span></Label>
+        <Select value={role} onValueChange={(v) => { setRole(v); setWingId(""); setSubjects([]); setGrade(""); setSection(""); }}>
+          <SelectTrigger data-testid="select-role">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ROLES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  {r.label}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {/* Teacher specific fields */}
+      {role === "teacher" && (
+        <>
+          <div className="space-y-2">
+            <Label>Wing <span className="text-red-500">*</span></Label>
+            <Select value={wingId} onValueChange={setWingId}>
+              <SelectTrigger data-testid="select-wing">
+                <SelectValue placeholder="Select wing" />
+              </SelectTrigger>
+              <SelectContent>
+                {wings.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4" />
+                      {w.displayName || w.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {wings.length === 0 && (
+              <p className="text-xs text-amber-600">
+                No wings found. Please create wings in Admin Settings first.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Subjects <span className="text-red-500">*</span></Label>
+            <div className="border rounded-lg p-3 max-h-48 overflow-y-auto bg-slate-50 dark:bg-slate-900">
+              <div className="grid grid-cols-2 gap-2">
+                {COMMON_SUBJECTS.map((subj) => (
+                  <div key={subj} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`subj-${subj}`}
+                      checked={subjects.includes(subj)}
+                      onCheckedChange={() => handleSubjectToggle(subj)}
+                    />
+                    <label
+                      htmlFor={`subj-${subj}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {subj}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {subjects.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {subjects.map((s) => (
+                  <Badge key={s} variant="secondary" className="text-xs">
+                    {s}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Student specific fields */}
+      {role === "student" && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Class <span className="text-red-500">*</span></Label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger data-testid="select-grade">
+                <SelectValue placeholder="Select class" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADES.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4" />
+                      Class {g}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Section</Label>
+            <Input
+              value={section}
+              onChange={(e) => setSection(e.target.value.toUpperCase())}
+              placeholder="e.g., A, B, C"
+              maxLength={5}
+              data-testid="input-section"
+            />
+          </div>
+        </div>
+      )}
 
       <DialogFooter className="mt-6">
         <Button type="button" variant="outline" onClick={onCancel}>
@@ -721,11 +890,13 @@ function UserForm({
 function BulkUploadForm({
   schoolId,
   schoolCode,
+  wings,
   onSuccess,
   onCancel,
 }: {
   schoolId: string;
   schoolCode: string;
+  wings: Wing[];
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -743,7 +914,8 @@ function BulkUploadForm({
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const lines = text.split("\n").filter(line => line.trim());
+      const lines = text.split("\n")
+        .filter(line => line.trim() && !line.trim().startsWith("#"));
       
       if (lines.length < 2) {
         toast({ title: "Invalid CSV", description: "File must have header row and at least one data row", variant: "destructive" });
@@ -752,10 +924,10 @@ function BulkUploadForm({
 
       const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
       const data = lines.slice(1).map(line => {
-        const values = line.split(",").map(v => v.trim());
+        const values = parseCSVLine(line);
         const obj: any = {};
         headers.forEach((h, i) => {
-          obj[h] = values[i] || "";
+          obj[h] = values[i]?.trim() || "";
         });
         return obj;
       }).filter(row => row.name && row.email);
@@ -764,6 +936,27 @@ function BulkUploadForm({
       setUploadResults(null);
     };
     reader.readAsText(file);
+  };
+
+  // Parse CSV line handling quoted values
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        result.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
   };
 
   const handleUpload = async () => {
@@ -786,6 +979,11 @@ function BulkUploadForm({
           tenantId: schoolId,
           role: uploadType,
           users: parsedData,
+          wingMapping: wings.reduce((acc, w) => {
+            acc[w.name.toLowerCase()] = w.id;
+            acc[w.displayName?.toLowerCase() || ""] = w.id;
+            return acc;
+          }, {} as Record<string, string>),
         }),
       });
 
@@ -838,14 +1036,17 @@ function BulkUploadForm({
         </TabsList>
 
         <TabsContent value="teacher" className="mt-4">
-          <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Teacher CSV Format</h4>
-            <p className="text-sm text-green-700 dark:text-green-400 mb-3">
-              Required columns: <code className="bg-green-100 dark:bg-green-900 px-1 rounded">name, email, password</code>
-              <br />
-              Optional: <code className="bg-green-100 dark:bg-green-900 px-1 rounded">subject</code>
-            </p>
-            <Button variant="outline" size="sm" onClick={() => downloadTemplate("teacher")}>
+          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg border border-green-200 dark:border-green-800">
+            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2 flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              Teacher CSV Format
+            </h4>
+            <div className="text-sm text-green-700 dark:text-green-400 mb-3 space-y-1">
+              <p><strong>Required:</strong> <code className="bg-green-100 dark:bg-green-900 px-1 rounded">name, email, password, wing, subjects</code></p>
+              <p><strong>Wing values:</strong> {wings.length > 0 ? wings.map(w => w.displayName || w.name).join(", ") : "No wings created yet"}</p>
+              <p><strong>Subjects:</strong> Comma-separated (e.g., "Mathematics,Science,English")</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("teacher")} className="bg-white dark:bg-slate-800">
               <Download className="w-4 h-4 mr-2" />
               Download Teacher Template
             </Button>
@@ -853,14 +1054,18 @@ function BulkUploadForm({
         </TabsContent>
 
         <TabsContent value="student" className="mt-4">
-          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-            <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">Student CSV Format</h4>
-            <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
-              Required columns: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">name, email, password, grade</code>
-              <br />
-              Optional: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">roll_number</code>
-            </p>
-            <Button variant="outline" size="sm" onClick={() => downloadTemplate("student")}>
+          <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+            <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              Student CSV Format
+            </h4>
+            <div className="text-sm text-amber-700 dark:text-amber-400 mb-3 space-y-1">
+              <p><strong>Required:</strong> <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">name, email, password, class</code></p>
+              <p><strong>Optional:</strong> <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">section, roll_number</code></p>
+              <p><strong>Class:</strong> 1-12</p>
+              <p><strong>Section:</strong> Leave blank if Super Admin will fill later</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("student")} className="bg-white dark:bg-slate-800">
               <Download className="w-4 h-4 mr-2" />
               Download Student Template
             </Button>
@@ -903,7 +1108,17 @@ function BulkUploadForm({
                 <TableRow className="bg-slate-50 dark:bg-slate-800">
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  {uploadType === "student" && <TableHead>Grade</TableHead>}
+                  {uploadType === "teacher" ? (
+                    <>
+                      <TableHead>Wing</TableHead>
+                      <TableHead>Subjects</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead>Class</TableHead>
+                      <TableHead>Section</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -911,12 +1126,22 @@ function BulkUploadForm({
                   <TableRow key={i}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell>{row.email}</TableCell>
-                    {uploadType === "student" && <TableCell>{row.grade || "-"}</TableCell>}
+                    {uploadType === "teacher" ? (
+                      <>
+                        <TableCell>{row.wing || "-"}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{row.subjects || "-"}</TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell>{row.class || "-"}</TableCell>
+                        <TableCell>{row.section || "-"}</TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
                 {parsedData.length > 10 && (
                   <TableRow>
-                    <TableCell colSpan={uploadType === "student" ? 3 : 2} className="text-center text-slate-500">
+                    <TableCell colSpan={4} className="text-center text-slate-500">
                       ... and {parsedData.length - 10} more rows
                     </TableCell>
                   </TableRow>
