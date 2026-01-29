@@ -1957,6 +1957,65 @@ export class PgStorage implements IStorage {
       .returning();
     return !!updated;
   }
+
+  // =====================================================
+  // REFERENCE MATERIALS - Global Content Library
+  // =====================================================
+  async getReferenceMaterials(grade?: string, category?: string): Promise<ReferenceMaterial[]> {
+    let query = db.select().from(referenceMaterials)
+      .where(eq(referenceMaterials.isDeleted, false));
+    
+    if (grade) {
+      query = db.select().from(referenceMaterials)
+        .where(and(
+          eq(referenceMaterials.isDeleted, false),
+          eq(referenceMaterials.grade, grade)
+        ));
+    }
+    
+    if (grade && category) {
+      query = db.select().from(referenceMaterials)
+        .where(and(
+          eq(referenceMaterials.isDeleted, false),
+          eq(referenceMaterials.grade, grade),
+          eq(referenceMaterials.category, category)
+        ));
+    } else if (category) {
+      query = db.select().from(referenceMaterials)
+        .where(and(
+          eq(referenceMaterials.isDeleted, false),
+          eq(referenceMaterials.category, category)
+        ));
+    }
+
+    return await query.orderBy(desc(referenceMaterials.createdAt));
+  }
+
+  async createReferenceMaterial(material: InsertReferenceMaterial): Promise<ReferenceMaterial> {
+    const [created] = await db.insert(referenceMaterials)
+      .values({
+        ...material,
+        id: randomUUID(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateReferenceMaterial(id: string, data: Partial<ReferenceMaterial>): Promise<ReferenceMaterial | undefined> {
+    const [updated] = await db.update(referenceMaterials)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(referenceMaterials.id, id))
+      .returning();
+    return updated;
+  }
+
+  async softDeleteReferenceMaterial(id: string): Promise<boolean> {
+    const [updated] = await db.update(referenceMaterials)
+      .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
+      .where(eq(referenceMaterials.id, id))
+      .returning();
+    return !!updated;
+  }
 }
 
 export const pgStorage = new PgStorage();
