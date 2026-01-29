@@ -756,28 +756,53 @@ function StudentDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Performance Over Time</CardTitle>
-              <CardDescription>Track how your marks improve</CardDescription>
+              <CardDescription>Your actual performance from submitted exams</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between"><span>Maths</span><span>75%</span></div>
-                  <Progress value={75} />
+              {studentResults.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium">No performance data yet</p>
+                  <p className="text-sm">Complete some exams to see your performance trends.</p>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between"><span>Science</span><span>60%</span></div>
-                  <Progress value={60} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between"><span>English</span><span>85%</span></div>
-                  <Progress value={85} />
-                </div>
-              </div>
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Improvement Suggestions</h4>
-                <p className="text-sm text-muted-foreground">Practice more in: Fractions, Algebra</p>
-                <p className="text-sm text-green-600">You are strong in: Reading, Biology</p>
-              </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {/* Group results by subject and show average */}
+                    {Object.entries(
+                      studentResults.reduce((acc: Record<string, { total: number; count: number }>, r) => {
+                        if (!acc[r.subject]) acc[r.subject] = { total: 0, count: 0 };
+                        const pct = parseFloat(r.percentage || "0");
+                        acc[r.subject].total += pct;
+                        acc[r.subject].count += 1;
+                        return acc;
+                      }, {})
+                    ).map(([subject, data]) => {
+                      const avg = Math.round(data.total / data.count);
+                      return (
+                        <div key={subject} className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{subject}</span>
+                            <span className={avg >= 60 ? "text-green-600" : avg >= 40 ? "text-yellow-600" : "text-red-600"}>
+                              {avg}%
+                            </span>
+                          </div>
+                          <Progress value={avg} className={avg >= 60 ? "[&>div]:bg-green-500" : avg >= 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-red-500"} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-6 p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Summary</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Total exams completed: {studentResults.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Overall average: {Math.round(studentResults.reduce((sum, r) => sum + parseFloat(r.percentage || "0"), 0) / studentResults.length)}%
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
