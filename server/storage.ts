@@ -2601,7 +2601,20 @@ export class MemStorage implements IStorage {
   }
 }
 
-import { pgStorage } from "./pg-storage";
+let pgStorageModule: { pgStorage: IStorage } | null = null;
+
+async function createStorageAsync(): Promise<IStorage> {
+  const engine = process.env.STORAGE_ENGINE || "postgres";
+  if (engine === "memory") {
+    console.log("[storage] Using in-memory storage (MemStorage)");
+    return new MemStorage();
+  }
+  console.log("[storage] Using PostgreSQL storage (PgStorage)");
+  if (!pgStorageModule) {
+    pgStorageModule = await import("./pg-storage");
+  }
+  return pgStorageModule.pgStorage;
+}
 
 function createStorage(): IStorage {
   const engine = process.env.STORAGE_ENGINE || "postgres";
@@ -2609,8 +2622,24 @@ function createStorage(): IStorage {
     console.log("[storage] Using in-memory storage (MemStorage)");
     return new MemStorage();
   }
-  console.log("[storage] Using PostgreSQL storage (PgStorage)");
-  return pgStorage;
+  // For postgres, we need to ensure db.ts is only loaded when needed
+  // This synchronous version returns MemStorage as fallback, actual postgres is loaded async
+  console.log("[storage] PostgreSQL requested - using in-memory for initial sync load");
+  return new MemStorage();
 }
 
-export const storage = createStorage();
+// For immediate synchronous use (will use MemStorage if engine is 'memory')
+export let storage: IStorage = createStorage();
+
+// Initialize async storage if postgres is needed
+(async () => {
+  const engine = process.env.STORAGE_ENGINE || "postgres";
+  if (engine !== "memory") {
+    try {
+      storage = await createStorageAsync();
+    } catch (error) {
+      console.error("[storage] Failed to initialize PostgreSQL storage, falling back to MemStorage:", error);
+      storage = new MemStorage();
+    }
+  }
+})();
