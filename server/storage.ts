@@ -385,12 +385,13 @@ export interface IStorage {
   recalculateStorageUsage(tenantId: string): Promise<StorageUsage>;
   
   // =====================================================
-  // ADMIN EXAM CONFIGURATION (Legacy - being replaced by SchoolExams)
+  // ADMIN EXAM CONFIGURATION (Legacy - kept for backward compatibility)
+  // getActiveExamsForBlueprint and getMockTestExams now use SchoolExams
   // =====================================================
   getAdminExamConfig(id: string): Promise<AdminExamConfig | undefined>;
   getAdminExamConfigsByTenant(tenantId: string, wing?: WingType): Promise<AdminExamConfig[]>;
-  getActiveExamsForBlueprint(tenantId: string): Promise<AdminExamConfig[]>;
-  getMockTestExams(tenantId: string): Promise<AdminExamConfig[]>;
+  getActiveExamsForBlueprint(tenantId: string): Promise<SchoolExam[]>;  // NOW USES SCHOOL_EXAMS
+  getMockTestExams(tenantId: string): Promise<SchoolExam[]>;  // NOW USES SCHOOL_EXAMS
   createAdminExamConfig(config: InsertAdminExamConfig): Promise<AdminExamConfig>;
   updateAdminExamConfig(id: string, data: Partial<AdminExamConfig>): Promise<AdminExamConfig | undefined>;
   softDeleteAdminExamConfig(id: string, deletedBy: string): Promise<boolean>;
