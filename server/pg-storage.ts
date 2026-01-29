@@ -1991,6 +1991,15 @@ export class PgStorage implements IStorage {
     return await query.orderBy(desc(referenceMaterials.createdAt));
   }
 
+  async getReferenceMaterial(id: string): Promise<ReferenceMaterial | undefined> {
+    const [material] = await db.select().from(referenceMaterials)
+      .where(and(
+        eq(referenceMaterials.id, id),
+        eq(referenceMaterials.isDeleted, false)
+      ));
+    return material;
+  }
+
   async createReferenceMaterial(material: InsertReferenceMaterial): Promise<ReferenceMaterial> {
     const [created] = await db.insert(referenceMaterials)
       .values({
@@ -2017,5 +2026,45 @@ export class PgStorage implements IStorage {
     return !!updated;
   }
 }
+
+// =====================================================
+// SEED SUPER ADMIN USER
+// =====================================================
+async function seedSuperAdmin() {
+  try {
+    // Check if super admin already exists
+    const [existingSuperAdmin] = await db.select().from(users)
+      .where(eq(users.email, "superadmin@safal.com"));
+    
+    if (!existingSuperAdmin) {
+      console.log("[pg-storage] Creating Super Admin user...");
+      await db.insert(users).values({
+        id: "user-superadmin",
+        tenantId: null,
+        email: "superadmin@safal.com",
+        password: "SuperAdmin@123",
+        name: "Super Admin",
+        role: "super_admin",
+        grade: null,
+        section: null,
+        wingId: null,
+        subjects: [],
+        avatar: null,
+        parentOf: null,
+        active: true,
+        assignedQuestions: {},
+        sessionToken: null,
+      });
+      console.log("[pg-storage] Super Admin user created successfully");
+    } else {
+      console.log("[pg-storage] Super Admin user already exists");
+    }
+  } catch (error) {
+    console.error("[pg-storage] Error seeding Super Admin:", error);
+  }
+}
+
+// Seed on module load
+seedSuperAdmin();
 
 export const pgStorage = new PgStorage();
