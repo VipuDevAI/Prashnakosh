@@ -25,6 +25,8 @@ import {
   type StorageUsage, type InsertStorageUsage,
   type AdminExamConfig, type InsertAdminExamConfig,
   type SchoolStorageConfig, type InsertSchoolStorageConfig,
+  type SchoolWing, type InsertSchoolWing,
+  type SchoolExam, type InsertSchoolExam,
   type WingType,
   type AuthUser,
   type QuestionStatus,
