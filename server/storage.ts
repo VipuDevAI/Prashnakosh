@@ -536,16 +536,24 @@ export class MemStorage implements IStorage {
     const user: User = { 
       id,
       tenantId: insertUser.tenantId || null,
+      userCode: insertUser.userCode || null,
       email: insertUser.email,
       password: insertUser.password,
       name: insertUser.name,
       role: insertUser.role,
       grade: insertUser.grade || null,
+      section: insertUser.section || null,
+      wingId: insertUser.wingId || null,
+      subjects: insertUser.subjects || [],
       avatar: insertUser.avatar || null,
       parentOf: insertUser.parentOf || null,
       active: insertUser.active ?? true,
+      mustChangePassword: insertUser.mustChangePassword ?? false,
       assignedQuestions: insertUser.assignedQuestions || {},
-      sessionToken: insertUser.sessionToken || null
+      sessionToken: insertUser.sessionToken || null,
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
     };
     this.users.set(id, user);
     return user;
