@@ -172,8 +172,13 @@ export default function ReferenceMaterialsPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const token = localStorage.getItem("safal_token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      
       const res = await fetch(`/api/superadmin/reference-materials/${id}`, {
         method: "DELETE",
+        headers,
         credentials: "include",
       });
       if (!res.ok) {
