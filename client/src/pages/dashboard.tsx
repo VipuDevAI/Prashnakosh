@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    window.location.href = "/";
   };
 
   const roleConfig: Record<string, { label: string; color: string }> = {
