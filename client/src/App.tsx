@@ -247,6 +247,21 @@ function Router() {
       <Route path="/bulk-upload">
         <ProtectedRoute component={BulkUploadPage} />
       </Route>
+      
+      {/* Super Admin Routes */}
+      <Route path="/superadmin">
+        <ProtectedRoute component={SuperAdminDashboard} />
+      </Route>
+      <Route path="/superadmin/schools">
+        <ProtectedRoute component={SuperAdminSchools} />
+      </Route>
+      <Route path="/superadmin/settings">
+        <ProtectedRoute component={SuperAdminSettings} />
+      </Route>
+      <Route path="/superadmin/storage">
+        <ProtectedRoute component={SuperAdminStorage} />
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );
