@@ -331,6 +331,15 @@ export interface IStorage {
   softDeleteSchoolExam(id: string): Promise<boolean>;
   
   // =====================================================
+  // REFERENCE MATERIALS (Global for Class 10 & 12)
+  // =====================================================
+  getReferenceMaterials(grade?: string, category?: string): Promise<ReferenceMaterial[]>;
+  getReferenceMaterial(id: string): Promise<ReferenceMaterial | undefined>;
+  createReferenceMaterial(material: InsertReferenceMaterial): Promise<ReferenceMaterial>;
+  updateReferenceMaterial(id: string, data: Partial<ReferenceMaterial>): Promise<ReferenceMaterial | undefined>;
+  softDeleteReferenceMaterial(id: string): Promise<boolean>;
+  
+  // =====================================================
   // PHASE 2+3: SUPER ADMIN GOVERNANCE
   // =====================================================
   
