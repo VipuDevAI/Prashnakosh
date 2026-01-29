@@ -4966,7 +4966,7 @@ export function registerPaperGenerationRoutes(app: Express) {
   // Create a new user for a school
   app.post("/api/superadmin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
-      const { tenantId, email, name, password, role, grade } = req.body;
+      const { tenantId, email, name, password, role, grade, section, wingId, subjects } = req.body;
       
       if (!tenantId) {
         return res.status(400).json({ error: "tenantId is required" });
@@ -4976,6 +4976,21 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
       if (!role || !["principal", "hod", "teacher", "student", "parent"].includes(role)) {
         return res.status(400).json({ error: "Valid role is required (principal, hod, teacher, student, parent)" });
+      }
+
+      // Validate teacher requirements
+      if (role === "teacher") {
+        if (!wingId) {
+          return res.status(400).json({ error: "Wing is required for teachers" });
+        }
+        if (!subjects || !Array.isArray(subjects) || subjects.length === 0) {
+          return res.status(400).json({ error: "At least one subject is required for teachers" });
+        }
+      }
+
+      // Validate student requirements
+      if (role === "student" && !grade) {
+        return res.status(400).json({ error: "Class is required for students" });
       }
 
       // Check if email already exists
@@ -4994,7 +5009,10 @@ export function registerPaperGenerationRoutes(app: Express) {
         name,
         password, // Note: In production, hash this!
         role,
-        grade: grade || null,
+        grade: role === "student" ? grade : null,
+        section: role === "student" ? section || null : null,
+        wingId: role === "teacher" ? wingId : null,
+        subjects: role === "teacher" ? subjects : [],
         userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
       });
 
