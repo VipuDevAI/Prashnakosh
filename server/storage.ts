@@ -27,6 +27,7 @@ import {
   type SchoolStorageConfig, type InsertSchoolStorageConfig,
   type SchoolWing, type InsertSchoolWing,
   type SchoolExam, type InsertSchoolExam,
+  type ReferenceMaterial, type InsertReferenceMaterial,
   type WingType,
   type AuthUser,
   type QuestionStatus,
