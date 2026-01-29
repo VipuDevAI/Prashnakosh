@@ -358,6 +358,9 @@ export default function StoragePage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Footer */}
+      <AppFooter />
     </div>
   );
 }
