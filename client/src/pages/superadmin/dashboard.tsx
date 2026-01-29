@@ -69,25 +69,47 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Three Primary Buttons */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {/* Add School */}
           <Card 
             className="group cursor-pointer hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 border-2 hover:border-emerald-500/50 bg-white dark:bg-slate-900"
             onClick={() => navigate("/superadmin/schools")}
             data-testid="card-add-school"
           >
-            <CardContent className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
-                <Building2 className="w-8 h-8" />
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
+                <Building2 className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Add School
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Onboard new schools with complete details
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Onboard new schools
               </p>
-              <div className="mt-4 text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
+              <div className="mt-3 text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
                 Create • Edit • Delete
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Users Management */}
+          <Card 
+            className="group cursor-pointer hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 border-2 hover:border-orange-500/50 bg-white dark:bg-slate-900"
+            onClick={() => navigate("/superadmin/users")}
+            data-testid="card-users"
+          >
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-500/30">
+                <Users className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                Users
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Add users per school
+              </p>
+              <div className="mt-3 text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">
+                Teachers • Students • HOD
               </div>
             </CardContent>
           </Card>
@@ -98,17 +120,17 @@ export default function SuperAdminDashboard() {
             onClick={() => navigate("/superadmin/settings")}
             data-testid="card-admin-settings"
           >
-            <CardContent className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
-                <Settings className="w-8 h-8" />
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
+                <Settings className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Admin Settings
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Configure wings & exams for each school
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Configure wings & exams
               </p>
-              <div className="mt-4 text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">
+              <div className="mt-3 text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">
                 Wings • Exams • Structure
               </div>
             </CardContent>
@@ -120,17 +142,17 @@ export default function SuperAdminDashboard() {
             onClick={() => navigate("/superadmin/storage")}
             data-testid="card-s3-storage"
           >
-            <CardContent className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/30">
-                <HardDrive className="w-8 h-8" />
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/30">
+                <HardDrive className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 S3 Storage
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Allocate storage buckets per school
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Allocate storage buckets
               </p>
-              <div className="mt-4 text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wide">
+              <div className="mt-3 text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wide">
                 Buckets • Folders • Mapping
               </div>
             </CardContent>
