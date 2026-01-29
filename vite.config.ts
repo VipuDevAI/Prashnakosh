@@ -34,6 +34,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 3000,
+    allowedHosts: ["school-examgov.preview.emergentagent.com"],
     proxy: {
       "/api": {
         target: "http://localhost:8001",
