@@ -690,12 +690,12 @@ function UserForm({
 
         <div className="space-y-2">
           <Label>Grade {role === "student" && <span className="text-red-500">*</span>}</Label>
-          <Select value={grade} onValueChange={setGrade}>
+          <Select value={grade || "none"} onValueChange={(v) => setGrade(v === "none" ? "" : v)}>
             <SelectTrigger data-testid="select-grade">
               <SelectValue placeholder="Select grade" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Grade</SelectItem>
+              <SelectItem value="none">No Grade</SelectItem>
               {GRADES.map((g) => (
                 <SelectItem key={g} value={g}>Grade {g}</SelectItem>
               ))}
