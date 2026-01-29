@@ -1,42 +1,39 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Settings, HardDrive, LogOut, Shield, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles } from "lucide-react";
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
 
-  useEffect(() => {
-    if (!user || user.role !== "super_admin") {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
   if (!user || user.role !== "super_admin") {
+    navigate("/");
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      {/* Header */}
-      <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-              <Shield className="w-6 h-6" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-300">
+      {/* Premium Header with Gradient */}
+      <header className="relative border-b border-white/20 dark:border-slate-800/50 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900 text-white shadow-xl shadow-indigo-500/20 dark:shadow-indigo-900/30">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
+        <div className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
+              <Shield className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Prashnakosh</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Super Admin Console</p>
+              <h1 className="text-2xl font-bold tracking-tight">Prashnakosh</h1>
+              <p className="text-sm text-white/80">Super Admin Control Center</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600 dark:text-slate-300">
+            <span className="hidden sm:block text-sm text-white/90 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
               Welcome, <strong>{user.name}</strong>
             </span>
+            <ThemeToggle />
             <Button 
               variant="outline" 
               size="sm" 
@@ -44,6 +41,7 @@ export default function SuperAdminDashboard() {
                 logout(); 
                 window.location.href = "/";
               }}
+              className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:text-white"
               data-testid="btn-logout"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -55,120 +53,131 @@ export default function SuperAdminDashboard() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
+        {/* Welcome Section with Gradient Text */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 shadow-lg shadow-indigo-500/30">
-            <Shield className="w-10 h-10" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white mb-6 shadow-2xl shadow-purple-500/30 animate-pulse">
+            <Sparkles className="w-10 h-10" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
             Super Admin Dashboard
           </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            You are shaping the academic structure of every school. 
-            <span className="block mt-2 font-medium text-indigo-600 dark:text-indigo-400">
-              Configure once. Everything else flows automatically.
-            </span>
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+            Manage schools, configure exam structures, allocate resources, and oversee the entire platform from here.
           </p>
         </div>
 
-        {/* Three Primary Buttons */}
+        {/* Four Primary Cards with Premium Gradients */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {/* Add School */}
           <Card 
-            className="group cursor-pointer hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 border-2 hover:border-emerald-500/50 bg-white dark:bg-slate-900"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-teal-800 text-white shadow-xl shadow-emerald-500/30 dark:shadow-emerald-900/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/schools")}
             data-testid="card-add-school"
           >
-            <CardContent className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
-                <Building2 className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                Add School
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Onboard new schools
-              </p>
-              <div className="mt-3 text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
-                Create • Edit • Delete
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <Building2 className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">Add School</h3>
+                <p className="text-xs text-white/80 mb-3">Onboard new schools</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Create • Edit • Delete
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Users Management */}
           <Card 
-            className="group cursor-pointer hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 border-2 hover:border-orange-500/50 bg-white dark:bg-slate-900"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 dark:from-orange-600 dark:via-orange-700 dark:to-red-700 text-white shadow-xl shadow-orange-500/30 dark:shadow-orange-900/30 hover:shadow-2xl hover:shadow-orange-500/40 hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/users")}
             data-testid="card-users"
           >
-            <CardContent className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-500/30">
-                <Users className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                Users
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Add users per school
-              </p>
-              <div className="mt-3 text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">
-                Teachers • Students • HOD
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <Users className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">Users</h3>
+                <p className="text-xs text-white/80 mb-3">Add users per school</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Teachers • Students • HOD
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Admin Settings */}
           <Card 
-            className="group cursor-pointer hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 border-2 hover:border-blue-500/50 bg-white dark:bg-slate-900"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 dark:from-blue-600 dark:via-blue-700 dark:to-indigo-800 text-white shadow-xl shadow-blue-500/30 dark:shadow-blue-900/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/settings")}
             data-testid="card-admin-settings"
           >
-            <CardContent className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
-                <Settings className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                Admin Settings
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Configure wings & exams
-              </p>
-              <div className="mt-3 text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">
-                Wings • Exams • Structure
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <Settings className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">Admin Settings</h3>
+                <p className="text-xs text-white/80 mb-3">Configure wings & exams</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Wings • Exams • Structure
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* S3 Storage */}
           <Card 
-            className="group cursor-pointer hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 border-2 hover:border-purple-500/50 bg-white dark:bg-slate-900"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-purple-400 via-purple-500 to-pink-600 dark:from-purple-600 dark:via-purple-700 dark:to-pink-800 text-white shadow-xl shadow-purple-500/30 dark:shadow-purple-900/30 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/storage")}
             data-testid="card-s3-storage"
           >
-            <CardContent className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 text-white mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/30">
-                <HardDrive className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                S3 Storage
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Allocate storage buckets
-              </p>
-              <div className="mt-3 text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wide">
-                Buckets • Folders • Mapping
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <HardDrive className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">S3 Storage</h3>
+                <p className="text-xs text-white/80 mb-3">Allocate storage buckets</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Buckets • Folders • Mapping
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Info Footer */}
-        <div className="mt-16 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            All configurations made here automatically apply to HOD, Teacher, and Student dashboards.
-          </p>
+        {/* Stats Section */}
+        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
+            <p className="text-3xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">0</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Schools</p>
+          </div>
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
+            <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">0</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Users</p>
+          </div>
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
+            <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">0</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Exams</p>
+          </div>
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/50 dark:border-slate-700/50 shadow-lg">
+            <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">0</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Questions</p>
+          </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-auto py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+        <p>© 2026 Prashnakosh. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
