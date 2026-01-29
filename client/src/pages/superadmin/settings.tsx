@@ -83,6 +83,7 @@ interface Exam {
   watermarkText: string | null;
   logoUrl: string | null;
   pageSize: string;
+  allowMockTest: boolean;
   isActive: boolean;
 }
 
