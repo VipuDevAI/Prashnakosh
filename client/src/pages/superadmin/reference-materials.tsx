@@ -142,9 +142,13 @@ export default function ReferenceMaterialsPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ReferenceMaterial> }) => {
+      const token = localStorage.getItem("safal_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      
       const res = await fetch(`/api/superadmin/reference-materials/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(data),
         credentials: "include",
       });
