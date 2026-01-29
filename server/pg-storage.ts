@@ -1756,25 +1756,29 @@ export class PgStorage implements IStorage {
       .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
   }
 
-  async getActiveExamsForBlueprint(tenantId: string): Promise<AdminExamConfig[]> {
-    return db.select().from(adminExamConfigs)
+  // =====================================================
+  // ACTIVE EXAMS FOR BLUEPRINT AND MOCK TESTS
+  // Now using school_exams as the SINGLE SOURCE OF TRUTH
+  // =====================================================
+  async getActiveExamsForBlueprint(tenantId: string): Promise<SchoolExam[]> {
+    return db.select().from(schoolExams)
       .where(and(
-        eq(adminExamConfigs.tenantId, tenantId),
-        eq(adminExamConfigs.isDeleted, false),
-        eq(adminExamConfigs.isActive, true)
+        eq(schoolExams.tenantId, tenantId),
+        eq(schoolExams.isDeleted, false),
+        eq(schoolExams.isActive, true)
       ))
-      .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
+      .orderBy(schoolExams.wingId, schoolExams.examName);
   }
 
-  async getMockTestExams(tenantId: string): Promise<AdminExamConfig[]> {
-    return db.select().from(adminExamConfigs)
+  async getMockTestExams(tenantId: string): Promise<SchoolExam[]> {
+    return db.select().from(schoolExams)
       .where(and(
-        eq(adminExamConfigs.tenantId, tenantId),
-        eq(adminExamConfigs.isDeleted, false),
-        eq(adminExamConfigs.isActive, true),
-        eq(adminExamConfigs.allowMockTest, true)
+        eq(schoolExams.tenantId, tenantId),
+        eq(schoolExams.isDeleted, false),
+        eq(schoolExams.isActive, true),
+        eq(schoolExams.allowMockTest, true)
       ))
-      .orderBy(adminExamConfigs.wing, adminExamConfigs.examName);
+      .orderBy(schoolExams.wingId, schoolExams.examName);
   }
 
   async createAdminExamConfig(config: InsertAdminExamConfig): Promise<AdminExamConfig> {
