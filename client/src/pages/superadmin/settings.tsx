@@ -536,6 +536,9 @@ export default function AdminSettingsPage() {
         )}
       </main>
 
+      {/* Footer */}
+      <AppFooter />
+
       {/* Wing Form Dialog */}
       <WingFormDialog
         isOpen={isWingCreateOpen || !!editWing}
