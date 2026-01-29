@@ -67,7 +67,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Four Primary Cards with Premium Gradients */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
           {/* Add School */}
           <Card 
             className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-teal-800 text-white shadow-xl shadow-emerald-500/30 dark:shadow-emerald-900/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 hover:-translate-y-1"
@@ -147,6 +147,27 @@ export default function SuperAdminDashboard() {
                 <p className="text-xs text-white/80 mb-3">Allocate storage buckets</p>
                 <div className="text-xs font-medium uppercase tracking-wide text-white/60">
                   Buckets • Folders • Mapping
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reference Materials Library */}
+          <Card 
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-cyan-400 via-teal-500 to-emerald-600 dark:from-cyan-600 dark:via-teal-700 dark:to-emerald-800 text-white shadow-xl shadow-teal-500/30 dark:shadow-teal-900/30 hover:shadow-2xl hover:shadow-teal-500/40 hover:scale-105 hover:-translate-y-1"
+            onClick={() => navigate("/superadmin/reference-materials")}
+            data-testid="card-reference-materials"
+          >
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <Library className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">Reference Library</h3>
+                <p className="text-xs text-white/80 mb-3">Global study materials</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Class 10 • Class 12 • Papers
                 </div>
               </div>
             </CardContent>
