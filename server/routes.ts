@@ -4646,6 +4646,303 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // =====================================================
+  // NEW SUPER ADMIN APIs (Fresh Implementation)
+  // =====================================================
+
+  // --- Schools CRUD ---
+  app.get("/api/superadmin/schools", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      const schools = tenants.filter(t => !t.isDeleted).map(t => ({
+        id: t.id,
+        name: t.name,
+        code: t.code,
+        address: t.address || "",
+        phone: t.phone || "",
+        principalName: t.principalName || "",
+        principalEmail: t.principalEmail || "",
+        principalPhone: t.principalPhone || "",
+        active: t.active ?? true,
+        createdAt: t.createdAt,
+      }));
+      res.json(schools);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/superadmin/schools", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { name, code, address, phone, principalName, principalEmail, principalPhone } = req.body;
+      if (!name || !code) {
+        return res.status(400).json({ error: "Name and code are required" });
+      }
+      // Check if code already exists
+      const existing = await storage.getTenantByCode(code);
+      if (existing) {
+        return res.status(400).json({ error: "School code already exists" });
+      }
+      const tenant = await storage.createTenant({
+        name,
+        code,
+        address,
+        phone,
+        principalName,
+        principalEmail,
+        principalPhone,
+        active: true,
+      });
+      res.status(201).json(tenant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/superadmin/schools/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, address, phone, principalName, principalEmail, principalPhone, active } = req.body;
+      const updated = await storage.updateTenant(id, {
+        ...(name && { name }),
+        ...(address !== undefined && { address }),
+        ...(phone !== undefined && { phone }),
+        ...(principalName !== undefined && { principalName }),
+        ...(principalEmail !== undefined && { principalEmail }),
+        ...(principalPhone !== undefined && { principalPhone }),
+        ...(active !== undefined && { active }),
+      });
+      if (!updated) {
+        return res.status(404).json({ error: "School not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/superadmin/schools/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.softDeleteTenant(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "School not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Wings CRUD ---
+  app.get("/api/superadmin/wings", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { schoolId } = req.query;
+      if (!schoolId) {
+        return res.status(400).json({ error: "schoolId is required" });
+      }
+      const wings = await storage.getWingsByTenant(schoolId as string);
+      res.json(wings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/superadmin/wings", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { tenantId, name, displayName, grades } = req.body;
+      if (!tenantId || !name || !displayName) {
+        return res.status(400).json({ error: "tenantId, name, and displayName are required" });
+      }
+      const wing = await storage.createWing({
+        tenantId,
+        name,
+        displayName,
+        grades: grades || [],
+        sortOrder: 0,
+        isActive: true,
+      });
+      res.status(201).json(wing);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/superadmin/wings/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, displayName, grades, isActive, sortOrder } = req.body;
+      const updated = await storage.updateWing(id, {
+        ...(name && { name }),
+        ...(displayName && { displayName }),
+        ...(grades && { grades }),
+        ...(isActive !== undefined && { isActive }),
+        ...(sortOrder !== undefined && { sortOrder }),
+      });
+      if (!updated) {
+        return res.status(404).json({ error: "Wing not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/superadmin/wings/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.softDeleteWing(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Wing not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- School Exams CRUD ---
+  app.get("/api/superadmin/exams", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { schoolId, wingId } = req.query;
+      if (!schoolId) {
+        return res.status(400).json({ error: "schoolId is required" });
+      }
+      const exams = await storage.getSchoolExams(schoolId as string, wingId as string | undefined);
+      res.json(exams);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/superadmin/exams", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = req.user as AuthUser;
+      const { tenantId, wingId, examName, academicYear, totalMarks, durationMinutes, examDate, subjects, questionPaperSets, watermarkText, logoUrl, pageSize } = req.body;
+      if (!tenantId || !wingId || !examName || !academicYear) {
+        return res.status(400).json({ error: "tenantId, wingId, examName, and academicYear are required" });
+      }
+      const exam = await storage.createSchoolExam({
+        tenantId,
+        wingId,
+        examName,
+        academicYear,
+        totalMarks: totalMarks || 100,
+        durationMinutes: durationMinutes || 60,
+        examDate: examDate ? new Date(examDate) : null,
+        subjects: subjects || [],
+        questionPaperSets: questionPaperSets || 1,
+        watermarkText: watermarkText || null,
+        logoUrl: logoUrl || null,
+        pageSize: pageSize || "A4",
+        isActive: true,
+        createdBy: user.id,
+      });
+      res.status(201).json(exam);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/superadmin/exams/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      if (updates.examDate) {
+        updates.examDate = new Date(updates.examDate);
+      }
+      const updated = await storage.updateSchoolExam(id, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "Exam not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/superadmin/exams/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.softDeleteSchoolExam(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Exam not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Storage Configuration ---
+  app.get("/api/superadmin/storage", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { schoolId } = req.query;
+      if (!schoolId) {
+        return res.status(400).json({ error: "schoolId is required" });
+      }
+      const config = await storage.getSchoolStorageConfig(schoolId as string);
+      res.json(config || { tenantId: schoolId, isConfigured: false, maxStorageBytes: 5 * 1024 * 1024 * 1024 });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/superadmin/storage/all", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      const configs = await Promise.all(
+        tenants.filter(t => !t.isDeleted).map(async (tenant) => {
+          const config = await storage.getSchoolStorageConfig(tenant.id);
+          return {
+            tenantId: tenant.id,
+            schoolName: tenant.name,
+            schoolCode: tenant.code,
+            s3BucketName: config?.s3BucketName || null,
+            s3FolderPath: config?.s3FolderPath || null,
+            maxStorageBytes: config?.maxStorageBytes || 5 * 1024 * 1024 * 1024,
+            isConfigured: config?.isConfigured || false,
+          };
+        })
+      );
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/superadmin/storage", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const user = req.user as AuthUser;
+      const { tenantId, s3BucketName, s3FolderPath, maxStorageBytes } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
+      const config = await storage.createOrUpdateSchoolStorageConfig(tenantId, {
+        s3BucketName,
+        s3FolderPath,
+        maxStorageBytes: maxStorageBytes || 5 * 1024 * 1024 * 1024,
+        isConfigured: !!(s3BucketName || s3FolderPath),
+        updatedBy: user.id,
+      });
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Mock Tests for Students (uses schoolExams) ---
+  app.get("/api/student/mock-exams", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = getTenantId(req);
+      const exams = await storage.getSchoolExams(tenantId);
+      // Return only active exams
+      res.json(exams.filter(e => e.isActive));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 function parseCSVContent(csvContent: string): string[][] {
