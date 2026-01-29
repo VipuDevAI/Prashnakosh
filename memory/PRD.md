@@ -95,8 +95,10 @@ users (
 - `PATCH, DELETE /api/superadmin/wings/:id` - Update and delete wings
 - `GET, POST /api/superadmin/exams` - List and create exams
 - `PATCH, DELETE /api/superadmin/exams/:id` - Update and delete exams
-- `GET, POST /api/superadmin/storage` - Get and save storage config
-- `GET /api/superadmin/storage/all` - Get all schools' storage configs
+- `GET, POST /api/superadmin/users` - List and create users
+- `PATCH, DELETE /api/superadmin/users/:id` - Update and delete users
+- `POST /api/superadmin/users/bulk` - Bulk upload users (teachers/students)
+- `GET, POST /api/superadmin/storage` - Storage configuration
 
 ## Database Schema
 
