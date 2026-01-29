@@ -40,7 +40,10 @@ export default function SuperAdminDashboard() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => { logout(); navigate("/login"); }}
+              onClick={() => { 
+                logout(); 
+                window.location.href = "/login";
+              }}
               data-testid="btn-logout"
             >
               <LogOut className="w-4 h-4 mr-2" />
