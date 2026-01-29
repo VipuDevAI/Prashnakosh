@@ -316,6 +316,9 @@ export default function SchoolsPage() {
         </Card>
       </main>
 
+      {/* Footer */}
+      <AppFooter />
+
       {/* Create/Edit Dialog */}
       <SchoolFormDialog
         isOpen={isCreateOpen || !!editSchool}
