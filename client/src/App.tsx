@@ -56,6 +56,7 @@ import SuperAdminDashboard from "@/pages/superadmin/dashboard";
 import SuperAdminSchools from "@/pages/superadmin/schools";
 import SuperAdminSettings from "@/pages/superadmin/settings";
 import SuperAdminStorage from "@/pages/superadmin/storage";
+import SuperAdminUsers from "@/pages/superadmin/users";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
