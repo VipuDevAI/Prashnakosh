@@ -48,6 +48,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUsersByTenant(tenantId: string): Promise<User[]>;
+  getUserByEmailAndTenant(email: string, tenantId: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   getStudentsByTenant(tenantId: string): Promise<{ id: string; name: string }[]>;
   getAllStudents(): Promise<{ id: string; name: string }[]>;
