@@ -267,6 +267,9 @@ function Router() {
       <Route path="/superadmin/users">
         <ProtectedRoute component={SuperAdminUsers} />
       </Route>
+      <Route path="/superadmin/reference-materials">
+        <ProtectedRoute component={SuperAdminReferenceMaterials} />
+      </Route>
       
       <Route component={NotFound} />
     </Switch>
