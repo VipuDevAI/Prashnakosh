@@ -46,6 +46,9 @@ import {
   Plus, Image, RefreshCw, History, MessageSquare, Activity, ChevronRight, Trophy, Library
 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/logo";
+import { BRAND } from "@/lib/brand";
+import { AppFooter } from "@/components/app-footer";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
