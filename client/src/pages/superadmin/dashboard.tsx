@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppLogo } from "@/components/app-logo";
 import { AppFooter } from "@/components/app-footer";
-import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles } from "lucide-react";
+import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles, Library } from "lucide-react";
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
