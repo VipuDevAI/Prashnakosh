@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/logo";
+import { BRAND } from "@/lib/brand";
 
 export default function LoginPage() {
   const [location, navigate] = useLocation();
