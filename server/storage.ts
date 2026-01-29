@@ -2499,6 +2499,127 @@ export class MemStorage implements IStorage {
 
   private adminExamConfigs = new Map<string, AdminExamConfig>();
   private schoolStorageConfigs = new Map<string, SchoolStorageConfig>();
+  private schoolWings = new Map<string, SchoolWing>();
+  private schoolExams = new Map<string, SchoolExam>();
+
+  // =====================================================
+  // SOFT DELETE TENANT (School)
+  // =====================================================
+  async softDeleteTenant(id: string): Promise<boolean> {
+    const tenant = this.tenants.get(id);
+    if (!tenant) return false;
+    // Soft delete by setting active to false
+    this.tenants.set(id, { ...tenant, active: false });
+    return true;
+  }
+
+  // =====================================================
+  // SCHOOL WINGS CRUD
+  // =====================================================
+  async getWingsByTenant(tenantId: string): Promise<SchoolWing[]> {
+    return Array.from(this.schoolWings.values()).filter(w => 
+      w.tenantId === tenantId && !w.isDeleted
+    );
+  }
+
+  async getWing(id: string): Promise<SchoolWing | undefined> {
+    const wing = this.schoolWings.get(id);
+    return wing && !wing.isDeleted ? wing : undefined;
+  }
+
+  async createWing(wing: InsertSchoolWing): Promise<SchoolWing> {
+    const id = randomUUID();
+    const created: SchoolWing = {
+      id,
+      tenantId: wing.tenantId,
+      name: wing.name,
+      displayName: wing.displayName,
+      grades: wing.grades || [],
+      sortOrder: wing.sortOrder || 0,
+      isActive: wing.isActive ?? true,
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.schoolWings.set(id, created);
+    return created;
+  }
+
+  async updateWing(id: string, data: Partial<SchoolWing>): Promise<SchoolWing | undefined> {
+    const wing = this.schoolWings.get(id);
+    if (!wing || wing.isDeleted) return undefined;
+    const updated = { ...wing, ...data, updatedAt: new Date() };
+    this.schoolWings.set(id, updated);
+    return updated;
+  }
+
+  async softDeleteWing(id: string): Promise<boolean> {
+    const wing = this.schoolWings.get(id);
+    if (!wing || wing.isDeleted) return false;
+    this.schoolWings.set(id, { ...wing, isDeleted: true, isActive: false, updatedAt: new Date() });
+    // Also soft-delete all exams under this wing
+    for (const [examId, exam] of this.schoolExams.entries()) {
+      if (exam.wingId === id) {
+        this.schoolExams.set(examId, { ...exam, isDeleted: true, isActive: false, updatedAt: new Date() });
+      }
+    }
+    return true;
+  }
+
+  // =====================================================
+  // SCHOOL EXAMS CRUD
+  // =====================================================
+  async getSchoolExams(tenantId: string, wingId?: string): Promise<SchoolExam[]> {
+    return Array.from(this.schoolExams.values()).filter(e => 
+      e.tenantId === tenantId && !e.isDeleted && (!wingId || e.wingId === wingId)
+    );
+  }
+
+  async getSchoolExam(id: string): Promise<SchoolExam | undefined> {
+    const exam = this.schoolExams.get(id);
+    return exam && !exam.isDeleted ? exam : undefined;
+  }
+
+  async createSchoolExam(exam: InsertSchoolExam): Promise<SchoolExam> {
+    const id = randomUUID();
+    const created: SchoolExam = {
+      id,
+      tenantId: exam.tenantId,
+      wingId: exam.wingId,
+      examName: exam.examName,
+      academicYear: exam.academicYear,
+      totalMarks: exam.totalMarks || 100,
+      durationMinutes: exam.durationMinutes || 60,
+      examDate: exam.examDate || null,
+      subjects: exam.subjects || [],
+      questionPaperSets: exam.questionPaperSets || 1,
+      watermarkText: exam.watermarkText || null,
+      logoUrl: exam.logoUrl || null,
+      pageSize: exam.pageSize || "A4",
+      isActive: exam.isActive ?? true,
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: exam.createdBy || null,
+    };
+    this.schoolExams.set(id, created);
+    return created;
+  }
+
+  async updateSchoolExam(id: string, data: Partial<SchoolExam>): Promise<SchoolExam | undefined> {
+    const exam = this.schoolExams.get(id);
+    if (!exam || exam.isDeleted) return undefined;
+    const updated = { ...exam, ...data, updatedAt: new Date() };
+    this.schoolExams.set(id, updated);
+    return updated;
+  }
+
+  async softDeleteSchoolExam(id: string): Promise<boolean> {
+    const exam = this.schoolExams.get(id);
+    if (!exam || exam.isDeleted) return false;
+    this.schoolExams.set(id, { ...exam, isDeleted: true, isActive: false, updatedAt: new Date() });
+    return true;
+  }
 
   async getAdminExamConfig(id: string): Promise<AdminExamConfig | undefined> {
     return this.adminExamConfigs.get(id);
