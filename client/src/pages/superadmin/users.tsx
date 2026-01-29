@@ -544,6 +544,9 @@ export default function SuperAdminUsersPage() {
         )}
       </main>
 
+      {/* Footer */}
+      <AppFooter />
+
       {/* Create User Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
