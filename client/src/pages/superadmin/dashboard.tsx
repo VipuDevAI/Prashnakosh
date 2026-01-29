@@ -42,7 +42,7 @@ export default function SuperAdminDashboard() {
               size="sm" 
               onClick={() => { 
                 logout(); 
-                window.location.href = "/login";
+                window.location.href = "/";
               }}
               data-testid="btn-logout"
             >
