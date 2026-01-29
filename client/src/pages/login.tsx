@@ -194,16 +194,10 @@ export default function LoginPage() {
           </Card>
         </div>
       </div>
-      <footer className="py-4 px-4 sm:px-6 text-sm text-slate-500 dark:text-slate-400">
+      <footer className="py-4 px-4 sm:px-6 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-          <span>All rights reserved</span>
-          <span>
-            Powered by{" "}
-            <span className="font-semibold bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
-              SmartGenEduX
-            </span>
-            {" "}@2025
-          </span>
+          <span>© 2025 {BRAND.footer.left}</span>
+          <span>{BRAND.footer.right}</span>
         </div>
       </footer>
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
