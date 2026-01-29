@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="4" failures="5" skipped="0" tests="16" time="13.638" timestamp="2026-01-29T01:48:16.076799+00:00" hostname="agent-env-2b2040f2-2615-4593-8861-aa55598bb782"><testcase classname="backend.tests.test_superadmin.TestAuth" name="test_superadmin_login" time="0.709" /><testcase classname="backend.tests.test_superadmin.TestSchoolsCRUD" name="test_get_schools_list" time="1.289" /><testcase classname="backend.tests.test_superadmin.TestSchoolsCRUD" name="test_create_school" time="0.640" /><testcase classname="backend.tests.test_superadmin.TestSchoolsCRUD" name="test_create_and_verify_school" time="1.277" /><testcase classname="backend.tests.test_superadmin.TestSchoolsCRUD" name="test_update_school" time="1.058" /><testcase classname="backend.tests.test_superadmin.TestSchoolsCRUD" name="test_delete_school" time="0.901"><failure message="AssertionError: Delete failed: {&quot;error&quot;:&quot;storage.softDeleteTenant is not a function&quot;}&#10;assert 520 in [200, 204]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_superadmin.py:146: in test_delete_school
+    assert delete_response.status_code in [200, 204], f"Delete failed: {delete_response.text}"
+E   AssertionError: Delete failed: {"error":"storage.softDeleteTenant is not a function"}
+E   assert 520 in [200, 204]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_superadmin.TestWingsCRUD" name="test_get_wings_list" time="1.739"><failure message="assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_superadmin.py:188: in test_get_wings_list
+    assert response.status_code == 200
+E   assert 520 == 200
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_superadmin.TestWingsCRUD" name="test_create_wing" time="0.646"><failure message="AssertionError: Create wing failed: {&quot;error&quot;:&quot;storage.createWing is not a function&quot;}&#10;assert 520 in [200, 201]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_superadmin.py:203: in test_create_wing
+    assert response.status_code in [200, 201], f"Create wing failed: {response.text}"
+E   AssertionError: Create wing failed: {"error":"storage.createWing is not a function"}
+E   assert 520 in [200, 201]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_superadmin.TestWingsCRUD" name="test_update_wing" time="0.437"><failure message="assert 520 in [200, 201]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_superadmin.py:221: in test_update_wing
+    assert create_response.status_code in [200, 201]
+E   assert 520 in [200, 201]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_superadmin.TestWingsCRUD" name="test_delete_wing" time="0.431"><failure message="assert 520 in [200, 201]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_superadmin.py:244: in test_delete_wing
+    assert create_response.status_code in [200, 201]
+E   assert 520 in [200, 201]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_superadmin.TestExamsCRUD" name="test_get_exams_list" time="2.210"><error message="failed on setup with &quot;KeyError: 0&quot;">backend/tests/test_superadmin.py:301: in test_school_and_wing
+    wing_id = wings[0]["id"] if wings else None
+              ^^^^^^^^
+E   KeyError: 0</error></testcase><testcase classname="backend.tests.test_superadmin.TestExamsCRUD" name="test_create_exam" time="0.000"><error message="failed on setup with &quot;KeyError: 0&quot;">backend/tests/test_superadmin.py:301: in test_school_and_wing
+    wing_id = wings[0]["id"] if wings else None
+              ^^^^^^^^
+E   KeyError: 0</error></testcase><testcase classname="backend.tests.test_superadmin.TestExamsCRUD" name="test_update_exam" time="0.000"><error message="failed on setup with &quot;KeyError: 0&quot;">backend/tests/test_superadmin.py:301: in test_school_and_wing
+    wing_id = wings[0]["id"] if wings else None
+              ^^^^^^^^
+E   KeyError: 0</error></testcase><testcase classname="backend.tests.test_superadmin.TestExamsCRUD" name="test_delete_exam" time="0.000"><error message="failed on setup with &quot;KeyError: 0&quot;">backend/tests/test_superadmin.py:301: in test_school_and_wing
+    wing_id = wings[0]["id"] if wings else None
+              ^^^^^^^^
+E   KeyError: 0</error></testcase><testcase classname="backend.tests.test_superadmin.TestStorageConfig" name="test_get_all_storage_configs" time="1.053" /><testcase classname="backend.tests.test_superadmin.TestStorageConfig" name="test_save_storage_config" time="1.070" /></testsuite></testsuites>
