@@ -1065,16 +1065,23 @@ function HODDashboard() {
                   <Label>Select Exam Type</Label>
                   <Select>
                     <SelectTrigger data-testid="select-exam-type">
-                      <SelectValue placeholder="Choose exam type" />
+                      <SelectValue placeholder={availableExams.length === 0 ? "No exams configured" : "Choose exam type"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="chapter">Chapter Test</SelectItem>
-                      <SelectItem value="unit1">Unit Test 1</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="halfyearly">Half Yearly</SelectItem>
-                      <SelectItem value="annual">Annual</SelectItem>
+                      {availableExams.length === 0 ? (
+                        <SelectItem value="none" disabled>No exams available - Super Admin must configure exams</SelectItem>
+                      ) : (
+                        availableExams.map((exam) => (
+                          <SelectItem key={exam.id} value={exam.id}>
+                            {exam.examName} ({exam.totalMarks} marks, {exam.durationMinutes}min)
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Exams are configured by Super Admin under Admin Settings → Wings → Exams
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
