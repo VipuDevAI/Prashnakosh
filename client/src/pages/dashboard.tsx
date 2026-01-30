@@ -948,6 +948,20 @@ function HODDashboard() {
     enabled: !!user?.id,
   });
 
+  // Fetch exams from Super Admin configuration (school_exams table)
+  const { data: availableExams = [] } = useQuery<{
+    id: string;
+    examName: string;
+    academicYear: string;
+    totalMarks: number;
+    durationMinutes: number;
+    subjects: string[];
+    allowMockTest: boolean;
+  }[]>({
+    queryKey: ['/api/exams/for-blueprint'],
+    enabled: !!user?.id,
+  });
+
   return (
     <div className="space-y-6">
       <Card className="bg-muted/50">
