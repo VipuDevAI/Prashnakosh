@@ -66,8 +66,8 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
 
-        {/* Four Primary Cards with Premium Gradients */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+        {/* Six Primary Cards with Premium Gradients */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {/* Add School */}
           <Card 
             className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-teal-800 text-white shadow-xl shadow-emerald-500/30 dark:shadow-emerald-900/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 hover:-translate-y-1"
@@ -131,22 +131,22 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* S3 Storage */}
+          {/* AI Question Parser - NEW */}
           <Card 
-            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-purple-400 via-purple-500 to-pink-600 dark:from-purple-600 dark:via-purple-700 dark:to-pink-800 text-white shadow-xl shadow-purple-500/30 dark:shadow-purple-900/30 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-105 hover:-translate-y-1"
-            onClick={() => navigate("/superadmin/storage")}
-            data-testid="card-s3-storage"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-violet-400 via-purple-500 to-fuchsia-600 dark:from-violet-600 dark:via-purple-700 dark:to-fuchsia-800 text-white shadow-xl shadow-purple-500/30 dark:shadow-purple-900/30 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-105 hover:-translate-y-1"
+            onClick={() => navigate("/superadmin/question-parser")}
+            data-testid="card-question-parser"
           >
             <CardContent className="p-6 text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                  <HardDrive className="w-7 h-7" />
+                  <FileUp className="w-7 h-7" />
                 </div>
-                <h3 className="text-lg font-bold mb-1">S3 Storage</h3>
-                <p className="text-xs text-white/80 mb-3">Allocate storage buckets</p>
+                <h3 className="text-lg font-bold mb-1">AI Paper Parser</h3>
+                <p className="text-xs text-white/80 mb-3">Extract questions from PDF</p>
                 <div className="text-xs font-medium uppercase tracking-wide text-white/60">
-                  Buckets • Folders • Mapping
+                  PDF • Image • Scanned
                 </div>
               </div>
             </CardContent>
@@ -168,6 +168,27 @@ export default function SuperAdminDashboard() {
                 <p className="text-xs text-white/80 mb-3">Global study materials</p>
                 <div className="text-xs font-medium uppercase tracking-wide text-white/60">
                   Class 10 • Class 12 • Papers
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* S3 Storage */}
+          <Card 
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-slate-400 via-slate-500 to-zinc-600 dark:from-slate-600 dark:via-slate-700 dark:to-zinc-800 text-white shadow-xl shadow-slate-500/30 dark:shadow-slate-900/30 hover:shadow-2xl hover:shadow-slate-500/40 hover:scale-105 hover:-translate-y-1"
+            onClick={() => navigate("/superadmin/storage")}
+            data-testid="card-s3-storage"
+          >
+            <CardContent className="p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <HardDrive className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">S3 Storage</h3>
+                <p className="text-xs text-white/80 mb-3">Allocate storage buckets</p>
+                <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+                  Buckets • Folders • Mapping
                 </div>
               </div>
             </CardContent>
