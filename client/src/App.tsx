@@ -59,6 +59,7 @@ import SuperAdminSettings from "@/pages/superadmin/settings";
 import SuperAdminStorage from "@/pages/superadmin/storage";
 import SuperAdminUsers from "@/pages/superadmin/users";
 import SuperAdminReferenceMaterials from "@/pages/superadmin/reference-materials";
+import SuperAdminQuestionParser from "@/pages/superadmin/question-parser";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
