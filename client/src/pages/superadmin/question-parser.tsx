@@ -423,12 +423,12 @@ export default function QuestionPaperParserPage() {
 
                   <div className="space-y-2">
                     <Label>Chapter (Optional)</Label>
-                    <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={!selectedSubject}>
+                    <Select value={selectedChapter || "auto"} onValueChange={(v) => setSelectedChapter(v === "auto" ? "" : v)} disabled={!selectedSubject}>
                       <SelectTrigger data-testid="select-chapter">
                         <SelectValue placeholder="Auto-detect" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Auto-detect from content</SelectItem>
+                        <SelectItem value="auto">Auto-detect from content</SelectItem>
                         {chapters.map((chapter) => (
                           <SelectItem key={chapter} value={chapter}>{chapter}</SelectItem>
                         ))}
