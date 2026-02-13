@@ -1816,6 +1816,76 @@ export async function registerRoutes(
   registerWorkflowRoutes(app);
   registerPaperGenerationRoutes(app);
 
+  // =====================================================
+  // PARSER SERVICE PROXY - Routes to Python FastAPI service
+  // =====================================================
+  app.all("/api/parser/*", async (req, res) => {
+    try {
+      const parserUrl = `http://localhost:8002${req.originalUrl}`;
+      
+      // For multipart form data, we need to forward the raw request
+      if (req.headers['content-type']?.includes('multipart/form-data')) {
+        const FormData = (await import('form-data')).default;
+        const fetch = (await import('node-fetch')).default;
+        
+        // Collect all form data from the request
+        const formData = new FormData();
+        
+        // Parse multipart data using multer middleware already applied or raw body
+        // Since this is a proxy, we forward raw body
+        const chunks: Buffer[] = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', async () => {
+          try {
+            const rawBody = Buffer.concat(chunks);
+            
+            // Forward the raw request to parser service
+            const proxyRes = await fetch(parserUrl, {
+              method: req.method,
+              headers: {
+                'content-type': req.headers['content-type'] || '',
+                'content-length': rawBody.length.toString(),
+              },
+              body: rawBody,
+            });
+            
+            const contentType = proxyRes.headers.get('content-type');
+            if (contentType) {
+              res.setHeader('Content-Type', contentType);
+            }
+            res.status(proxyRes.status);
+            
+            const data = await proxyRes.json();
+            res.json(data);
+          } catch (err: any) {
+            res.status(500).json({ error: `Parser proxy error: ${err.message}` });
+          }
+        });
+      } else {
+        // For non-multipart requests (GET, JSON POST)
+        const fetch = (await import('node-fetch')).default;
+        const proxyRes = await fetch(parserUrl, {
+          method: req.method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
+        });
+        
+        const contentType = proxyRes.headers.get('content-type');
+        if (contentType) {
+          res.setHeader('Content-Type', contentType);
+        }
+        res.status(proxyRes.status);
+        
+        const data = await proxyRes.json();
+        res.json(data);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: `Parser service error: ${error.message}` });
+    }
+  });
+
   return httpServer;
 }
 
