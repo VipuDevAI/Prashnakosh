@@ -195,7 +195,8 @@ export default function QuestionPaperParserPage() {
       setParseProgress(30);
       setParseStatus("Processing with AI...");
 
-      const response = await fetch("http://localhost:8002/api/parser/parse-paper", {
+      // Use the backend proxy which forwards to the parser service
+      const response = await fetch("/api/parser/parse-paper", {
         method: "POST",
         body: formData,
       });
