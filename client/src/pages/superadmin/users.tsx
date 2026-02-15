@@ -714,8 +714,8 @@ function UserForm({
       role,
       grade: role === "student" ? grade : null,
       section: role === "student" ? section || null : null,
-      wingId: role === "teacher" ? wingId : null,
-      subjects: role === "teacher" ? subjects : [],
+      wingId: (role === "teacher" || role === "hod") ? wingId : null,
+      subjects: (role === "teacher" || role === "hod") ? subjects : [],
     };
     
     if (password) {
