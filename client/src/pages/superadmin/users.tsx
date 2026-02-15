@@ -784,8 +784,8 @@ function UserForm({
         </Select>
       </div>
 
-      {/* Teacher specific fields */}
-      {role === "teacher" && (
+      {/* Teacher and HOD specific fields */}
+      {(role === "teacher" || role === "hod") && (
         <>
           <div className="space-y-2">
             <Label>Wing <span className="text-red-500">*</span></Label>
