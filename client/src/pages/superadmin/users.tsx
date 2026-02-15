@@ -482,7 +482,7 @@ export default function SuperAdminUsersPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {u.role === "teacher" && u.subjects && u.subjects.length > 0 ? (
+                            {(u.role === "teacher" || u.role === "hod") && u.subjects && u.subjects.length > 0 ? (
                               <div className="flex flex-wrap gap-1 max-w-[200px]">
                                 {u.subjects.slice(0, 2).map((subj, i) => (
                                   <Badge key={i} variant="secondary" className="text-xs">
