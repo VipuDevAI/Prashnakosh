@@ -695,12 +695,12 @@ function UserForm({
       toast({ title: "Password is required for new users", variant: "destructive" });
       return;
     }
-    if (role === "teacher" && !wingId) {
-      toast({ title: "Wing is required for teachers", variant: "destructive" });
+    if ((role === "teacher" || role === "hod") && !wingId) {
+      toast({ title: "Wing is required for teachers and HODs", variant: "destructive" });
       return;
     }
-    if (role === "teacher" && subjects.length === 0) {
-      toast({ title: "At least one subject is required for teachers", variant: "destructive" });
+    if ((role === "teacher" || role === "hod") && subjects.length === 0) {
+      toast({ title: "At least one subject is required for teachers and HODs", variant: "destructive" });
       return;
     }
     if (role === "student" && !grade) {
