@@ -467,7 +467,7 @@ export default function SuperAdminUsersPage() {
                           </TableCell>
                           <TableCell>{getRoleBadge(u.role)}</TableCell>
                           <TableCell>
-                            {u.role === "teacher" && u.wingId ? (
+                            {(u.role === "teacher" || u.role === "hod") && u.wingId ? (
                               <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30">
                                 <Layers className="w-3 h-3 mr-1" />
                                 {getWingName(u.wingId)}
