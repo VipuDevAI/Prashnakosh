@@ -39,7 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { 
-  ArrowLeft, Plus, Edit, Trash2, Building2, Phone, Mail, User, MapPin, Shield
+  ArrowLeft, Plus, Edit, Trash2, Building2, Phone, Mail, User, MapPin, Shield, ImageIcon
 } from "lucide-react";
 
 interface School {
