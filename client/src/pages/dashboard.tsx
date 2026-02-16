@@ -943,8 +943,15 @@ function HODDashboard() {
   const hodSubject = (user as any)?.subjects?.join(", ") || "Not Assigned";
   const hodWing = (user as any)?.wingId ? "Senior Secondary (11-12)" : "Not Assigned";
 
-  const { data: pendingQuestions = [] } = useQuery<{lesson: string; chapter: string; type: string; uploadedBy: string; status: string}[]>({
-    queryKey: ['/api/hod/pending-questions', user?.id, hodSubject, hodWing],
+  // Fetch questions pending HOD review
+  const { data: pendingQuestions = [] } = useQuery<{id: string; content: string; chapter: string; type: string; status: string}[]>({
+    queryKey: ['/api/hod/questions/pending'],
+    enabled: !!user?.id,
+  });
+
+  // Fetch ALL questions for HOD (approved ones)
+  const { data: allQuestions = [] } = useQuery<{id: string; content: string; chapter: string; type: string; status: string; subject: string}[]>({
+    queryKey: ['/api/questions'],
     enabled: !!user?.id,
   });
 
