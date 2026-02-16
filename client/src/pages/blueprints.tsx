@@ -444,17 +444,23 @@ export default function BlueprintsPage() {
                     <Select 
                       value={classLevel} 
                       onValueChange={setClassLevel}
-                      disabled={!selectedWing && availableGrades.length === 0}
+                      disabled={!selectedWingId || availableGrades.length === 0}
                     >
                       <SelectTrigger data-testid="select-class">
-                        <SelectValue placeholder={selectedWing ? "Select grade" : "Select wing first"} />
+                        <SelectValue placeholder={selectedWingId ? "Select grade" : "Select wing first"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableGrades.map((grade) => (
-                          <SelectItem key={grade} value={grade}>
-                            Grade {grade}
-                          </SelectItem>
-                        ))}
+                        {availableGrades.length === 0 ? (
+                          <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                            No grades available for this wing.
+                          </div>
+                        ) : (
+                          availableGrades.map((grade) => (
+                            <SelectItem key={grade} value={grade}>
+                              Grade {grade}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
