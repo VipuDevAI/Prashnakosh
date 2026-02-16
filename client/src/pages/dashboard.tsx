@@ -962,6 +962,32 @@ function HODDashboard() {
     enabled: !!user?.id,
   });
 
+  // Fetch blueprints for HOD
+  const { data: hodBlueprints = [] } = useQuery<{
+    id: string;
+    name: string;
+    subject: string;
+    grade: string;
+  }[]>({
+    queryKey: ['/api/blueprints'],
+    enabled: !!user?.id,
+  });
+
+  // Fetch tests for HOD
+  const { data: hodTests = [] } = useQuery<{
+    id: string;
+    title: string;
+    subject: string;
+    grade: string;
+    workflowState: string;
+  }[]>({
+    queryKey: ['/api/tests'],
+    enabled: !!user?.id,
+  });
+
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string>("");
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+
   return (
     <div className="space-y-6">
       <Card className="bg-muted/50">
