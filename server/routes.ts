@@ -292,6 +292,18 @@ export async function registerRoutes(
     }
   });
 
+  // Wings routes - tenant scoped for HOD/teachers
+  app.get("/api/wings", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const wings = await storage.getWingsByTenant(tenantId);
+      res.json(wings.filter(w => w.isActive));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Chapter routes - protected with auth and tenant isolation
   app.get("/api/chapters", requireAuth, requireTenant, async (req, res) => {
     try {
