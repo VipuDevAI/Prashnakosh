@@ -46,6 +46,7 @@ interface School {
   id: string;
   name: string;
   code: string;
+  logo?: string;
   address?: string;
   phone?: string;
   principalName?: string;
