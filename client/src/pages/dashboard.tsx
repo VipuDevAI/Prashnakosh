@@ -1282,6 +1282,76 @@ function HODDashboard() {
           </CoinButton>
         </ContentCard>
       </GridContainer>
+
+      {/* Question Preview Dialog */}
+      <Dialog open={showQuestionDialog} onOpenChange={setShowQuestionDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Question Preview</DialogTitle>
+            <DialogDescription>
+              {selectedQuestion?.chapter} | {selectedQuestion?.subject} | {selectedQuestion?.type}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedQuestion && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={selectedQuestion.status === 'approved' ? 'default' : 'secondary'}>
+                  {selectedQuestion.status}
+                </Badge>
+                {selectedQuestion.marks && (
+                  <Badge variant="outline">{selectedQuestion.marks} marks</Badge>
+                )}
+                {selectedQuestion.difficulty && (
+                  <Badge variant="outline">{selectedQuestion.difficulty}</Badge>
+                )}
+              </div>
+              
+              <div className="p-4 bg-muted rounded-lg">
+                <Label className="text-xs text-muted-foreground mb-2 block">Question</Label>
+                <p className="text-base whitespace-pre-wrap">{selectedQuestion.content}</p>
+              </div>
+              
+              {selectedQuestion.options && selectedQuestion.options.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Options</Label>
+                  <div className="grid gap-2">
+                    {selectedQuestion.options.map((option, idx) => {
+                      const optionLabel = String.fromCharCode(65 + idx);
+                      const isCorrect = selectedQuestion.correctAnswer === optionLabel || 
+                                       selectedQuestion.correctAnswer === option ||
+                                       selectedQuestion.correctAnswer?.toLowerCase() === optionLabel.toLowerCase();
+                      return (
+                        <div 
+                          key={idx} 
+                          className={`p-2 rounded border ${isCorrect ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border"}`}
+                        >
+                          <span className="font-medium mr-2">{optionLabel}.</span>
+                          {option}
+                          {isCorrect && (
+                            <Badge className="ml-2 bg-green-500 text-white text-xs">Correct</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {selectedQuestion.correctAnswer && !selectedQuestion.options && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-500">
+                  <Label className="text-xs text-muted-foreground block mb-1">Correct Answer</Label>
+                  <p className="font-medium">{selectedQuestion.correctAnswer}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQuestionDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
