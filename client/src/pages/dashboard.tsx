@@ -1039,40 +1039,45 @@ function HODDashboard() {
               <CardDescription>Check spelling, blueprint match, difficulty, marks, correctness</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Total Questions: {allQuestions.length}</p>
+                <p className="text-xs text-muted-foreground">Pending: {pendingQuestions.length} | Approved: {allQuestions.filter(q => q.status === 'approved').length}</p>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lesson</TableHead>
+                    <TableHead>Question</TableHead>
                     <TableHead>Chapter</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Uploaded By</TableHead>
+                    <TableHead>Subject</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingQuestions.length === 0 ? (
+                  {allQuestions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No pending questions to review</TableCell>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No questions available</TableCell>
                     </TableRow>
                   ) : (
-                    pendingQuestions.map((q, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{q.lesson}</TableCell>
+                    allQuestions.slice(0, 20).map((q, idx) => (
+                      <TableRow key={q.id || idx}>
+                        <TableCell className="max-w-xs truncate">{q.content?.substring(0, 50)}...</TableCell>
                         <TableCell>{q.chapter}</TableCell>
                         <TableCell>{q.type}</TableCell>
-                        <TableCell>{q.uploadedBy}</TableCell>
-                        <TableCell><Badge variant="secondary">{q.status}</Badge></TableCell>
+                        <TableCell>{q.subject}</TableCell>
+                        <TableCell><Badge variant={q.status === 'approved' ? 'default' : 'secondary'}>{q.status}</Badge></TableCell>
                         <TableCell className="space-x-2">
-                          <Button size="sm" variant="outline" onClick={() => toast({ title: "Coming Soon", description: "Question preview will be available soon." })} data-testid={`button-view-q-${idx}`}>View</Button>
-                          <Button size="sm" variant="default" disabled title="Approval workflow coming soon" data-testid={`button-approve-q-${idx}`}>Approve</Button>
-                          <Button size="sm" variant="destructive" disabled title="Approval workflow coming soon" data-testid={`button-reject-q-${idx}`}>Reject</Button>
+                          <Button size="sm" variant="outline" onClick={() => toast({ title: "Question Preview", description: q.content?.substring(0, 200) })} data-testid={`button-view-q-${idx}`}>View</Button>
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
+              {allQuestions.length > 20 && (
+                <p className="text-sm text-muted-foreground mt-4 text-center">Showing 20 of {allQuestions.length} questions</p>
+              )}
               <p className="text-sm text-muted-foreground mt-4">Rejected questions go back to Teacher for correction. Approved questions move to Question Bank.</p>
             </CardContent>
           </Card>
