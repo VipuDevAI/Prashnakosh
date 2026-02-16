@@ -122,6 +122,8 @@ export class PgStorage implements IStorage {
       avatar: user.avatar,
       mustChangePassword: user.mustChangePassword || false,
       userCode: user.userCode,
+      wingId: user.wingId,
+      subjects: user.subjects,
     };
     return { user: authUser, token: `token-${user.id}-${Date.now()}` };
   }
