@@ -154,8 +154,8 @@ export function PageFooter() {
       "border-t border-slate-200/60 dark:border-slate-700/60",
       "bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm mt-auto"
     )}>
-      <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-        <span>All rights reserved</span>
+      <div className="flex flex-col items-center gap-1 max-w-7xl mx-auto text-center">
+        <span>© 2025 All rights reserved</span>
         <span>
           Powered by{" "}
           <span className="font-semibold bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
