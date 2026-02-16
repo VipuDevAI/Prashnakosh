@@ -186,13 +186,13 @@ function TeacherDashboard() {
             </div>
             <div className="space-y-2">
               <Label>Select Wing *</Label>
-              <Select value={selectedWing} onValueChange={setSelectedWing} disabled={wings.length === 0}>
+              <Select value={selectedWing} onValueChange={setSelectedWing} disabled={activeWings.length === 0}>
                 <SelectTrigger data-testid="select-wing">
-                  <SelectValue placeholder={wings.length === 0 ? "No wings configured" : "Select Wing"} />
+                  <SelectValue placeholder={activeWings.length === 0 ? "No wings configured" : "Select Wing"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {wings.map(wing => (
-                    <SelectItem key={wing} value={wing}>{wing}</SelectItem>
+                  {activeWings.map(wing => (
+                    <SelectItem key={wing.id} value={wing.id}>{wing.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -201,13 +201,13 @@ function TeacherDashboard() {
 
             <div className="space-y-2">
               <Label>Select Class (Optional)</Label>
-              <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!selectedWing || classes.length === 0}>
+              <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!selectedWing || availableGrades.length === 0}>
                 <SelectTrigger data-testid="select-class">
-                  <SelectValue placeholder={!selectedWing ? "Select wing first" : classes.length === 0 ? "No classes available" : "Select Class"} />
+                  <SelectValue placeholder={!selectedWing ? "Select wing first" : availableGrades.length === 0 ? "No classes available" : "Select Class"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map(cls => (
-                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
+                  {availableGrades.map(grade => (
+                    <SelectItem key={grade} value={grade}>Class {grade}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
