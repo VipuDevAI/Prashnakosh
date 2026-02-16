@@ -935,6 +935,20 @@ function ParentDashboard() {
   );
 }
 
+// Question type for HOD view
+interface HODQuestion {
+  id: string;
+  content: string;
+  chapter: string;
+  type: string;
+  status: string;
+  subject: string;
+  marks?: number;
+  options?: string[];
+  correctAnswer?: string;
+  difficulty?: string;
+}
+
 function HODDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -943,14 +957,18 @@ function HODDashboard() {
   const hodSubject = (user as any)?.subjects?.join(", ") || "Not Assigned";
   const hodWing = (user as any)?.wingId ? "Senior Secondary (11-12)" : "Not Assigned";
 
+  // State for question preview dialog
+  const [selectedQuestion, setSelectedQuestion] = useState<HODQuestion | null>(null);
+  const [showQuestionDialog, setShowQuestionDialog] = useState(false);
+
   // Fetch questions pending HOD review
-  const { data: pendingQuestions = [] } = useQuery<{id: string; content: string; chapter: string; type: string; status: string}[]>({
+  const { data: pendingQuestions = [] } = useQuery<HODQuestion[]>({
     queryKey: ['/api/hod/questions/pending'],
     enabled: !!user?.id,
   });
 
   // Fetch ALL questions for HOD (approved ones)
-  const { data: allQuestions = [] } = useQuery<{id: string; content: string; chapter: string; type: string; status: string; subject: string}[]>({
+  const { data: allQuestions = [] } = useQuery<HODQuestion[]>({
     queryKey: ['/api/questions'],
     enabled: !!user?.id,
   });
@@ -994,6 +1012,12 @@ function HODDashboard() {
 
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string>("");
   const [selectedGrade, setSelectedGrade] = useState<string>("");
+
+  // Handler to open question preview
+  const handleViewQuestion = (question: HODQuestion) => {
+    setSelectedQuestion(question);
+    setShowQuestionDialog(true);
+  };
 
   return (
     <div className="space-y-6">
