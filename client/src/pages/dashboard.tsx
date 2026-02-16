@@ -940,8 +940,8 @@ function HODDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const hodSubject = (user as any)?.department || "Not Assigned";
-  const hodWing = (user as any)?.wing || "Not Assigned";
+  const hodSubject = (user as any)?.subjects?.join(", ") || "Not Assigned";
+  const hodWing = (user as any)?.wingName || (user as any)?.wingId || "Not Assigned";
 
   const { data: pendingQuestions = [] } = useQuery<{lesson: string; chapter: string; type: string; uploadedBy: string; status: string}[]>({
     queryKey: ['/api/hod/pending-questions', user?.id, hodSubject, hodWing],
