@@ -44,11 +44,19 @@ interface Subject {
 
 interface AdminExamConfig {
   id: string;
-  wing: string;
+  wingId: string;
   examName: string;
   totalMarks: number;
   durationMinutes: number;
-  examType: string;
+  isActive: boolean;
+  subjects?: string[];
+}
+
+interface Wing {
+  id: string;
+  name: string;
+  displayName: string;
+  grades: string[];
   isActive: boolean;
 }
 
