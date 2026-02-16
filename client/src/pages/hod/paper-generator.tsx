@@ -227,6 +227,22 @@ export default function HODPaperGeneratorPage() {
                 </Select>
               </div>
 
+              <div>
+                <Label className="flex items-center gap-2">
+                  <Image className="w-4 h-4" />
+                  School Logo URL (Optional)
+                </Label>
+                <Input
+                  value={customLogoUrl}
+                  onChange={(e) => setCustomLogoUrl(e.target.value)}
+                  placeholder="https://example.com/school-logo.png"
+                  data-testid="input-logo-url"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  If left empty, school's default logo will be used (if configured)
+                </p>
+              </div>
+
               <div className="flex gap-2 flex-wrap">
                 <CoinButton
                   color="gold"
@@ -242,7 +258,7 @@ export default function HODPaperGeneratorPage() {
                   <>
                     <Button
                       variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${selectedSet}`, '_blank')}
+                      onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${selectedSet}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')}
                       data-testid="button-download-paper-pdf"
                     >
                       <Download className="w-4 h-4 mr-1" />
@@ -258,7 +274,7 @@ export default function HODPaperGeneratorPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${selectedSet}`, '_blank')}
+                      onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${selectedSet}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')}
                       data-testid="button-download-key-pdf"
                     >
                       <Download className="w-4 h-4 mr-1" />
@@ -277,6 +293,7 @@ export default function HODPaperGeneratorPage() {
               </div>
             </div>
           </ContentCard>
+
 
           <ContentCard title="Submit to Principal" description="Send approved papers for principal review">
             {approvedTests.length === 0 ? (
