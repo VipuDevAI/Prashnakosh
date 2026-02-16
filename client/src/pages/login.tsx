@@ -195,7 +195,7 @@ export default function LoginPage() {
         </div>
       </div>
       <footer className="py-4 px-4 sm:px-6 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+        <div className="flex flex-col items-center gap-1 max-w-7xl mx-auto text-center">
           <span>© 2025 {BRAND.footer.left}</span>
           <span>{BRAND.footer.right}</span>
         </div>
