@@ -415,6 +415,8 @@ export type AuthUser = {
   avatar: string | null;
   mustChangePassword?: boolean;
   userCode?: string | null;
+  wingId?: string | null;
+  subjects?: string[] | null;
 };
 
 // API response types
