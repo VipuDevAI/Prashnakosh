@@ -55,7 +55,8 @@ const VALID_TRANSITIONS: Record<WorkflowState, { to: WorkflowState[]; roles: Use
 
 const EDITABLE_STATES: WorkflowState[] = ["draft", "submitted", "hod_rejected", "principal_rejected"];
 
-const DOWNLOAD_STATES: WorkflowState[] = ["hod_approved", "principal_approved", "sent_to_committee", "active", "locked", "archived"];
+// Allow draft for HOD preview, and all approved states for actual download
+const DOWNLOAD_STATES: WorkflowState[] = ["draft", "submitted", "pending_hod", "hod_approved", "pending_principal", "principal_approved", "sent_to_committee", "active", "locked", "archived"];
 
 const ATTEMPT_ALLOWED_STATES: WorkflowState[] = ["active"];
 
