@@ -355,14 +355,20 @@ export default function BlueprintsPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Wing *</Label>
-                      <Select value={selectedWing} onValueChange={handleWingChange}>
+                      <Select value={selectedWingId} onValueChange={handleWingChange}>
                         <SelectTrigger data-testid="select-wing">
                           <SelectValue placeholder="Select wing first" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(wingLabels).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                          ))}
+                          {wings.length === 0 ? (
+                            <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                              No wings configured. Contact Super Admin.
+                            </div>
+                          ) : (
+                            wings.filter(w => w.isActive).map((wing) => (
+                              <SelectItem key={wing.id} value={wing.id}>{wing.displayName}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -371,10 +377,10 @@ export default function BlueprintsPage() {
                       <Select 
                         value={selectedExamId} 
                         onValueChange={handleExamSelect}
-                        disabled={!selectedWing}
+                        disabled={!selectedWingId}
                       >
                         <SelectTrigger data-testid="select-exam">
-                          <SelectValue placeholder={selectedWing ? "Select exam" : "Select wing first"} />
+                          <SelectValue placeholder={selectedWingId ? "Select exam" : "Select wing first"} />
                         </SelectTrigger>
                         <SelectContent>
                           {filteredExams.length === 0 ? (
