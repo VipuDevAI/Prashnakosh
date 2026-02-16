@@ -526,6 +526,29 @@ function SchoolFormDialog({
                   data-testid="input-school-address"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  School Logo URL
+                </Label>
+                <Input
+                  value={formData.logo}
+                  onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                  data-testid="input-school-logo"
+                />
+                <p className="text-xs text-muted-foreground">Used in question papers and certificates</p>
+                {formData.logo && (
+                  <div className="mt-2 p-2 border rounded-lg bg-white dark:bg-slate-800">
+                    <img 
+                      src={formData.logo} 
+                      alt="Logo preview" 
+                      className="h-16 w-auto mx-auto object-contain"
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
