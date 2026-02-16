@@ -388,6 +388,7 @@ function SchoolFormDialog({
   const [formData, setFormData] = useState({
     name: "",
     code: "",
+    logo: "",
     address: "",
     phone: "",
     principalName: "",
@@ -401,6 +402,7 @@ function SchoolFormDialog({
       setFormData({
         name: school.name || "",
         code: school.code || "",
+        logo: school.logo || "",
         address: school.address || "",
         phone: school.phone || "",
         principalName: school.principalName || "",
@@ -411,6 +413,7 @@ function SchoolFormDialog({
       setFormData({
         name: "",
         code: "",
+        logo: "",
         address: "",
         phone: "",
         principalName: "",
@@ -425,6 +428,7 @@ function SchoolFormDialog({
     setFormData({
       name: school.name || "",
       code: school.code || "",
+      logo: school.logo || "",
       address: school.address || "",
       phone: school.phone || "",
       principalName: school.principalName || "",
@@ -452,6 +456,7 @@ function SchoolFormDialog({
     setFormData({
       name: "",
       code: "",
+      logo: "",
       address: "",
       phone: "",
       principalName: "",
