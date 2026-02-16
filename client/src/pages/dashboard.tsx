@@ -152,17 +152,15 @@ function TeacherDashboard() {
   const [selectedClass, setSelectedClass] = useState("");
   const [uploadMode, setUploadMode] = useState<"bulk" | "single" | null>(null);
 
-  const { data: wingsData = [] } = useQuery<{id: number; name: string}[]>({
+  // Fetch wings from API
+  const { data: wingsData = [] } = useQuery<{id: string; name: string; displayName: string; grades: string[]; isActive: boolean}[]>({
     queryKey: ['/api/wings'],
-    enabled: true,
   });
-  const wings = wingsData.map(w => w.name);
+  const activeWings = wingsData.filter(w => w.isActive);
 
-  const { data: classesData = [] } = useQuery<{id: number; name: string}[]>({
-    queryKey: ['/api/classes', selectedWing],
-    enabled: !!selectedWing,
-  });
-  const classes = classesData.map(c => c.name);
+  // Get grades from selected wing
+  const selectedWingObj = activeWings.find(w => w.id === selectedWing);
+  const availableGrades = selectedWingObj?.grades || [];
 
   const teacherSubject = (user as any)?.department || "Not Assigned";
   const canProceed = selectedWing;
