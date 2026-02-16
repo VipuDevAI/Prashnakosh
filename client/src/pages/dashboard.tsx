@@ -940,22 +940,8 @@ function HODDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Fetch wing details to get the display name
-  const { data: wingData } = useQuery<{ id: string; name: string; displayName: string }>({
-    queryKey: ['/api/wings', (user as any)?.wingId],
-    queryFn: async () => {
-      if (!(user as any)?.wingId) return null;
-      const response = await fetch(`/api/wings/${(user as any)?.wingId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('safal_token')}` }
-      });
-      if (!response.ok) return null;
-      return response.json();
-    },
-    enabled: !!(user as any)?.wingId,
-  });
-
   const hodSubject = (user as any)?.subjects?.join(", ") || "Not Assigned";
-  const hodWing = wingData?.displayName || wingData?.name || ((user as any)?.wingId ? "Senior Secondary" : "Not Assigned");
+  const hodWing = (user as any)?.wingId ? "Senior Secondary (11-12)" : "Not Assigned";
 
   const { data: pendingQuestions = [] } = useQuery<{lesson: string; chapter: string; type: string; uploadedBy: string; status: string}[]>({
     queryKey: ['/api/hod/pending-questions', user?.id, hodSubject, hodWing],
