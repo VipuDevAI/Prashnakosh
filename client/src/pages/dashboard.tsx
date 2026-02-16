@@ -1143,21 +1143,26 @@ function HODDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Select Blueprint</Label>
-                  <Select>
+                  <Select value={selectedBlueprintId} onValueChange={setSelectedBlueprintId}>
                     <SelectTrigger data-testid="select-blueprint"><SelectValue placeholder="Choose blueprint" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ut1">Unit Test 1 - Maths</SelectItem>
-                      <SelectItem value="quarterly">Quarterly - Maths</SelectItem>
+                      {hodBlueprints.length === 0 ? (
+                        <SelectItem value="none" disabled>No blueprints available</SelectItem>
+                      ) : (
+                        hodBlueprints.map((bp) => (
+                          <SelectItem key={bp.id} value={bp.id}>{bp.name} - {bp.subject}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Select Class</Label>
-                  <Select>
-                    <SelectTrigger data-testid="select-paper-class"><SelectValue placeholder="Choose class" /></SelectTrigger>
+                  <Label>Select Grade</Label>
+                  <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                    <SelectTrigger data-testid="select-paper-class"><SelectValue placeholder="Choose grade" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10a">Class 10-A</SelectItem>
-                      <SelectItem value="10b">Class 10-B</SelectItem>
+                      <SelectItem value="11">Grade 11</SelectItem>
+                      <SelectItem value="12">Grade 12</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
