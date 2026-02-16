@@ -2839,6 +2839,12 @@ export function registerPaperGenerationRoutes(app: Express) {
       const setNumber = parseInt(req.query.set as string) || 1;
       const setLabel = setNumber > 1 ? ` - Set ${setNumber}` : "";
       const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
+      const customLogoUrl = req.query.logoUrl as string | undefined;
+
+      // Fetch school/tenant info for logo and name
+      const tenant = await storage.getTenant(test.tenantId);
+      const schoolName = tenant?.name || "Question Bank";
+      const schoolLogoUrl = customLogoUrl || tenant?.logo;
 
       const questions = [];
       for (const qId of test.questionIds || []) {
@@ -2853,8 +2859,22 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.setHeader("Content-Disposition", `attachment; filename="${test.title.replace(/[^a-zA-Z0-9]/g, '_')}_set${setNumber}_answer_key.pdf"`);
       doc.pipe(res);
 
-      doc.fontSize(16).font("Helvetica-Bold").text("ANSWER KEY - CONFIDENTIAL", { align: "center" });
-      doc.moveDown(0.5);
+      // Add school logo if available
+      if (schoolLogoUrl) {
+        try {
+          const axios = require("axios");
+          const logoResponse = await axios.get(schoolLogoUrl, { responseType: "arraybuffer", timeout: 5000 });
+          const logoBuffer = Buffer.from(logoResponse.data);
+          doc.image(logoBuffer, doc.page.width / 2 - 30, doc.y, { width: 60, height: 60 });
+          doc.moveDown(4);
+        } catch (logoErr) {
+          console.log("Could not load logo for answer key:", logoErr);
+        }
+      }
+
+      doc.fontSize(16).font("Helvetica-Bold").text(`${schoolName} - ANSWER KEY`, { align: "center" });
+      doc.fontSize(12).fillColor("red").text("CONFIDENTIAL", { align: "center" });
+      doc.fillColor("black").moveDown(0.5);
       doc.fontSize(14).text(test.title + setLabel, { align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(10).font("Helvetica").text(`Subject: ${test.subject} | Grade: ${test.grade}`, { align: "center" });
