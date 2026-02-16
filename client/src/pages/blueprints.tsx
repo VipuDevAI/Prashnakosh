@@ -100,7 +100,7 @@ export default function BlueprintsPage() {
   const [sections, setSections] = useState<BlueprintSection[]>([]);
   
   // Wing and Exam selection state
-  const [selectedWing, setSelectedWing] = useState<string>("");
+  const [selectedWingId, setSelectedWingId] = useState<string>("");
   const [selectedExamId, setSelectedExamId] = useState<string>("");
 
   const { data: blueprints = [], isLoading } = useQuery<Blueprint[]>({
@@ -109,6 +109,11 @@ export default function BlueprintsPage() {
 
   const { data: subjects = [] } = useQuery<Subject[]>({
     queryKey: ['/api/subjects'],
+  });
+
+  // Fetch wings from API
+  const { data: wings = [] } = useQuery<Wing[]>({
+    queryKey: ['/api/wings'],
   });
 
   // Fetch exams configured by Super Admin for blueprint dropdown
@@ -123,15 +128,16 @@ export default function BlueprintsPage() {
     },
   });
 
-  // Filter exams by selected wing
+  // Filter exams by selected wing ID
   const filteredExams = adminExamConfigs.filter(
-    exam => !selectedWing || exam.wing === selectedWing
+    exam => !selectedWingId || exam.wingId === selectedWingId
   );
 
-  // Get grades available for selected wing
-  const availableGrades = selectedWing 
-    ? wingGradeMapping[selectedWing] || [] 
-    : [...Array(12)].map((_, i) => String(i + 1));
+  // Get selected wing object
+  const selectedWing = wings.find(w => w.id === selectedWingId);
+
+  // Get grades available for selected wing (from API data or fallback)
+  const availableGrades = selectedWing?.grades || [];
 
   // When exam is selected, update total marks automatically
   const handleExamSelect = (examId: string) => {
