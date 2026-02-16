@@ -304,6 +304,25 @@ export async function registerRoutes(
     }
   });
 
+  // Create chapter
+  app.post("/api/chapters", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { name, subject, grade, isLocked } = req.body;
+      const chapter = await storage.createChapter({
+        tenantId,
+        name,
+        subject,
+        grade,
+        status: isLocked ? "locked" : "draft",
+      });
+      res.json(chapter);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/chapters/:id/unlock", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
       const chapter = await storage.unlockChapter(req.params.id);
