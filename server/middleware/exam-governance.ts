@@ -4,8 +4,8 @@ import type { WorkflowState, UserRole } from "@shared/schema";
 
 const VALID_TRANSITIONS: Record<WorkflowState, { to: WorkflowState[]; roles: UserRole[] }> = {
   draft: { 
-    to: ["submitted", "pending_hod"], 
-    roles: ["teacher", "admin", "super_admin"] 
+    to: ["submitted", "pending_hod", "hod_approved"], 
+    roles: ["teacher", "hod", "admin", "super_admin"] 
   },
   submitted: { 
     to: ["pending_hod"], 
@@ -16,7 +16,7 @@ const VALID_TRANSITIONS: Record<WorkflowState, { to: WorkflowState[]; roles: Use
     roles: ["hod", "admin", "super_admin"] 
   },
   hod_approved: { 
-    to: ["active", "pending_principal", "sent_to_committee"], 
+    to: ["active", "pending_principal", "sent_to_committee", "locked"], 
     roles: ["hod", "admin", "super_admin", "exam_committee"] 
   },
   hod_rejected: { 
@@ -28,8 +28,8 @@ const VALID_TRANSITIONS: Record<WorkflowState, { to: WorkflowState[]; roles: Use
     roles: ["principal", "admin", "super_admin"] 
   },
   principal_approved: { 
-    to: ["active", "sent_to_committee"], 
-    roles: ["principal", "admin", "super_admin", "exam_committee"] 
+    to: ["active", "sent_to_committee", "locked"], 
+    roles: ["principal", "hod", "admin", "super_admin", "exam_committee"] 
   },
   principal_rejected: { 
     to: ["draft", "pending_hod"], 
@@ -37,11 +37,11 @@ const VALID_TRANSITIONS: Record<WorkflowState, { to: WorkflowState[]; roles: Use
   },
   sent_to_committee: { 
     to: ["active", "locked"], 
-    roles: ["exam_committee", "admin", "super_admin"] 
+    roles: ["exam_committee", "hod", "admin", "super_admin"] 
   },
   active: { 
     to: ["locked"], 
-    roles: ["exam_committee", "admin", "super_admin"] 
+    roles: ["exam_committee", "hod", "admin", "super_admin"] 
   },
   locked: { 
     to: ["archived"], 
