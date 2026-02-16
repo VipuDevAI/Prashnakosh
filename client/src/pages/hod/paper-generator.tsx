@@ -55,6 +55,7 @@ export default function HODPaperGeneratorPage() {
   const [selectedFormat, setSelectedFormat] = useState<"A4" | "Legal">("A4");
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   const [selectedSet, setSelectedSet] = useState<number>(1);
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
   const [approvalComments, setApprovalComments] = useState("");
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
