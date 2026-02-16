@@ -151,8 +151,8 @@ export default function BlueprintsPage() {
   };
 
   // Reset form when wing changes
-  const handleWingChange = (wing: string) => {
-    setSelectedWing(wing);
+  const handleWingChange = (wingId: string) => {
+    setSelectedWingId(wingId);
     setSelectedExamId("");
     setClassLevel("");
   };
@@ -205,7 +205,7 @@ export default function BlueprintsPage() {
     setClassLevel("");
     setTotalMarks("40");
     setSections([]);
-    setSelectedWing("");
+    setSelectedWingId("");
     setSelectedExamId("");
   };
 
