@@ -1092,7 +1092,7 @@ function HODDashboard() {
                         <TableCell>{q.subject}</TableCell>
                         <TableCell><Badge variant={q.status === 'approved' ? 'default' : 'secondary'}>{q.status}</Badge></TableCell>
                         <TableCell className="space-x-2">
-                          <Button size="sm" variant="outline" onClick={() => toast({ title: "Question Preview", description: q.content?.substring(0, 200) })} data-testid={`button-view-q-${idx}`}>View</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleViewQuestion(q)} data-testid={`button-view-q-${idx}`}>View</Button>
                         </TableCell>
                       </TableRow>
                     ))
