@@ -332,7 +332,7 @@ export default function SuperAdminUsersPage() {
             <img 
               src={BRAND.logo} 
               alt={BRAND.name}
-              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
+              className="h-12 object-contain"
             />
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Users Management</h1>

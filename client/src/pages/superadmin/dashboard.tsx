@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AppLogo } from "@/components/app-logo";
 import { AppFooter } from "@/components/app-footer";
 import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles, Library, FileUp } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
@@ -17,20 +18,26 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-300">
-      {/* Premium Header with Gradient */}
-      <header className="relative border-b border-white/20 dark:border-slate-800/50 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900 text-white shadow-xl shadow-indigo-500/20 dark:shadow-indigo-900/30">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
-        <div className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col corporate-gradient dark:cosmic-bg transition-colors duration-300 relative">
+      {/* Cosmic background effects for dark mode */}
+      <div className="dark:block hidden absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-cyan-500/20 to-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 w-80 h-80 bg-gradient-to-br from-orange-500/15 to-yellow-500/10 rounded-full blur-3xl" />
+      </div>
+      
+      {/* Premium Header with Cosmic Theme */}
+      <header className="relative z-10 border-b border-white/10 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl text-slate-800 dark:text-white shadow-lg dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <AppLogo size="lg" showText={false} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Prashnakosh</h1>
-              <p className="text-sm text-white/80">Super Admin Control Center</p>
-            </div>
+            <img 
+              src={BRAND.logo} 
+              alt={BRAND.name}
+              className="h-14 object-contain"
+            />
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden sm:block text-sm text-white/90 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+            <span className="hidden sm:block text-sm bg-slate-100 dark:bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-slate-700 dark:text-white/90">
               Welcome, <strong>{user.name}</strong>
             </span>
             <ThemeToggle />
@@ -41,7 +48,7 @@ export default function SuperAdminDashboard() {
                 logout(); 
                 window.location.href = "/";
               }}
-              className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:text-white"
+              className="dark:bg-white/10 dark:backdrop-blur-sm dark:border-white/30 dark:text-white dark:hover:bg-white/20"
               data-testid="btn-logout"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -52,13 +59,13 @@ export default function SuperAdminDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full relative z-10">
         {/* Welcome Section with Gradient Text */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white mb-6 shadow-2xl shadow-purple-500/30">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 text-white mb-6 shadow-2xl shadow-purple-500/30 dark:shadow-[0_0_40px_rgba(139,92,246,0.4)]">
             <Sparkles className="w-10 h-10" />
           </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
+          <h2 className="text-4xl font-bold gradient-text mb-4">
             Super Admin Dashboard
           </h2>
           <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
@@ -70,7 +77,7 @@ export default function SuperAdminDashboard() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {/* Add School */}
           <Card 
-            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-teal-800 text-white shadow-xl shadow-emerald-500/30 dark:shadow-emerald-900/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 hover:-translate-y-1"
+            className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 dark:from-emerald-600/90 dark:via-emerald-700/90 dark:to-teal-800/90 text-white shadow-xl shadow-emerald-500/30 dark:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:shadow-2xl hover:shadow-emerald-500/40 dark:hover:shadow-[0_0_50px_rgba(16,185,129,0.5)] hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/schools")}
             data-testid="card-add-school"
           >

@@ -101,7 +101,7 @@ export default function LoginPage() {
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-full blur-xl opacity-50 animate-pulse" />
             <img 
-              src={BRAND.logo} 
+              src={BRAND.loginLogo} 
               alt={BRAND.name}
               className="relative w-28 h-28 rounded-full object-cover ring-4 ring-white/20 shadow-2xl"
               style={{ animation: 'float 3s ease-in-out infinite' }}

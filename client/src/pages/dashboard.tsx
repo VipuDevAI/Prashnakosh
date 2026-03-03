@@ -86,11 +86,8 @@ export default function DashboardPage() {
             <img 
               src={BRAND.logo} 
               alt={BRAND.name}
-              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
+              className="h-12 sm:h-14 object-contain"
             />
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">{BRAND.name}</h1>
-            </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
