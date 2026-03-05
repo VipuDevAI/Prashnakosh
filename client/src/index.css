@@ -2,415 +2,483 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   PRASHNAKOSH - Professional Cosmic Theme
-   ============================================ */
-
-/* LIGHT MODE */
+/* LIGHT MODE - Premium EdTech Theme with Soft Teal/Blue Tones */
 :root {
-  --background: 210 30% 98%;
-  --foreground: 220 20% 15%;
+  --button-outline: rgba(0,0,0, .08);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -6;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .06);
+  --background: 200 30% 96%;
+  --foreground: 210 20% 25%;
+  --border: 200 20% 88%;
   --card: 0 0% 100%;
-  --card-foreground: 220 20% 15%;
+  --card-foreground: 210 20% 20%;
+  --card-border: 200 15% 90%;
+  --sidebar: 200 35% 97%;
+  --sidebar-foreground: 210 20% 25%;
+  --sidebar-border: 200 20% 90%;
+  --sidebar-primary: 199 89% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 200 25% 94%;
+  --sidebar-accent-foreground: 210 20% 25%;
+  --sidebar-ring: 199 89% 48%;
   --popover: 0 0% 100%;
-  --popover-foreground: 220 20% 15%;
+  --popover-foreground: 210 20% 20%;
+  --popover-border: 200 15% 90%;
   --primary: 199 89% 48%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 15% 96%;
-  --secondary-foreground: 220 20% 15%;
-  --muted: 220 15% 94%;
-  --muted-foreground: 220 10% 45%;
-  --accent: 220 20% 96%;
-  --accent-foreground: 220 20% 15%;
+  --secondary: 200 20% 96%;
+  --secondary-foreground: 210 20% 25%;
+  --muted: 200 15% 94%;
+  --muted-foreground: 210 15% 45%;
+  --accent: 200 25% 94%;
+  --accent-foreground: 210 20% 20%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 220 15% 90%;
-  --input: 220 15% 97%;
+  --input: 200 15% 96%;
+  --input-foreground: 210 20% 20%;
   --ring: 199 89% 48%;
-  --radius: 0.75rem;
+  --chart-1: 199 89% 48%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 45 93% 47%;
+  --chart-4: 142 71% 45%;
+  --chart-5: 0 72% 51%;
+  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: .625rem;
+  --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6px 10px -2px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
 
-  /* Cosmic Colors */
-  --cosmic-cyan: #00D4FF;
-  --cosmic-purple: #8B5CF6;
-  --cosmic-orange: #F97316;
-  --cosmic-blue: #0099FF;
-  --cosmic-bg-start: #0B1E3A;
-  --cosmic-bg-end: #0D1033;
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE - Professional Cosmic */
 .dark {
-  --background: 222 47% 8%;
-  --foreground: 210 40% 98%;
-  --card: 222 47% 11%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 47% 11%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 190 95% 55%;
-  --primary-foreground: 222 47% 8%;
-  --secondary: 222 30% 16%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 222 30% 14%;
-  --muted-foreground: 210 20% 65%;
-  --accent: 222 30% 18%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 72% 55%;
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 8;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .08);
+  --background: 210 25% 12%;
+  --foreground: 200 20% 95%;
+  --border: 210 20% 22%;
+  --card: 210 25% 16%;
+  --card-foreground: 200 20% 95%;
+  --card-border: 210 20% 22%;
+  --sidebar: 210 28% 14%;
+  --sidebar-foreground: 200 20% 95%;
+  --sidebar-border: 210 20% 20%;
+  --sidebar-primary: 199 89% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 20% 20%;
+  --sidebar-accent-foreground: 200 20% 95%;
+  --sidebar-ring: 199 89% 55%;
+  --popover: 210 25% 18%;
+  --popover-foreground: 200 20% 95%;
+  --popover-border: 210 20% 24%;
+  --primary: 199 89% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 22%;
+  --secondary-foreground: 200 20% 95%;
+  --muted: 210 18% 20%;
+  --muted-foreground: 200 15% 65%;
+  --accent: 210 20% 22%;
+  --accent-foreground: 200 20% 95%;
+  --destructive: 0 72% 50%;
   --destructive-foreground: 0 0% 100%;
-  --border: 222 30% 18%;
-  --input: 222 30% 14%;
-  --ring: 190 95% 55%;
+  --input: 210 20% 20%;
+  --ring: 199 89% 55%;
+  --chart-1: 199 89% 55%;
+  --chart-2: 173 58% 45%;
+  --chart-3: 45 93% 55%;
+  --chart-4: 142 71% 50%;
+  --chart-5: 0 72% 55%;
+  --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 6px 10px -2px rgba(0, 0, 0, 0.4), 0 3px 6px -2px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Premium EdTech typography - soft, professional colors */
+  h1, h2, h3, h4, h5, h6 {
+    color: hsl(210 25% 20%);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: hsl(200 20% 95%);
+  }
+
+  /* Form inputs - clean, light style with clear focus */
+  input, textarea, select {
+    color: hsl(210 20% 20%);
+    background-color: hsl(var(--input));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .dark input, .dark textarea, .dark select {
+    color: hsl(200 20% 95%);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: hsl(210 10% 55%);
+  }
+
+  .dark input::placeholder, .dark textarea::placeholder {
+    color: hsl(210 10% 50%);
+  }
+
+  /* Enhanced focus rings for accessibility */
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: hsl(199 89% 48%);
+    box-shadow: 0 0 0 3px hsla(199, 89%, 48%, 0.15);
+  }
+
+  /* Labels - clear and readable */
+  label {
+    color: hsl(210 20% 30%);
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .dark label {
+    color: hsl(200 15% 80%);
+  }
+
+  /* Card styling - ensure proper text colors */
+  .bg-card, [class*="bg-card"] {
+    color: hsl(var(--card-foreground));
   }
 }
 
+/* Premium EdTech gradient backgrounds */
 @layer components {
-  /* ============================================
-     COSMIC BACKGROUND
-     ============================================ */
-  .cosmic-dashboard-bg {
-    background: linear-gradient(135deg, #0B1E3A 0%, #0D1033 50%, #0B1E3A 100%);
-    min-height: 100vh;
-    position: relative;
-  }
-
-  .cosmic-dashboard-bg::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      radial-gradient(1px 1px at 100px 50px, rgba(255,255,255,0.3), transparent),
-      radial-gradient(1px 1px at 200px 150px, rgba(255,255,255,0.2), transparent),
-      radial-gradient(1px 1px at 300px 80px, rgba(255,255,255,0.25), transparent),
-      radial-gradient(1px 1px at 400px 200px, rgba(255,255,255,0.15), transparent),
-      radial-gradient(1px 1px at 500px 100px, rgba(255,255,255,0.2), transparent),
-      radial-gradient(1px 1px at 600px 250px, rgba(255,255,255,0.3), transparent);
-    background-size: 800px 400px;
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  /* Light mode background */
-  .light-dashboard-bg {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
-    min-height: 100vh;
-  }
-
-  /* ============================================
-     HEADER STYLES
-     ============================================ */
-  .cosmic-header {
-    background: rgba(11, 30, 58, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    position: relative;
-  }
-
-  .cosmic-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, 
-      #00D4FF 0%, 
-      #8B5CF6 50%, 
-      #F97316 100%
+  .edtech-gradient {
+    background: linear-gradient(135deg, 
+      hsl(200 40% 96%) 0%, 
+      hsl(195 45% 94%) 25%,
+      hsl(200 35% 95%) 50%,
+      hsl(180 30% 94%) 75%,
+      hsl(195 40% 96%) 100%
     );
   }
 
-  .light .cosmic-header {
-    background: rgba(255, 255, 255, 0.95);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  .dark .edtech-gradient {
+    background: linear-gradient(135deg, 
+      hsl(210 30% 12%) 0%, 
+      hsl(205 35% 14%) 25%,
+      hsl(210 28% 13%) 50%,
+      hsl(200 25% 14%) 75%,
+      hsl(205 30% 12%) 100%
+    );
   }
 
-  /* ============================================
-     SIDEBAR STYLES
-     ============================================ */
-  .cosmic-sidebar {
-    background: rgba(11, 30, 58, 0.6);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  /* Modern corporate gradient - cleaner, more professional */
+  .corporate-gradient {
+    background: linear-gradient(145deg, 
+      #f8fafc 0%, 
+      #f1f5f9 30%,
+      #e2e8f0 70%,
+      #f8fafc 100%
+    );
+    background-attachment: fixed;
   }
 
-  .sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    color: rgba(255, 255, 255, 0.7);
-    transition: all 0.2s ease;
-    cursor: pointer;
+  .dark .corporate-gradient {
+    background: linear-gradient(145deg, 
+      #0f172a 0%, 
+      #1e293b 50%,
+      #0f172a 100%
+    );
+    background-attachment: fixed;
   }
 
-  .sidebar-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
+  /* Subtle animated gradient for special pages */
+  .edtech-gradient-animated {
+    background: linear-gradient(135deg, #F8FAFF 0%, #ECFEFF 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 15s ease infinite;
   }
 
-  .sidebar-item.active {
-    background: linear-gradient(90deg, rgba(0, 212, 255, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
-    color: #00D4FF;
-    border-left: 3px solid #00D4FF;
+  .dark .edtech-gradient-animated {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
   }
 
-  /* ============================================
-     STAT CARDS
-     ============================================ */
-  .stat-card-cosmic {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    transition: all 0.2s ease;
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
-  .stat-card-cosmic:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(0, 212, 255, 0.2);
+  /* Premium card styling */
+  .card-premium {
+    background: #FFFFFF;
+    border-radius: 20px;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.05),
+      0 10px 15px -3px rgba(0, 0, 0, 0.08),
+      0 20px 25px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
 
-  .stat-card-cyan {
-    border-left: 3px solid #00D4FF;
+  .dark .card-premium {
+    background: #1E293B;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(51, 65, 85, 0.5);
   }
 
-  .stat-card-purple {
-    border-left: 3px solid #8B5CF6;
+  /* Glass morphism effect */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   }
 
-  .stat-card-orange {
-    border-left: 3px solid #F97316;
+  .dark .glass-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(51, 65, 85, 0.3);
   }
 
-  .stat-card-blue {
-    border-left: 3px solid #0099FF;
+  /* Logo container with soft shadow */
+  .logo-container {
+    @apply rounded-full overflow-hidden;
+    box-shadow: 
+      0 4px 14px rgba(0, 0, 0, 0.12),
+      0 8px 24px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
   }
 
-  /* Light mode stat cards */
-  .light .stat-card-cosmic {
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  .dark .logo-container {
+    box-shadow: 
+      0 4px 14px rgba(0, 0, 0, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
   }
 
-  .light .stat-card-cosmic:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Soft floating button effect */
+  .btn-float {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* ============================================
-     MANAGEMENT CARDS
-     ============================================ */
-  .management-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .management-card:hover {
-    background: rgba(255, 255, 255, 0.06);
+  .btn-float:hover {
     transform: translateY(-2px);
+    box-shadow: 
+      0 10px 20px -5px rgba(0, 0, 0, 0.15),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
-  .light .management-card {
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  .btn-float:active {
+    transform: translateY(0);
+  }
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ *
+ * <element className="hover-elevate" />
+ * <element className="active-elevate-2" />
+ *
+ * // Using the tailwind utility when a data attribute is "on"
+ * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
+ * // Or manually controlling the toggle state
+ * <element className="toggle-elevate toggle-elevated" />
+ *
+ * Elevation systems have to handle many states.
+ * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
+ * - toggled or not
+ * - focused or not (this is not handled with these utilities)
+ *
+ * Even without handling focused or not, this is six possible combinations that
+ * need to be distinguished from eachother visually.
+ */
+@layer utilities {
+
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
   }
 
-  .light .management-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
   }
 
-  /* ============================================
-     ANALYTICS CARDS
-     ============================================ */
-  .analytics-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-    padding: 1.5rem;
+  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
+   * buttons/badges can remove the automatic brightness adjustment on interactions
+   * and program their own. */
+  .no-default-hover-elevate {}
+
+  .no-default-active-elevate {}
+
+
+  /**
+   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
+   * This way they can stack/compound. Both will overlap the parent's borders!
+   * So borders will be automatically adjusted both on toggle, and hover/active,
+   * and they will be compounded.
+   */
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: -1;
+    /* sits behind content but above backdrop */
   }
 
-  .light .analytics-card {
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
   }
 
-  /* ============================================
-     NOTIFICATION PANEL
-     ============================================ */
-  .notification-panel {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
   }
 
-  .notification-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s ease;
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
   }
 
-  .notification-item:last-child {
-    border-bottom: none;
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: 999;
+    /* sits in front of content */
   }
 
-  .notification-item:hover {
-    background: rgba(255, 255, 255, 0.03);
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
   }
 
-  .light .notification-panel {
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
   }
 
-  .light .notification-item {
-    border-bottom-color: rgba(0, 0, 0, 0.05);
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
   }
+}
 
-  /* ============================================
-     ICON CONTAINERS
-     ============================================ */
-  .icon-cyan {
-    background: rgba(0, 212, 255, 0.15);
-    color: #00D4FF;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
+/* Mobile-friendly improvements */
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
   }
-
-  .icon-purple {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8B5CF6;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
+  
+  table {
+    font-size: 0.875rem;
   }
-
-  .icon-orange {
-    background: rgba(249, 115, 22, 0.15);
-    color: #F97316;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-  }
-
-  .icon-blue {
-    background: rgba(0, 153, 255, 0.15);
-    color: #0099FF;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-  }
-
-  .icon-green {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22C55E;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-  }
-
-  /* ============================================
-     GRADIENT TEXT
-     ============================================ */
-  .gradient-text-cosmic {
-    background: linear-gradient(90deg, #00D4FF 0%, #8B5CF6 50%, #F97316 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* ============================================
-     BUTTONS
-     ============================================ */
-  .btn-cosmic-primary {
-    background: linear-gradient(90deg, #00D4FF 0%, #0099FF 100%);
-    color: white;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-  }
-
-  .btn-cosmic-primary:hover {
-    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-    transform: translateY(-1px);
-  }
-
-  /* ============================================
-     DONUT CHART COLORS
-     ============================================ */
-  .chart-cyan { color: #00D4FF; }
-  .chart-purple { color: #8B5CF6; }
-  .chart-orange { color: #F97316; }
-  .chart-blue { color: #0099FF; }
-  .chart-green { color: #22C55E; }
-
-  /* ============================================
-     RESPONSIVE UTILITIES
-     ============================================ */
-  @media (max-width: 1024px) {
-    .cosmic-sidebar {
-      width: 80px;
-    }
-    .sidebar-item span {
-      display: none;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .cosmic-sidebar {
-      display: none;
-    }
-  }
-
-  /* ============================================
-     SCROLLBAR
-     ============================================ */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 212, 255, 0.3);
-  }
-
-  .light ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .light ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+  
+  .mobile-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
