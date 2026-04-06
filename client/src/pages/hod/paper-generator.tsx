@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Send, CheckCircle, XCircle, Download, Clock, AlertTriangle, Printer, Image } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, FileText, Send, CheckCircle, XCircle, Download, AlertTriangle, Image, Loader2, Copy, Layers, ShieldCheck, BarChart3 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImg from "@/assets/logo.png";
@@ -26,6 +28,7 @@ interface Test {
   duration: number;
   workflowState: string;
   questionIds: string[] | null;
+  questionSets: { setName: string; questionIds: string[]; totalMarks: number }[] | null;
   hodApprovedBy: string | null;
   hodApprovedAt: string | null;
   hodComments: string | null;
@@ -34,6 +37,55 @@ interface Test {
   paperFormat: string;
   generatedPaperUrl: string | null;
   answerKeyUrl: string | null;
+  blueprintId: string | null;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  issues: string[];
+  sectionAnalysis: {
+    section: string;
+    questionType: string;
+    difficulty: string;
+    requiredPerSet: number;
+    requiredTotal: number;
+    available: number;
+    canFulfill: boolean;
+    difficultyBreakdown: Record<string, { available: number; neededPerSet: number }>;
+  }[];
+  remediation: {
+    maxSetsNoOverlap: number;
+    canReduceSets: boolean;
+    suggestedSetCount: number;
+  };
+}
+
+interface MultiSetResult {
+  success: boolean;
+  testId: string;
+  setCount: number;
+  sets: {
+    setName: string;
+    questionCount: number;
+    totalMarks: number;
+    sectionBreakdown: any[];
+  }[];
+  warnings: string[];
+  stats: {
+    overlapCount: number;
+    perSetStats: {
+      setName: string;
+      difficultyDistribution: Record<string, number>;
+      chapterDistribution: Record<string, number>;
+      totalMarks: number;
+    }[];
+    allSetsEqualMarks: boolean;
+  };
+  validation: {
+    overlapCount: number;
+    perSetStats: any[];
+    allSetsEqualMarks: boolean;
+  };
 }
 
 const workflowStateLabels: Record<string, { label: string; color: string }> = {
@@ -61,8 +113,47 @@ export default function HODPaperGeneratorPage() {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
 
+  // Multi-set state
+  const [setCount, setSetCount] = useState<number>(3);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [multiSetResult, setMultiSetResult] = useState<MultiSetResult | null>(null);
+  const [allowOverlap, setAllowOverlap] = useState(false);
+
   const { data: tests = [], isLoading } = useQuery<Test[]>({
     queryKey: ['/api/tests'],
+  });
+
+  // Validate multi-set capacity
+  const validateMutation = useMutation({
+    mutationFn: async ({ testId, setCount }: { testId: string; setCount: number }) => {
+      const res = await apiRequest("POST", `/api/tests/${testId}/validate-multiset`, { setCount });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setValidationResult(data);
+      setMultiSetResult(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Validation Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Generate multi-set
+  const generateMultiSetMutation = useMutation({
+    mutationFn: async ({ testId, setCount, allowOverlap }: { testId: string; setCount: number; allowOverlap: boolean }) => {
+      const res = await apiRequest("POST", `/api/tests/${testId}/generate-multiset`, { 
+        setCount, allowOverlap, mode: 'offline' 
+      });
+      return res.json();
+    },
+    onSuccess: (data: MultiSetResult) => {
+      setMultiSetResult(data);
+      toast({ title: "Multi-set generated", description: `${data.setCount} sets generated successfully` });
+      queryClient.invalidateQueries({ queryKey: ['/api/tests'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Generation Error", description: error.message, variant: "destructive" });
+    },
   });
 
   const generatePaperMutation = useMutation({
@@ -120,6 +211,9 @@ export default function HODPaperGeneratorPage() {
   const pendingTests = tests.filter(t => t.workflowState === "pending_hod" || t.workflowState === "draft");
   const approvedTests = tests.filter(t => t.workflowState === "hod_approved");
   const allTests = tests;
+  const selectedTest = tests.find(t => t.id === selectedTestId);
+  const storedSets = selectedTest?.questionSets;
+  const maxDownloadableSet = storedSets?.length || 3;
 
   return (
     <PageLayout>
@@ -138,6 +232,7 @@ export default function HODPaperGeneratorPage() {
 
       <PageContent>
         <GridContainer cols={2}>
+          {/* Pending Review Card */}
           <ContentCard title="Pending Review" description="Papers awaiting your approval">
             {isLoading ? (
               <div className="py-4 text-center text-muted-foreground">Loading...</div>
@@ -182,49 +277,54 @@ export default function HODPaperGeneratorPage() {
             )}
           </ContentCard>
 
-          <ContentCard title="Generate Paper" description="Create question paper and answer key">
+          {/* Multi-Set Generation Card */}
+          <ContentCard title="Multi-Set Paper Generation" description="Generate non-overlapping question sets (A/B/C)">
             <div className="space-y-4 mt-4">
               <div>
                 <Label>Select Test</Label>
-                <Select onValueChange={(v) => setSelectedTestId(v)}>
+                <Select onValueChange={(v) => { setSelectedTestId(v); setValidationResult(null); setMultiSetResult(null); }}>
                   <SelectTrigger data-testid="select-test">
-                    <SelectValue placeholder="Choose a test" />
+                    <SelectValue placeholder="Choose a test with blueprint" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allTests.map((test) => (
+                    {allTests.filter(t => t.blueprintId).map((test) => (
                       <SelectItem key={test.id} value={test.id}>
                         {test.title} ({test.subject})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedTestId && !selectedTest?.blueprintId && (
+                  <p className="text-xs text-destructive mt-1">Selected test has no blueprint. Multi-set requires a blueprint.</p>
+                )}
               </div>
 
-              <div>
-                <Label>Paper Format</Label>
-                <Select value={selectedFormat} onValueChange={(v: "A4" | "Legal") => setSelectedFormat(v)}>
-                  <SelectTrigger data-testid="select-format">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A4">A4</SelectItem>
-                    <SelectItem value="Legal">Legal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Paper Set</Label>
-                <Select value={String(selectedSet)} onValueChange={(v) => setSelectedSet(Number(v))}>
-                  <SelectTrigger data-testid="select-set">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Set 1</SelectItem>
-                    <SelectItem value="2">Set 2</SelectItem>
-                    <SelectItem value="3">Set 3</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label>Number of Sets</Label>
+                  <Select value={String(setCount)} onValueChange={(v) => { setSetCount(Number(v)); setValidationResult(null); setMultiSetResult(null); }}>
+                    <SelectTrigger data-testid="select-set-count">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 Sets (A, B)</SelectItem>
+                      <SelectItem value="3">3 Sets (A, B, C)</SelectItem>
+                      <SelectItem value="4">4 Sets (A, B, C, D)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label>Paper Format</Label>
+                  <Select value={selectedFormat} onValueChange={(v: "A4" | "Legal") => setSelectedFormat(v)}>
+                    <SelectTrigger data-testid="select-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A4">A4</SelectItem>
+                      <SelectItem value="Legal">Legal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
@@ -238,63 +338,104 @@ export default function HODPaperGeneratorPage() {
                   placeholder="https://example.com/school-logo.png"
                   data-testid="input-logo-url"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  If left empty, school's default logo will be used (if configured)
-                </p>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
+              {/* Step 1: Validate */}
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => selectedTestId && validateMutation.mutate({ testId: selectedTestId, setCount })}
+                disabled={!selectedTestId || !selectedTest?.blueprintId || validateMutation.isPending}
+                data-testid="button-validate-pool"
+              >
+                {validateMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Validating Pool...</>
+                ) : (
+                  <><ShieldCheck className="w-4 h-4 mr-2" /> Step 1: Validate Question Pool</>
+                )}
+              </Button>
+
+              {/* Validation Summary */}
+              {validationResult && (
+                <ValidationSummary 
+                  result={validationResult} 
+                  setCount={setCount}
+                  onReduceSets={(n) => { setSetCount(n); setValidationResult(null); }}
+                  onAllowOverlap={() => setAllowOverlap(true)}
+                />
+              )}
+
+              {/* Step 2: Generate */}
+              {validationResult && (
+                <Button
+                  className="w-full"
+                  onClick={() => selectedTestId && generateMultiSetMutation.mutate({ testId: selectedTestId, setCount: validationResult.remediation.suggestedSetCount || setCount, allowOverlap })}
+                  disabled={generateMultiSetMutation.isPending}
+                  data-testid="button-generate-multiset"
+                >
+                  {generateMultiSetMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating {setCount} Sets...</>
+                  ) : (
+                    <><Layers className="w-4 h-4 mr-2" /> Step 2: Generate {validationResult.valid ? setCount : validationResult.remediation.suggestedSetCount} Sets</>
+                  )}
+                </Button>
+              )}
+
+              {/* Multi-Set Result */}
+              {multiSetResult && (
+                <MultiSetResultView 
+                  result={multiSetResult} 
+                  testId={selectedTestId!}
+                  format={selectedFormat}
+                  logoUrl={customLogoUrl}
+                />
+              )}
+
+              {/* Legacy single-set generation fallback */}
+              {selectedTestId && !selectedTest?.blueprintId && (
                 <CoinButton
                   color="gold"
                   icon={<FileText className="w-5 h-5" />}
-                  onClick={() => selectedTestId && generatePaperMutation.mutate({ testId: selectedTestId, format: selectedFormat })}
-                  disabled={!selectedTestId || generatePaperMutation.isPending}
+                  onClick={() => generatePaperMutation.mutate({ testId: selectedTestId, format: selectedFormat })}
+                  disabled={generatePaperMutation.isPending}
                   data-testid="button-generate"
                 >
-                  Generate Paper
+                  Generate Single Paper
                 </CoinButton>
-
-                {selectedTestId && user?.role !== "teacher" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${selectedSet}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')}
-                      data-testid="button-download-paper-pdf"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      PDF Paper (Set {selectedSet})
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/paper-docx?set=${selectedSet}`, '_blank')}
-                      data-testid="button-download-paper-docx"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Word Paper (Set {selectedSet})
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${selectedSet}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')}
-                      data-testid="button-download-key-pdf"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      PDF Key (Set {selectedSet})
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-docx?set=${selectedSet}`, '_blank')}
-                      data-testid="button-download-key-docx"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Word Key (Set {selectedSet})
-                    </Button>
-                  </>
-                )}
-              </div>
+              )}
             </div>
           </ContentCard>
 
+          {/* Download Section */}
+          {selectedTestId && storedSets && storedSets.length > 0 && (
+            <ContentCard title="Download Papers" description={`${storedSets.length} sets available for download`}>
+              <div className="space-y-3 mt-4">
+                {storedSets.map((set, idx) => (
+                  <Card key={set.setName} className="bg-background/50" data-testid={`download-set-${idx + 1}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">{set.setName}</CardTitle>
+                        <Badge variant="outline">{set.questionIds.length} Qs | {set.totalMarks} marks</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardFooter className="pt-1 flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-pdf-set-${idx + 1}`}>
+                        <Download className="w-3 h-3 mr-1" /> PDF
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-docx?set=${idx + 1}`, '_blank')} data-testid={`btn-docx-set-${idx + 1}`}>
+                        <Download className="w-3 h-3 mr-1" /> DOCX
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-key-pdf-set-${idx + 1}`}>
+                        <Download className="w-3 h-3 mr-1" /> Answer Key
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </ContentCard>
+          )}
 
+          {/* Submit to Principal */}
           <ContentCard title="Submit to Principal" description="Send approved papers for principal review">
             {approvedTests.length === 0 ? (
               <div className="py-4 text-center text-muted-foreground">No approved papers ready to submit</div>
@@ -326,13 +467,17 @@ export default function HODPaperGeneratorPage() {
             )}
           </ContentCard>
 
+          {/* All Papers Status */}
           <ContentCard title="All Papers Status" description="Overview of all exam papers">
             <div className="space-y-2 mt-4">
               {allTests.map((test) => (
                 <div key={test.id} className="flex items-center justify-between p-2 rounded bg-background/50" data-testid={`status-${test.id}`}>
                   <div>
                     <p className="font-medium text-sm">{test.title}</p>
-                    <p className="text-xs text-muted-foreground">{test.subject} | Grade {test.grade}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {test.subject} | Grade {test.grade}
+                      {test.questionSets && ` | ${test.questionSets.length} sets`}
+                    </p>
                   </div>
                   <Badge className={workflowStateLabels[test.workflowState]?.color || "bg-muted"}>
                     {workflowStateLabels[test.workflowState]?.label || test.workflowState}
@@ -343,6 +488,7 @@ export default function HODPaperGeneratorPage() {
           </ContentCard>
         </GridContainer>
 
+        {/* Approve Dialog */}
         <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
           <DialogContent>
             <DialogHeader>
@@ -368,6 +514,7 @@ export default function HODPaperGeneratorPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Reject Dialog */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogContent>
             <DialogHeader>
@@ -396,5 +543,229 @@ export default function HODPaperGeneratorPage() {
       </PageContent>
       <PageFooter />
     </PageLayout>
+  );
+}
+
+// ============================================================================
+// VALIDATION SUMMARY COMPONENT
+// ============================================================================
+
+function ValidationSummary({ 
+  result, 
+  setCount, 
+  onReduceSets, 
+  onAllowOverlap 
+}: { 
+  result: ValidationResult; 
+  setCount: number;
+  onReduceSets: (n: number) => void;
+  onAllowOverlap: () => void;
+}) {
+  return (
+    <div className="space-y-3 p-4 border rounded-lg bg-muted/30" data-testid="validation-summary">
+      <div className="flex items-center gap-2">
+        {result.valid ? (
+          <CheckCircle className="w-5 h-5 text-green-600" />
+        ) : (
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+        )}
+        <h3 className="font-semibold text-sm">
+          {result.valid 
+            ? `Pool validated: ${setCount} sets can be generated with zero overlap` 
+            : `Insufficient questions for ${setCount} sets`
+          }
+        </h3>
+      </div>
+
+      {/* Section Analysis Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-1.5 px-2 font-medium">Section</th>
+              <th className="text-center py-1.5 px-2 font-medium">Type</th>
+              <th className="text-center py-1.5 px-2 font-medium">Per Set</th>
+              <th className="text-center py-1.5 px-2 font-medium">Total ({setCount} sets)</th>
+              <th className="text-center py-1.5 px-2 font-medium">Available</th>
+              <th className="text-center py-1.5 px-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.sectionAnalysis.map((sa, idx) => (
+              <tr key={idx} className="border-b border-border/50">
+                <td className="py-1.5 px-2 font-medium">{sa.section}</td>
+                <td className="py-1.5 px-2 text-center">
+                  <Badge variant="outline" className="text-[10px]">{sa.questionType}</Badge>
+                </td>
+                <td className="py-1.5 px-2 text-center">{sa.requiredPerSet}</td>
+                <td className="py-1.5 px-2 text-center font-medium">{sa.requiredTotal}</td>
+                <td className="py-1.5 px-2 text-center">{sa.available}</td>
+                <td className="py-1.5 px-2 text-center">
+                  {sa.canFulfill ? (
+                    <CheckCircle className="w-4 h-4 text-green-600 inline" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500 inline" />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Difficulty breakdown for sections */}
+      {result.sectionAnalysis.some(sa => Object.keys(sa.difficultyBreakdown).length > 1) && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+            View difficulty breakdown
+          </summary>
+          <div className="mt-2 space-y-2">
+            {result.sectionAnalysis.map((sa, idx) => (
+              <div key={idx}>
+                <p className="font-medium">{sa.section}:</p>
+                <div className="flex gap-3 ml-2">
+                  {Object.entries(sa.difficultyBreakdown).map(([diff, data]) => (
+                    <span key={diff} className={`${data.available >= data.neededPerSet * setCount ? 'text-green-600' : 'text-amber-500'}`}>
+                      {diff}: {data.available} avail / {data.neededPerSet * setCount} needed
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* Remediation options */}
+      {!result.valid && (
+        <div className="space-y-2">
+          {result.issues.map((issue, idx) => (
+            <p key={idx} className="text-xs text-destructive">{issue}</p>
+          ))}
+          
+          <div className="flex gap-2 flex-wrap pt-2">
+            {result.remediation.canReduceSets && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onReduceSets(result.remediation.suggestedSetCount)}
+                data-testid="button-reduce-sets"
+              >
+                <Layers className="w-3 h-3 mr-1" />
+                Reduce to {result.remediation.suggestedSetCount} Sets
+              </Button>
+            )}
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={onAllowOverlap}
+              data-testid="button-allow-overlap"
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              Allow Controlled Overlap
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MULTI-SET RESULT COMPONENT
+// ============================================================================
+
+function MultiSetResultView({ 
+  result, 
+  testId, 
+  format, 
+  logoUrl 
+}: { 
+  result: MultiSetResult; 
+  testId: string; 
+  format: string; 
+  logoUrl: string;
+}) {
+  return (
+    <div className="space-y-3 p-4 border rounded-lg bg-green-50 dark:bg-green-950/20" data-testid="multiset-result">
+      <div className="flex items-center gap-2">
+        <CheckCircle className="w-5 h-5 text-green-600" />
+        <h3 className="font-semibold text-sm">{result.setCount} Sets Generated Successfully</h3>
+      </div>
+
+      {/* Parity validation */}
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="p-2 rounded bg-background border text-center" data-testid="parity-overlap">
+          <p className="font-semibold text-lg">{result.validation.overlapCount}</p>
+          <p className="text-muted-foreground">Overlap</p>
+        </div>
+        <div className="p-2 rounded bg-background border text-center" data-testid="parity-marks">
+          <p className="font-semibold text-lg">{result.validation.allSetsEqualMarks ? "Yes" : "No"}</p>
+          <p className="text-muted-foreground">Equal Marks</p>
+        </div>
+        <div className="p-2 rounded bg-background border text-center">
+          <p className="font-semibold text-lg">{result.sets.reduce((s, set) => s + set.questionCount, 0)}</p>
+          <p className="text-muted-foreground">Total Qs</p>
+        </div>
+      </div>
+
+      {/* Per-set summary */}
+      {result.sets.map((set, idx) => (
+        <div key={set.setName} className="flex items-center justify-between p-2 rounded bg-background border">
+          <div>
+            <p className="text-sm font-medium">{set.setName}</p>
+            <p className="text-xs text-muted-foreground">{set.questionCount} questions | {set.totalMarks} marks</p>
+          </div>
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" onClick={() => window.open(`/api/tests/${testId}/paper-pdf?format=${format}&set=${idx + 1}${logoUrl ? `&logoUrl=${encodeURIComponent(logoUrl)}` : ''}`, '_blank')}>
+              <Download className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
+
+      {/* Per-set difficulty parity */}
+      {result.stats.perSetStats && result.stats.perSetStats.length > 1 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
+            <BarChart3 className="w-3 h-3" /> View difficulty parity across sets
+          </summary>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-1 px-2">Set</th>
+                  <th className="text-center py-1 px-2">Easy</th>
+                  <th className="text-center py-1 px-2">Medium</th>
+                  <th className="text-center py-1 px-2">Hard</th>
+                  <th className="text-center py-1 px-2">Total Marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.stats.perSetStats.map((ss) => (
+                  <tr key={ss.setName} className="border-b border-border/50">
+                    <td className="py-1 px-2 font-medium">{ss.setName}</td>
+                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.easy || 0}</td>
+                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.medium || 0}</td>
+                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.hard || 0}</td>
+                    <td className="py-1 px-2 text-center font-medium">{ss.totalMarks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
+      {/* Warnings */}
+      {result.warnings.length > 0 && (
+        <Alert variant="destructive" className="py-2">
+          <AlertTriangle className="h-3 w-3" />
+          <AlertDescription className="text-xs">
+            {result.warnings.map((w, i) => <p key={i}>{w}</p>)}
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }

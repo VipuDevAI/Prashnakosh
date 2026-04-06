@@ -250,6 +250,7 @@ export const tests = pgTable("tests", {
   totalMarks: integer("total_marks").default(100),
   questionCount: integer("question_count").default(50),
   questionIds: jsonb("question_ids").$type<string[]>(),
+  questionSets: jsonb("question_sets").$type<{ setName: string; questionIds: string[]; totalMarks: number }[]>(),
   isActive: boolean("is_active").default(false),
   resultsRevealed: boolean("results_revealed").default(false),
   createdBy: varchar("created_by"),
@@ -272,6 +273,11 @@ export const tests = pgTable("tests", {
 export const insertTestSchema = createInsertSchema(tests, {
   type: z.enum(testTypes),
   questionIds: z.array(z.string()).nullable().optional(),
+  questionSets: z.array(z.object({
+    setName: z.string(),
+    questionIds: z.array(z.string()),
+    totalMarks: z.number(),
+  })).nullable().optional(),
   workflowState: z.enum(workflowStates).optional(),
 }).omit({ id: true });
 export type InsertTest = z.infer<typeof insertTestSchema>;

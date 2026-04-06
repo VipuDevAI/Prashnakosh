@@ -19,6 +19,7 @@ import {
   canTransitionTo,
   logStateChange 
 } from "./middleware/exam-governance";
+import { validateBlueprintCapacity } from "./lib/question-selection-engine";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1135,8 +1136,12 @@ export async function registerRoutes(
   app.post("/api/questions/bulk", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
       const { questions: questionsInput, uploadId, forceUpload } = req.body;
-      const tenantId = requireTenantId(req, res);
-      if (!tenantId) return;
+      // For super_admin, use tenantId from the first question; for others, use user's tenantId
+      const userTenantId = req.tenantId || req.user?.tenantId;
+      const tenantId = userTenantId || questionsInput?.[0]?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "tenantId is required" });
+      }
       
       // === DUPLICATE DETECTION: Check BEFORE saving ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
@@ -3028,6 +3033,121 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
+  // ========================================================================
+  // MULTI-SET VALIDATION: Check pool capacity before generating sets
+  // ========================================================================
+  app.post("/api/tests/:id/validate-multiset", requireAuth, requireTenant, requireRole("teacher", "hod", "exam_committee", "admin", "super_admin"), async (req, res) => {
+    try {
+      const test = await storage.getTest(req.params.id);
+      if (!test) return res.status(404).json({ error: "Test not found" });
+      if (req.user?.role !== "super_admin" && test.tenantId !== req.tenantId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      if (!test.blueprintId) {
+        return res.status(400).json({ error: "Test has no blueprint assigned" });
+      }
+      
+      const blueprint = await storage.getBlueprint(test.blueprintId);
+      if (!blueprint || !blueprint.sections) {
+        return res.status(404).json({ error: "Blueprint not found or has no sections" });
+      }
+      
+      const setCount = req.body.setCount || 3;
+      
+      // Get all available questions for this tenant/subject/grade
+      const allQuestions = await storage.getQuestionsByTenant(test.tenantId);
+      const approvedQuestions = allQuestions.filter(q => q.status === 'approved' && !q.isDeleted);
+      
+      const validation = validateBlueprintCapacity(blueprint, approvedQuestions, setCount);
+      
+      res.json({
+        testId: test.id,
+        testTitle: test.title,
+        blueprintId: test.blueprintId,
+        requestedSetCount: setCount,
+        ...validation,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================================================
+  // MULTI-SET GENERATION: Generate N non-overlapping question sets
+  // ========================================================================
+  app.post("/api/tests/:id/generate-multiset", requireAuth, requireTenant, requireRole("hod", "exam_committee", "admin", "super_admin"), async (req, res) => {
+    try {
+      const test = await storage.getTest(req.params.id);
+      if (!test) return res.status(404).json({ error: "Test not found" });
+      if (req.user?.role !== "super_admin" && test.tenantId !== req.tenantId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      if (!test.blueprintId) {
+        return res.status(400).json({ error: "Test has no blueprint assigned" });
+      }
+      
+      const blueprint = await storage.getBlueprint(test.blueprintId);
+      if (!blueprint || !blueprint.sections) {
+        return res.status(404).json({ error: "Blueprint not found or has no sections" });
+      }
+      
+      const { setCount = 3, allowOverlap = false, mode = 'offline' } = req.body;
+      
+      // Use unified engine for multi-set generation
+      const selectionResult = await storage.selectQuestionsUnified(blueprint, {
+        mode,
+        tenantId: test.tenantId,
+        subject: blueprint.subject || test.subject,
+        grade: blueprint.grade || test.grade,
+        setCount,
+        allowOverlap,
+        shuffleQuestions: mode === 'online',
+        shuffleOptions: mode === 'online',
+        fixedOrder: mode === 'offline',
+        onlyApproved: true,
+      });
+      
+      // Store sets in the test record
+      const questionSets = selectionResult.sets.map(set => ({
+        setName: set.setName,
+        questionIds: set.questions.map(q => q.id),
+        totalMarks: set.totalMarks,
+      }));
+      
+      // Also store first set's questions in questionIds for backward compat
+      const firstSetIds = selectionResult.sets[0]?.questions.map(q => q.id) || [];
+      const totalMarks = selectionResult.sets[0]?.totalMarks || 0;
+      
+      await storage.updateTest(req.params.id, {
+        questionIds: firstSetIds,
+        questionSets: questionSets as any,
+        totalMarks,
+        questionCount: firstSetIds.length,
+      });
+      
+      res.json({
+        success: selectionResult.success,
+        testId: test.id,
+        setCount: selectionResult.sets.length,
+        sets: selectionResult.sets.map(set => ({
+          setName: set.setName,
+          questionCount: set.questions.length,
+          totalMarks: set.totalMarks,
+          sectionBreakdown: set.sectionBreakdown,
+        })),
+        warnings: selectionResult.warnings,
+        stats: selectionResult.stats,
+        validation: {
+          overlapCount: selectionResult.stats.overlapCount || 0,
+          perSetStats: selectionResult.stats.perSetStats,
+          allSetsEqualMarks: new Set(selectionResult.sets.map(s => s.totalMarks)).size <= 1,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   function seededShuffle<T>(array: T[], seed: number): T[] {
     const result = [...array];
     let currentSeed = seed;
@@ -3060,8 +3180,6 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;
-      const setLabel = setNumber > 1 ? ` - Set ${setNumber}` : "";
-      const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
       const customLogoUrl = req.query.logoUrl as string | undefined;
 
       // Fetch school/tenant info for logo and name
@@ -3069,13 +3187,29 @@ export function registerPaperGenerationRoutes(app: Express) {
       const schoolName = tenant?.name || "Question Bank";
       const schoolLogoUrl = customLogoUrl || tenant?.logo;
 
+      // Determine question IDs based on stored multi-set data or fallback
+      let questionIdsForSet: string[] = [];
+      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+      
+      if (storedSets && storedSets.length >= setNumber) {
+        questionIdsForSet = storedSets[setNumber - 1].questionIds;
+      } else {
+        questionIdsForSet = test.questionIds || [];
+      }
+
       const questions = [];
-      for (const qId of test.questionIds || []) {
+      for (const qId of questionIdsForSet) {
         const q = await storage.getQuestion(qId);
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = seededShuffle(questions, shuffleSeed);
+      // Only shuffle if no stored sets (backward compat)
+      const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
+      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      
+      const setLabel = storedSets && storedSets.length >= setNumber 
+        ? ` - ${storedSets[setNumber - 1].setName}` 
+        : (setNumber > 1 ? ` - Set ${setNumber}` : "");
 
       const passageGroups = new Map<string, { passage: any; questions: typeof questions }>();
       const standaloneQuestions: typeof questions = [];
@@ -3185,8 +3319,6 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;
-      const setLabel = setNumber > 1 ? ` - Set ${setNumber}` : "";
-      const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
       const customLogoUrl = req.query.logoUrl as string | undefined;
 
       // Fetch school/tenant info for logo and name
@@ -3194,13 +3326,28 @@ export function registerPaperGenerationRoutes(app: Express) {
       const schoolName = tenant?.name || "Question Bank";
       const schoolLogoUrl = customLogoUrl || tenant?.logo;
 
+      // Use stored multi-set data if available
+      let questionIdsForSet: string[] = [];
+      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+      
+      if (storedSets && storedSets.length >= setNumber) {
+        questionIdsForSet = storedSets[setNumber - 1].questionIds;
+      } else {
+        questionIdsForSet = test.questionIds || [];
+      }
+
       const questions = [];
-      for (const qId of test.questionIds || []) {
+      for (const qId of questionIdsForSet) {
         const q = await storage.getQuestion(qId);
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = seededShuffle(questions, shuffleSeed);
+      const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
+      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      
+      const setLabel = storedSets && storedSets.length >= setNumber 
+        ? ` - ${storedSets[setNumber - 1].setName}` 
+        : (setNumber > 1 ? ` - Set ${setNumber}` : "");
 
       const doc = new PDFDocument({ size: "A4", margin: 50 });
       res.setHeader("Content-Type", "application/pdf");
@@ -3263,17 +3410,31 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;
-      const setLabel = setNumber > 1 ? ` - Set ${setNumber}` : "";
       const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
 
       const tenant = await storage.getTenant(test.tenantId);
+      
+      // Use stored multi-set data if available
+      let questionIdsForSet: string[] = [];
+      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+      
+      if (storedSets && storedSets.length >= setNumber) {
+        questionIdsForSet = storedSets[setNumber - 1].questionIds;
+      } else {
+        questionIdsForSet = test.questionIds || [];
+      }
+
       const questions = [];
-      for (const qId of test.questionIds || []) {
+      for (const qId of questionIdsForSet) {
         const q = await storage.getQuestion(qId);
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      
+      const setLabel = storedSets && storedSets.length >= setNumber 
+        ? ` - ${storedSets[setNumber - 1].setName}` 
+        : (setNumber > 1 ? ` - Set ${setNumber}` : "");
 
       const passageGroups = new Map<string, { passage: any; questions: typeof questions }>();
       const standaloneQuestions: typeof questions = [];
@@ -3441,17 +3602,31 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;
-      const setLabel = setNumber > 1 ? ` - Set ${setNumber}` : "";
       const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
 
       const tenant = await storage.getTenant(test.tenantId);
+      
+      // Use stored multi-set data if available
+      let questionIdsForSet: string[] = [];
+      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+      
+      if (storedSets && storedSets.length >= setNumber) {
+        questionIdsForSet = storedSets[setNumber - 1].questionIds;
+      } else {
+        questionIdsForSet = test.questionIds || [];
+      }
+
       const questions = [];
-      for (const qId of test.questionIds || []) {
+      for (const qId of questionIdsForSet) {
         const q = await storage.getQuestion(qId);
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      
+      const setLabel = storedSets && storedSets.length >= setNumber 
+        ? ` - ${storedSets[setNumber - 1].setName}` 
+        : (setNumber > 1 ? ` - Set ${setNumber}` : "");
 
       const schoolName = tenant?.name || "Question Bank";
 

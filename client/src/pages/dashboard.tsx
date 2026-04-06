@@ -1171,7 +1171,7 @@ function HODDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Generate Question Paper</CardTitle>
-              <CardDescription>Only HOD can generate papers - NOT teachers</CardDescription>
+              <CardDescription>Generate single or multi-set papers from blueprints</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1201,30 +1201,14 @@ function HODDashboard() {
                   </Select>
                 </div>
               </div>
+              
               <CoinButton color="gold" className="w-full" icon={<FileText className="w-5 h-5" />} onClick={() => navigate("/hod/generate-paper")} data-testid="button-generate-paper">
-                Generate Paper
+                Multi-Set Paper Generator
               </CoinButton>
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <h4 className="font-medium">Paper Settings</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Paper Size</Label>
-                    <Select><SelectTrigger data-testid="select-paper-size"><SelectValue placeholder="A4" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="a4">A4</SelectItem>
-                        <SelectItem value="legal">Legal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">Header: Auto add School name and logo. Footer: Page number + exam name.</p>
-              </div>
-              <div className="flex gap-4">
-                <CoinButton color="blue" icon={<Download className="w-5 h-5" />} disabled title="PDF download coming soon" data-testid="button-download-pdf">Download PDF</CoinButton>
-                <CoinButton color="green" icon={<Download className="w-5 h-5" />} disabled title="Word download coming soon" data-testid="button-download-docx">Download Word</CoinButton>
-                <CoinButton color="teal" icon={<FileText className="w-5 h-5" />} disabled title="Answer key coming soon" data-testid="button-answer-key">Answer Key</CoinButton>
-              </div>
-              <p className="text-sm text-muted-foreground">Original question paper is locked. Teachers CANNOT download it.</p>
+              
+              <p className="text-sm text-muted-foreground">
+                Generate non-overlapping question sets (Set A/B/C) with guaranteed difficulty parity, chapter coverage consistency, and equal marks across all sets.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

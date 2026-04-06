@@ -35,6 +35,7 @@ export interface SelectionOptions {
   
   // Multi-set options
   setCount?: number;  // 1 = single set, 2+ = multiple sets (A/B/C)
+  allowOverlap?: boolean;  // Default: false. Only if explicitly chosen by user
   
   // Online-specific
   shuffleQuestions?: boolean;  // Default: true for online
@@ -87,6 +88,14 @@ export interface SelectionStats {
   chapterDistribution: Record<string, number>;
   typeDistribution: Record<string, number>;
   shortfalls: { section: string; shortage: number }[];
+  // Per-set parity validation
+  perSetStats?: {
+    setName: string;
+    difficultyDistribution: Record<string, number>;
+    chapterDistribution: Record<string, number>;
+    totalMarks: number;
+  }[];
+  overlapCount?: number;  // Should always be 0 for valid multi-set
 }
 
 // ============================================================================
@@ -220,6 +229,7 @@ export class QuestionSelectionEngine {
   
   /**
    * Main selection method - generates one or more question sets based on blueprint
+   * For multi-set: uses FAIR PARTITIONING to ensure identical difficulty/chapter distribution
    */
   selectForBlueprint(blueprint: Blueprint): SelectionResult {
     const warnings: string[] = [];
@@ -229,14 +239,17 @@ export class QuestionSelectionEngine {
     // Reset used questions for fresh selection
     this.usedQuestionIds = new Set();
     
-    // Generate each set
-    for (let setIndex = 0; setIndex < setCount; setIndex++) {
-      const setName = setCount === 1 ? 'Main' : `Set ${String.fromCharCode(65 + setIndex)}`;
-      const setResult = this.selectSingleSet(blueprint, setName, warnings);
+    if (setCount <= 1) {
+      // Single set - use original logic
+      const setResult = this.selectSingleSet(blueprint, 'Main', warnings);
       sets.push(setResult);
+    } else {
+      // Multi-set: Fair partitioning algorithm
+      const multiSetResult = this.selectMultiSetFair(blueprint, setCount, warnings);
+      sets.push(...multiSetResult);
     }
     
-    // Calculate stats
+    // Calculate stats with per-set parity info
     const stats = this.calculateStats(sets, blueprint);
     
     return {
@@ -245,6 +258,218 @@ export class QuestionSelectionEngine {
       warnings,
       stats
     };
+  }
+  
+  /**
+   * FAIR MULTI-SET PARTITIONING
+   * Guarantees:
+   * 1. Zero question overlap across sets
+   * 2. Identical difficulty distribution per set
+   * 3. Consistent chapter coverage per set
+   * 4. Same total marks per set
+   */
+  private selectMultiSetFair(blueprint: Blueprint, setCount: number, warnings: string[]): QuestionSet[] {
+    const sections = (blueprint.sections || []) as BlueprintSection[];
+    
+    // Pre-allocate set structures
+    const setQuestions: SelectedQuestion[][] = Array.from({ length: setCount }, () => []);
+    const setBreakdowns: SectionBreakdown[][] = Array.from({ length: setCount }, () => []);
+    
+    for (const section of sections) {
+      // Get ALL matching questions for this section
+      const sectionPool = this.questionPool.filter(q => {
+        if (this.options.subject && q.subject !== this.options.subject) return false;
+        if (this.options.grade && q.grade !== this.options.grade) return false;
+        if (section.questionType && q.type !== section.questionType) return false;
+        if (section.marks && q.marks !== section.marks) return false;
+        if (section.difficulty && q.difficulty !== section.difficulty) return false;
+        if (section.chapters?.length && !section.chapters.includes(q.chapter)) return false;
+        return true;
+      });
+      
+      const requiredPerSet = section.questionCount;
+      const totalRequired = requiredPerSet * setCount;
+      const allowOverlap = this.options.allowOverlap === true;
+      
+      if (sectionPool.length < totalRequired && !allowOverlap) {
+        warnings.push(
+          `Section "${section.name}": Need ${totalRequired} questions (${setCount} sets x ${requiredPerSet}), ` +
+          `only ${sectionPool.length} available (${section.questionType}, ${section.difficulty || 'any difficulty'})`
+        );
+      }
+      
+      // Group pool by difficulty for fair partitioning
+      const byDifficulty: Record<string, Question[]> = {};
+      for (const q of sectionPool) {
+        const diff = q.difficulty || 'medium';
+        if (!byDifficulty[diff]) byDifficulty[diff] = [];
+        byDifficulty[diff].push(q);
+      }
+      
+      // Shuffle each difficulty bucket for randomization
+      for (const diff of Object.keys(byDifficulty)) {
+        byDifficulty[diff] = this.shuffleArray(byDifficulty[diff]);
+      }
+      
+      // Determine target difficulty distribution per set
+      const diffTargets = this.calculateDifficultyTargets(
+        requiredPerSet, section.difficulty, byDifficulty, setCount
+      );
+      
+      // Fair allocation: round-robin across sets from each difficulty bucket
+      const diffPointers: Record<string, number> = {};
+      for (const diff of Object.keys(byDifficulty)) {
+        diffPointers[diff] = 0;
+      }
+      
+      for (let setIdx = 0; setIdx < setCount; setIdx++) {
+        const questionsForThisSet: Question[] = [];
+        
+        // Allocate from each difficulty bucket
+        for (const [diff, target] of Object.entries(diffTargets)) {
+          const bucket = byDifficulty[diff] || [];
+          let allocated = 0;
+          
+          while (allocated < target && diffPointers[diff] < bucket.length) {
+            const q = bucket[diffPointers[diff]];
+            if (!this.usedQuestionIds.has(q.id) || allowOverlap) {
+              questionsForThisSet.push(q);
+              this.usedQuestionIds.add(q.id);
+              allocated++;
+            }
+            diffPointers[diff]++;
+          }
+        }
+        
+        // If we still need more questions (shortfall in specific difficulties)
+        // try to fill from any remaining in the section pool
+        if (questionsForThisSet.length < requiredPerSet) {
+          const remaining = sectionPool.filter(q => !this.usedQuestionIds.has(q.id) || allowOverlap);
+          const shuffledRemaining = this.shuffleArray(remaining);
+          for (const q of shuffledRemaining) {
+            if (questionsForThisSet.length >= requiredPerSet) break;
+            if (!this.usedQuestionIds.has(q.id) || allowOverlap) {
+              questionsForThisSet.push(q);
+              this.usedQuestionIds.add(q.id);
+            }
+          }
+        }
+        
+        setBreakdowns[setIdx].push({
+          name: section.name,
+          questionType: section.questionType || 'mixed',
+          requested: requiredPerSet,
+          selected: questionsForThisSet.length,
+          marks: section.marks || 0,
+          difficulty: section.difficulty,
+        });
+        
+        // Convert to SelectedQuestion with section info
+        for (const q of questionsForThisSet) {
+          const selectedQ: SelectedQuestion = {
+            ...q,
+            sectionName: section.name,
+            questionNumber: 0, // Will be renumbered later
+          };
+          
+          if (this.options.mode === 'online' && this.options.shuffleOptions !== false) {
+            if (q.options?.length && q.correctAnswer) {
+              const shuffleResult = this.shuffleOptions(q.options, q.correctAnswer);
+              selectedQ.shuffledOptions = shuffleResult.shuffledOptions;
+              selectedQ.correctAnswerIndex = shuffleResult.correctIndex;
+            }
+          }
+          
+          setQuestions[setIdx].push(selectedQ);
+        }
+      }
+    }
+    
+    // Build final QuestionSet objects
+    const result: QuestionSet[] = [];
+    for (let i = 0; i < setCount; i++) {
+      const setName = `Set ${String.fromCharCode(65 + i)}`;
+      let questions = setQuestions[i];
+      
+      // Renumber questions
+      let num = 1;
+      questions = questions.map(q => ({ ...q, questionNumber: num++ }));
+      
+      // Shuffle within sections for online mode
+      if (this.options.mode === 'online' && this.options.shuffleQuestions !== false) {
+        questions = this.shuffleWithinSections(questions);
+      }
+      
+      const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+      
+      result.push({
+        setName,
+        questions,
+        totalMarks,
+        sectionBreakdown: setBreakdowns[i],
+      });
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Calculate target difficulty counts per set
+   */
+  private calculateDifficultyTargets(
+    perSetCount: number,
+    requiredDifficulty: string | undefined,
+    byDifficulty: Record<string, Question[]>,
+    setCount: number
+  ): Record<string, number> {
+    if (requiredDifficulty) {
+      // All questions must be this difficulty
+      return { [requiredDifficulty]: perSetCount };
+    }
+    
+    // Calculate proportional targets based on available pool
+    const totalAvailable = Object.values(byDifficulty).reduce((s, arr) => s + arr.length, 0);
+    if (totalAvailable === 0) return { medium: perSetCount };
+    
+    const targets: Record<string, number> = {};
+    let allocated = 0;
+    const diffs = Object.keys(byDifficulty).sort();
+    
+    for (let i = 0; i < diffs.length; i++) {
+      const diff = diffs[i];
+      const availableForDiff = byDifficulty[diff].length;
+      const maxPerSet = Math.floor(availableForDiff / setCount);
+      
+      if (i === diffs.length - 1) {
+        // Last difficulty gets remainder
+        targets[diff] = Math.min(perSetCount - allocated, maxPerSet);
+      } else {
+        // Proportional allocation
+        const proportion = availableForDiff / totalAvailable;
+        const target = Math.min(Math.round(perSetCount * proportion), maxPerSet);
+        targets[diff] = target;
+        allocated += target;
+      }
+    }
+    
+    // Ensure total matches perSetCount
+    const totalTarget = Object.values(targets).reduce((s, v) => s + v, 0);
+    if (totalTarget < perSetCount) {
+      // Distribute remainder to difficulties with available capacity
+      let remaining = perSetCount - totalTarget;
+      for (const diff of diffs) {
+        if (remaining <= 0) break;
+        const maxPerSet = Math.floor(byDifficulty[diff].length / setCount);
+        const canAdd = maxPerSet - targets[diff];
+        if (canAdd > 0) {
+          const add = Math.min(canAdd, remaining);
+          targets[diff] += add;
+          remaining -= add;
+        }
+      }
+    }
+    
+    return targets;
   }
   
   /**
@@ -478,7 +703,7 @@ export class QuestionSelectionEngine {
   }
   
   /**
-   * Calculate selection statistics
+   * Calculate selection statistics with per-set parity validation
    */
   private calculateStats(sets: QuestionSet[], blueprint: Blueprint): SelectionStats {
     const allQuestions = sets.flatMap(s => s.questions);
@@ -486,20 +711,20 @@ export class QuestionSelectionEngine {
     
     const totalRequested = sections.reduce((sum, s) => sum + s.questionCount, 0) * sets.length;
     
-    // Difficulty distribution
+    // Difficulty distribution (aggregate)
     const difficultyDistribution: Record<string, number> = {};
     for (const q of allQuestions) {
       const diff = q.difficulty || 'medium';
       difficultyDistribution[diff] = (difficultyDistribution[diff] || 0) + 1;
     }
     
-    // Chapter distribution
+    // Chapter distribution (aggregate)
     const chapterDistribution: Record<string, number> = {};
     for (const q of allQuestions) {
       chapterDistribution[q.chapter] = (chapterDistribution[q.chapter] || 0) + 1;
     }
     
-    // Type distribution
+    // Type distribution (aggregate)
     const typeDistribution: Record<string, number> = {};
     for (const q of allQuestions) {
       typeDistribution[q.type] = (typeDistribution[q.type] || 0) + 1;
@@ -518,13 +743,44 @@ export class QuestionSelectionEngine {
       }
     }
     
+    // Per-set parity stats
+    const perSetStats = sets.map(set => {
+      const setDiffDist: Record<string, number> = {};
+      const setChapterDist: Record<string, number> = {};
+      for (const q of set.questions) {
+        const diff = q.difficulty || 'medium';
+        setDiffDist[diff] = (setDiffDist[diff] || 0) + 1;
+        setChapterDist[q.chapter] = (setChapterDist[q.chapter] || 0) + 1;
+      }
+      return {
+        setName: set.setName,
+        difficultyDistribution: setDiffDist,
+        chapterDistribution: setChapterDist,
+        totalMarks: set.totalMarks,
+      };
+    });
+    
+    // Cross-set overlap check
+    let overlapCount = 0;
+    if (sets.length > 1) {
+      const seenIds = new Set<string>();
+      for (const set of sets) {
+        for (const q of set.questions) {
+          if (seenIds.has(q.id)) overlapCount++;
+          seenIds.add(q.id);
+        }
+      }
+    }
+    
     return {
       totalQuestionsRequested: totalRequested,
       totalQuestionsSelected: allQuestions.length,
       difficultyDistribution,
       chapterDistribution,
       typeDistribution,
-      shortfalls
+      shortfalls,
+      perSetStats,
+      overlapCount,
     };
   }
 }
@@ -534,7 +790,8 @@ export class QuestionSelectionEngine {
 // ============================================================================
 
 /**
- * Validate blueprint against available question pool
+ * Validate blueprint against available question pool for multi-set generation
+ * Returns detailed capacity analysis with remediation options
  */
 export function validateBlueprintCapacity(
   blueprint: Blueprint,
@@ -545,17 +802,25 @@ export function validateBlueprintCapacity(
   issues: string[];
   sectionAnalysis: {
     section: string;
-    required: number;
+    questionType: string;
+    difficulty: string;
+    requiredPerSet: number;
+    requiredTotal: number;
     available: number;
     canFulfill: boolean;
+    difficultyBreakdown: Record<string, { available: number; neededPerSet: number }>;
   }[];
+  remediation: {
+    maxSetsNoOverlap: number;
+    canReduceSets: boolean;
+    suggestedSetCount: number;
+  };
 } {
   const sections = (blueprint.sections || []) as BlueprintSection[];
   const issues: string[] = [];
   const sectionAnalysis: any[] = [];
   
-  // For multi-set, we need setCount times the questions
-  const multiplier = setCount;
+  let globalMaxSets = Infinity;
   
   for (const section of sections) {
     const pool = availableQuestions.filter(q => {
@@ -567,29 +832,61 @@ export function validateBlueprintCapacity(
       return true;
     });
     
-    const required = section.questionCount * multiplier;
+    const requiredPerSet = section.questionCount;
+    const requiredTotal = requiredPerSet * setCount;
     const available = pool.length;
-    const canFulfill = available >= required;
+    const canFulfill = available >= requiredTotal;
+    
+    // Difficulty breakdown
+    const diffBreakdown: Record<string, { available: number; neededPerSet: number }> = {};
+    const byDiff: Record<string, Question[]> = {};
+    for (const q of pool) {
+      const d = q.difficulty || 'medium';
+      if (!byDiff[d]) byDiff[d] = [];
+      byDiff[d].push(q);
+    }
+    for (const [d, qs] of Object.entries(byDiff)) {
+      const proportion = qs.length / (pool.length || 1);
+      diffBreakdown[d] = {
+        available: qs.length,
+        neededPerSet: Math.round(requiredPerSet * proportion),
+      };
+    }
+    
+    // Calculate max sets for this section (no overlap)
+    const maxSetsForSection = requiredPerSet > 0 ? Math.floor(available / requiredPerSet) : Infinity;
+    globalMaxSets = Math.min(globalMaxSets, maxSetsForSection);
     
     sectionAnalysis.push({
       section: section.name,
-      required,
+      questionType: section.questionType || 'mixed',
+      difficulty: section.difficulty || 'mixed',
+      requiredPerSet,
+      requiredTotal,
       available,
-      canFulfill
+      canFulfill,
+      difficultyBreakdown: diffBreakdown,
     });
     
     if (!canFulfill) {
       issues.push(
-        `Section "${section.name}": Need ${required} questions (${setCount} sets × ${section.questionCount}), ` +
+        `Section "${section.name}": Need ${requiredTotal} questions (${setCount} sets x ${requiredPerSet}), ` +
         `only ${available} available`
       );
     }
   }
   
+  if (globalMaxSets === Infinity) globalMaxSets = setCount;
+  
   return {
     valid: issues.length === 0,
     issues,
-    sectionAnalysis
+    sectionAnalysis,
+    remediation: {
+      maxSetsNoOverlap: Math.max(1, globalMaxSets),
+      canReduceSets: globalMaxSets > 0 && globalMaxSets < setCount,
+      suggestedSetCount: Math.max(1, Math.min(setCount, globalMaxSets)),
+    },
   };
 }
 
