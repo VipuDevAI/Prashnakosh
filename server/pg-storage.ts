@@ -67,6 +67,25 @@ import {
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
 
+// Import duplicate detection and unified engine
+import { 
+  DuplicateDetectionService, 
+  generateQuestionHash, 
+  normalizeQuestionContent,
+  type DuplicateCheckRequest,
+  type DuplicateCheckResponse,
+  type BulkDuplicateCheckResult
+} from "./lib/duplicate-detection";
+import {
+  QuestionSelectionEngine,
+  createOnlineTestEngine,
+  createOfflinePaperEngine,
+  createMultiSetPaperEngine,
+  validateBlueprintCapacity,
+  type SelectionOptions,
+  type SelectionResult
+} from "./lib/question-selection-engine";
+
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -2030,6 +2049,232 @@ export class PgStorage implements IStorage {
       .where(eq(referenceMaterials.id, id))
       .returning();
     return !!updated;
+  }
+
+  // =====================================================
+  // DUPLICATE DETECTION METHODS
+  // =====================================================
+
+  /**
+   * Check a single question for duplicates before adding
+   */
+  async checkQuestionDuplicate(
+    tenantId: string,
+    content: string,
+    options?: string[],
+    subject?: string
+  ): Promise<DuplicateCheckResponse> {
+    // Get existing questions for this tenant
+    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    
+    const detector = new DuplicateDetectionService(existingQuestions);
+    return detector.checkSingleQuestion({
+      tenantId,
+      content,
+      options,
+      subject
+    });
+  }
+
+  /**
+   * Check multiple questions for duplicates (batch upload)
+   */
+  async checkBulkQuestionDuplicates(
+    tenantId: string,
+    questionsToCheck: { content: string; options?: string[] }[]
+  ): Promise<BulkDuplicateCheckResult> {
+    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    const detector = new DuplicateDetectionService(existingQuestions);
+    
+    return detector.checkBulkQuestions(
+      questionsToCheck.map(q => ({
+        ...q,
+        tenantId
+      }))
+    );
+  }
+
+  /**
+   * Create question with automatic hash generation
+   */
+  async createQuestionWithDuplicateCheck(
+    insertQuestion: InsertQuestion,
+    skipDuplicateCheck: boolean = false
+  ): Promise<{ question?: Question; duplicateResult?: DuplicateCheckResponse }> {
+    // Generate content hash
+    const contentHash = generateQuestionHash(
+      insertQuestion.content,
+      insertQuestion.options || undefined
+    );
+
+    if (!skipDuplicateCheck) {
+      // Check for duplicates first
+      const duplicateResult = await this.checkQuestionDuplicate(
+        insertQuestion.tenantId,
+        insertQuestion.content,
+        insertQuestion.options || undefined,
+        insertQuestion.subject
+      );
+
+      if (duplicateResult.recommendation === 'block') {
+        return { duplicateResult };
+      }
+    }
+
+    // Create the question with hash
+    const [question] = await db.insert(questions).values({
+      ...insertQuestion,
+      contentHash,
+      isVerified: false,
+      isPractice: insertQuestion.isPractice ?? true,
+      isAssessment: insertQuestion.isAssessment ?? false,
+      status: "draft",
+    }).returning();
+
+    return { question };
+  }
+
+  /**
+   * Find duplicates in existing question pool (for cleanup)
+   */
+  async findDuplicatesInTenant(tenantId: string): Promise<{
+    duplicateGroups: { hash: string; questions: Question[] }[];
+    totalDuplicates: number;
+  }> {
+    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    const detector = new DuplicateDetectionService(existingQuestions);
+    return detector.findDuplicatesInPool();
+  }
+
+  // =====================================================
+  // UNIFIED QUESTION SELECTION ENGINE
+  // =====================================================
+
+  /**
+   * Select questions for a test/paper using unified engine
+   * Works for both online tests and offline paper generation
+   */
+  async selectQuestionsUnified(
+    blueprint: Blueprint,
+    options: SelectionOptions
+  ): Promise<SelectionResult> {
+    // Get the question pool
+    const questionPool = await this.getQuestionsByTenant(options.tenantId);
+    
+    // Filter by subject and grade
+    const filteredPool = questionPool.filter(q => 
+      q.subject === options.subject && 
+      q.grade === options.grade &&
+      q.status === 'approved' &&
+      !q.isDeleted
+    );
+
+    // Create appropriate engine based on mode
+    let engine: QuestionSelectionEngine;
+    
+    if (options.setCount && options.setCount > 1) {
+      engine = createMultiSetPaperEngine(
+        options.tenantId,
+        options.subject,
+        options.grade,
+        options.setCount,
+        options
+      );
+    } else if (options.mode === 'online') {
+      engine = createOnlineTestEngine(
+        options.tenantId,
+        options.subject,
+        options.grade,
+        options
+      );
+    } else {
+      engine = createOfflinePaperEngine(
+        options.tenantId,
+        options.subject,
+        options.grade,
+        options
+      );
+    }
+
+    // Set the pool and select
+    engine.setQuestionPool(filteredPool);
+    return engine.selectForBlueprint(blueprint);
+  }
+
+  /**
+   * Validate if blueprint can be fulfilled with available questions
+   */
+  async validateBlueprintAvailability(
+    blueprint: Blueprint,
+    tenantId: string,
+    subject: string,
+    grade: string,
+    setCount: number = 1
+  ): Promise<{
+    valid: boolean;
+    issues: string[];
+    sectionAnalysis: { section: string; required: number; available: number; canFulfill: boolean }[];
+  }> {
+    const questionPool = await this.getQuestionsByTenant(tenantId);
+    const filteredPool = questionPool.filter(q => 
+      q.subject === subject && 
+      q.grade === grade &&
+      q.status === 'approved' &&
+      !q.isDeleted
+    );
+
+    return validateBlueprintCapacity(blueprint, filteredPool, setCount);
+  }
+
+  /**
+   * Get chapter-wise question statistics for HOD dashboard
+   */
+  async getChapterQuestionStats(tenantId: string, subject: string, grade?: string): Promise<{
+    chapter: string;
+    total: number;
+    byType: Record<string, number>;
+    byDifficulty: Record<string, number>;
+    byStatus: Record<string, number>;
+  }[]> {
+    const pool = await this.getQuestionsByTenant(tenantId);
+    const filtered = pool.filter(q => 
+      q.subject === subject && 
+      (!grade || q.grade === grade) &&
+      !q.isDeleted
+    );
+
+    // Group by chapter
+    const chapterMap = new Map<string, Question[]>();
+    for (const q of filtered) {
+      if (!chapterMap.has(q.chapter)) {
+        chapterMap.set(q.chapter, []);
+      }
+      chapterMap.get(q.chapter)!.push(q);
+    }
+
+    // Calculate stats
+    const stats: any[] = [];
+    for (const [chapter, questions] of chapterMap) {
+      const byType: Record<string, number> = {};
+      const byDifficulty: Record<string, number> = {};
+      const byStatus: Record<string, number> = {};
+
+      for (const q of questions) {
+        byType[q.type] = (byType[q.type] || 0) + 1;
+        byDifficulty[q.difficulty || 'medium'] = (byDifficulty[q.difficulty || 'medium'] || 0) + 1;
+        byStatus[q.status || 'draft'] = (byStatus[q.status || 'draft'] || 0) + 1;
+      }
+
+      stats.push({
+        chapter,
+        total: questions.length,
+        byType,
+        byDifficulty,
+        byStatus
+      });
+    }
+
+    return stats.sort((a, b) => a.chapter.localeCompare(b.chapter));
   }
 }
 

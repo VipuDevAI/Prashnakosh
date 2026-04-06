@@ -1537,6 +1537,155 @@ export async function registerRoutes(
     }
   });
 
+  // =====================================================
+  // DUPLICATE DETECTION ENDPOINTS
+  // =====================================================
+
+  // Check single question for duplicates (real-time validation)
+  app.post("/api/questions/check-duplicate", requireAuth, requireTenant, async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const { content, options, subject } = req.body;
+
+      if (!content || content.length < 10) {
+        return res.status(400).json({ error: "Question content is required (minimum 10 characters)" });
+      }
+
+      const result = await storage.checkQuestionDuplicate(tenantId, content, options, subject);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Check multiple questions for duplicates (batch upload preview)
+  app.post("/api/questions/check-duplicates-bulk", requireAuth, requireTenant, async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const { questions } = req.body;
+
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({ error: "Questions array is required" });
+      }
+
+      if (questions.length > 500) {
+        return res.status(400).json({ error: "Maximum 500 questions per batch" });
+      }
+
+      const result = await storage.checkBulkQuestionDuplicates(tenantId, questions);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Find duplicates in existing question pool (admin cleanup tool)
+  app.get("/api/questions/find-duplicates", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const result = await storage.findDuplicatesInTenant(tenantId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // CHAPTER STATISTICS ENDPOINT (HOD Dashboard)
+  // =====================================================
+
+  // Get chapter-wise question statistics
+  app.get("/api/hod/chapter-stats", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const { subject, grade } = req.query;
+
+      if (!subject) {
+        return res.status(400).json({ error: "Subject is required" });
+      }
+
+      const stats = await storage.getChapterQuestionStats(
+        tenantId, 
+        subject as string, 
+        grade as string | undefined
+      );
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // UNIFIED QUESTION SELECTION ENDPOINTS
+  // =====================================================
+
+  // Validate blueprint against available questions
+  app.post("/api/blueprints/:id/validate", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const { id } = req.params;
+      const { setCount } = req.body;
+
+      const blueprint = await storage.getBlueprint(id);
+      if (!blueprint) {
+        return res.status(404).json({ error: "Blueprint not found" });
+      }
+
+      const result = await storage.validateBlueprintAvailability(
+        blueprint,
+        tenantId,
+        blueprint.subject,
+        blueprint.grade || "12",
+        setCount || 1
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate questions using unified engine (preview before creating test)
+  app.post("/api/blueprints/:id/generate-preview", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+
+      const { id } = req.params;
+      const { mode, setCount, shuffleQuestions, shuffleOptions } = req.body;
+
+      const blueprint = await storage.getBlueprint(id);
+      if (!blueprint) {
+        return res.status(404).json({ error: "Blueprint not found" });
+      }
+
+      const selectionResult = await storage.selectQuestionsUnified(blueprint, {
+        mode: mode || 'offline',
+        tenantId,
+        subject: blueprint.subject,
+        grade: blueprint.grade || "12",
+        setCount: setCount || 1,
+        shuffleQuestions: shuffleQuestions ?? (mode === 'online'),
+        shuffleOptions: shuffleOptions ?? (mode === 'online'),
+        onlyApproved: true
+      });
+
+      res.json(selectionResult);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Teacher - Upload image for question (S3)
   app.post("/api/teacher/upload/image", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), upload.single("image"), async (req: Request, res) => {
     try {

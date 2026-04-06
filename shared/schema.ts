@@ -171,6 +171,11 @@ export const questions = pgTable("questions", {
   reviewedBy: varchar("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
   rejectionReason: text("rejection_reason"),
+  // Duplicate detection fields
+  contentHash: text("content_hash"),  // MD5 hash of normalized content for exact duplicate detection
+  // Year tracking for multi-year question bank
+  academicYear: text("academic_year"), // e.g., "2024-25"
+  createdAt: timestamp("created_at").default(sql`now()`),
   // Soft delete fields
   isDeleted: boolean("is_deleted").default(false),
   deletedAt: timestamp("deleted_at"),
