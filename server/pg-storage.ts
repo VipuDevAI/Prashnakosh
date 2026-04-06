@@ -339,12 +339,18 @@ export class PgStorage implements IStorage {
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
+    // Auto-generate contentHash for duplicate tracking
+    const contentHash = generateQuestionHash(
+      insertQuestion.content,
+      insertQuestion.options || undefined
+    );
     const [question] = await db.insert(questions).values({
       ...insertQuestion,
+      contentHash,
       isVerified: false,
       isPractice: insertQuestion.isPractice ?? true,
       isAssessment: insertQuestion.isAssessment ?? false,
-      status: "draft",
+      status: insertQuestion.status || "draft",
     }).returning();
     return question;
   }
@@ -354,10 +360,11 @@ export class PgStorage implements IStorage {
     const result = await db.insert(questions).values(
       insertQuestions.map(q => ({
         ...q,
+        contentHash: generateQuestionHash(q.content, q.options || undefined),
         isVerified: false,
         isPractice: q.isPractice ?? true,
         isAssessment: q.isAssessment ?? false,
-        status: "draft",
+        status: q.status || "draft",
       }))
     ).returning();
     return result;
@@ -649,11 +656,36 @@ export class PgStorage implements IStorage {
     const OBJECTIVE_TYPES = ["mcq", "true_false", "fill_blank", "numerical", "assertion_reason", "matching"];
     
     let questionsData: Question[] = [];
+    
     if (test.questionIds && test.questionIds.length > 0) {
+      // Test has pre-selected questions - use them with online mode shuffling
       let preselectedQuestions = await this.getQuestionsByIds(test.questionIds);
       let objectiveQuestions = preselectedQuestions.filter(q => OBJECTIVE_TYPES.includes(q.type));
-      questionsData = this.selectQuestionsWithPassageGrouping(objectiveQuestions, objectiveQuestions.length);
-    } else {
+      // Shuffle questions for online mode
+      questionsData = shuffleArray(objectiveQuestions);
+    } else if (test.blueprintId) {
+      // Use UNIFIED ENGINE for online test question selection
+      const blueprint = await this.getBlueprint(test.blueprintId);
+      if (blueprint && blueprint.sections) {
+        const selectionResult = await this.selectQuestionsUnified(blueprint, {
+          mode: 'online',
+          tenantId,
+          subject: blueprint.subject || test.subject,
+          grade: blueprint.grade || test.grade,
+          setCount: 1,
+          shuffleQuestions: true,
+          shuffleOptions: true,
+          onlyApproved: true,
+        });
+        
+        if (selectionResult.sets.length > 0) {
+          questionsData = selectionResult.sets[0].questions;
+        }
+      }
+    }
+    
+    // Fallback: if no questions were selected via engine, use legacy path
+    if (questionsData.length === 0) {
       const availableQuestions = await this.getFilteredAssessmentQuestions(
         tenantId, 
         test.subject, 
@@ -662,14 +694,23 @@ export class PgStorage implements IStorage {
           objectiveOnly: true 
         }
       );
-      questionsData = this.selectQuestionsWithPassageGrouping(availableQuestions, test.questionCount || 50);
+      questionsData = shuffleArray(availableQuestions).slice(0, test.questionCount || 50);
     }
+
+    // Shuffle options for each MCQ in online mode
+    const questionsWithShuffledOptions = questionsData.map(q => {
+      if (q.options && q.options.length > 0 && q.correctAnswer && OBJECTIVE_TYPES.includes(q.type)) {
+        const shuffledOpts = shuffleArray([...q.options]);
+        return { ...q, options: shuffledOpts };
+      }
+      return q;
+    });
 
     const attempt = await this.createAttempt({
       tenantId,
       testId,
       studentId,
-      assignedQuestionIds: questionsData.map(q => q.id),
+      assignedQuestionIds: questionsWithShuffledOptions.map(q => q.id),
       answers: {},
       questionStatuses: {},
       markedForReview: [],
@@ -677,8 +718,8 @@ export class PgStorage implements IStorage {
       timeRemaining: (test.duration || 60) * 60,
     });
 
-    const questionsWithPassages = await this.attachPassageToQuestions(questionsData);
-    return { attempt, questions: shuffleArray(questionsWithPassages) as Question[], duration: test.duration || 60 };
+    const questionsWithPassages = await this.attachPassageToQuestions(questionsWithShuffledOptions);
+    return { attempt, questions: questionsWithPassages as Question[], duration: test.duration || 60 };
   }
 
   async saveExamState(attemptId: string, answers: Record<string, string>, questionStatuses: Record<string, QuestionStatus>, markedForReview: string[], timeRemaining: number): Promise<Attempt | undefined> {

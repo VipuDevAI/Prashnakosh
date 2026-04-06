@@ -1134,18 +1134,45 @@ export async function registerRoutes(
   // Bulk question creation - protected with auth and tenant isolation
   app.post("/api/questions/bulk", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const { questions, uploadId } = req.body;
+      const { questions: questionsInput, uploadId, forceUpload } = req.body;
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       
-      const questionsWithTenant = questions.map((q: any) => ({
+      // === DUPLICATE DETECTION: Check BEFORE saving ===
+      const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
+        tenantId,
+        questionsInput.map((q: any) => ({ content: q.content, options: q.options || undefined }))
+      );
+
+      // Filter out exact duplicates unless force upload
+      const nonDuplicates = forceUpload 
+        ? questionsInput 
+        : questionsInput.filter((_: any, idx: number) => {
+            return duplicateCheckResults.results[idx]?.status !== 'exact_duplicate';
+          });
+      
+      if (nonDuplicates.length === 0) {
+        return res.status(409).json({ 
+          error: "All questions are duplicates",
+          duplicateSummary: {
+            exactDuplicates: duplicateCheckResults.exactDuplicates,
+            totalChecked: duplicateCheckResults.totalChecked,
+          }
+        });
+      }
+
+      const questionsWithTenant = nonDuplicates.map((q: any) => ({
         ...q,
         tenantId,
         uploadId: uploadId || null,
       }));
       
       const created = await storage.createQuestions(questionsWithTenant);
-      res.json({ success: true, count: created.length });
+      res.json({ 
+        success: true, 
+        count: created.length,
+        duplicatesRemoved: questionsInput.length - nonDuplicates.length,
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1271,17 +1298,39 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No questions found in document" });
       }
 
+      // === DUPLICATE DETECTION: Check BEFORE saving ===
+      const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
+        tenantId,
+        questions.map(q => ({ content: q.content, options: q.options || undefined }))
+      );
+
+      // Filter out exact duplicates
+      const nonDuplicateQuestions = questions.filter((q, idx) => {
+        const dupResult = duplicateCheckResults.results[idx];
+        return dupResult?.status !== 'exact_duplicate';
+      });
+
+      if (nonDuplicateQuestions.length === 0) {
+        return res.status(409).json({ 
+          error: "All questions are duplicates of existing ones",
+          duplicateSummary: {
+            exactDuplicates: duplicateCheckResults.exactDuplicates,
+            totalParsed: questions.length,
+          }
+        });
+      }
+
       const uploadRecord = await storage.createUpload({
         tenantId,
         filename: req.file.originalname || "upload.docx",
         source: "word",
         subject,
         grade,
-        questionCount: questions.length,
+        questionCount: nonDuplicateQuestions.length,
         uploadedBy: req.body.uploadedBy || null,
       });
 
-      const questionsWithUpload = questions.map(q => ({
+      const questionsWithUpload = nonDuplicateQuestions.map(q => ({
         ...q,
         uploadId: uploadRecord.id,
       }));
@@ -1292,6 +1341,7 @@ export async function registerRoutes(
         success: true,
         uploadId: uploadRecord.id,
         questionsCreated: created.length,
+        duplicatesRemoved: questions.length - nonDuplicateQuestions.length,
         questions: created,
       });
     } catch (error: any) {
@@ -1327,6 +1377,15 @@ export async function registerRoutes(
 
       const parseResult = parseQuestionsFromTextWithPreview(text, subject, chapter, grade, tenantId);
 
+      // === DUPLICATE DETECTION: Check parsed questions against existing pool ===
+      const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
+        tenantId,
+        parseResult.questions.map(q => ({
+          content: q.content,
+          options: q.options || undefined,
+        }))
+      );
+
       res.json({
         success: true,
         preview: {
@@ -1338,10 +1397,21 @@ export async function registerRoutes(
             correctAnswer: q.correctAnswer,
             marks: q.marks,
             difficulty: q.difficulty,
+            // Include duplicate status per question
+            duplicateStatus: duplicateCheckResults.results[idx]?.status || 'unique',
+            duplicateMatchId: duplicateCheckResults.results[idx]?.matchId,
+            duplicateSimilarity: duplicateCheckResults.results[idx]?.similarity,
           })),
           totalParsed: parseResult.questions.length,
           skippedContent: parseResult.skippedContent,
           warnings: parseResult.warnings,
+          // Aggregate duplicate stats
+          duplicateSummary: {
+            exactDuplicates: duplicateCheckResults.exactDuplicates,
+            similarFound: duplicateCheckResults.similarFound,
+            unique: duplicateCheckResults.unique,
+            totalChecked: duplicateCheckResults.totalChecked,
+          },
         },
         metadata: {
           subject,
@@ -1405,17 +1475,57 @@ export async function registerRoutes(
         });
       }
 
+      // === DUPLICATE DETECTION: Check BEFORE saving ===
+      const forceUpload = req.body.forceUpload === true;
+      const skipDuplicateIds = req.body.skipDuplicateIds || []; // indices to skip (exact dupes)
+      
+      // Run duplicate check on valid questions
+      const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
+        tenantId,
+        validQuestions.map(q => ({
+          content: q.content,
+          options: q.options || undefined,
+        }))
+      );
+
+      // Filter out exact duplicates unless force upload
+      let questionsToProcess = validQuestions;
+      const duplicateWarnings: string[] = [];
+      
+      if (!forceUpload) {
+        questionsToProcess = validQuestions.filter((q, idx) => {
+          const dupResult = duplicateCheckResults.results[idx];
+          if (dupResult?.status === 'exact_duplicate') {
+            duplicateWarnings.push(`Question ${idx + 1}: Exact duplicate removed`);
+            return false; // Always block exact duplicates
+          }
+          return true;
+        });
+      }
+
+      if (questionsToProcess.length === 0) {
+        return res.status(409).json({
+          error: "All questions are duplicates",
+          duplicateWarnings,
+          duplicateSummary: {
+            exactDuplicates: duplicateCheckResults.exactDuplicates,
+            similarFound: duplicateCheckResults.similarFound,
+            unique: duplicateCheckResults.unique,
+          },
+        });
+      }
+
       const uploadRecord = await storage.createUpload({
         tenantId,
         filename: metadata.filename || "word_upload.docx",
         source: "word",
         subject: metadata.subject,
         grade: metadata.grade,
-        questionCount: questions.length,
+        questionCount: questionsToProcess.length,
         uploadedBy: user.id,
       });
 
-      const questionsToSave = validQuestions.map((q: any) => ({
+      const questionsToSave = questionsToProcess.map((q: any) => ({
         ...q,
         tenantId,
         uploadId: uploadRecord.id,
@@ -1429,8 +1539,10 @@ export async function registerRoutes(
         success: true,
         uploadId: uploadRecord.id,
         questionsCreated: created.length,
-        skippedCount: questions.length - validQuestions.length,
+        skippedCount: questions.length - questionsToProcess.length,
+        duplicatesRemoved: validQuestions.length - questionsToProcess.length,
         validationErrors: validationErrors.length > 0 ? validationErrors : undefined,
+        duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined,
         message: `${created.length} questions submitted for HOD approval`,
       });
     } catch (error: any) {
@@ -1481,6 +1593,46 @@ export async function registerRoutes(
         }
       }
 
+      // === DUPLICATE DETECTION: Check BEFORE saving ===
+      const duplicateCheck = await storage.checkQuestionDuplicate(
+        tenantId,
+        content,
+        type === "mcq" ? options : undefined,
+        subject
+      );
+
+      if (duplicateCheck.status === 'exact_duplicate') {
+        return res.status(409).json({
+          error: "Exact duplicate question exists in the question bank.",
+          duplicate: true,
+          duplicateType: 'exact',
+          existingQuestion: duplicateCheck.exactMatch,
+          recommendation: 'block',
+        });
+      }
+
+      // For similar questions (>85%), return warning but allow frontend to decide
+      let similarWarning = undefined;
+      if (duplicateCheck.status === 'similar_found') {
+        similarWarning = {
+          similarQuestions: duplicateCheck.similarQuestions,
+          message: duplicateCheck.message,
+          recommendation: duplicateCheck.recommendation,
+          options: duplicateCheck.options,
+        };
+      }
+
+      // Check if frontend explicitly confirmed to proceed despite similarity
+      const forceUpload = req.body.forceUpload === true;
+      if (duplicateCheck.status === 'similar_found' && !duplicateCheck.canProceed && !forceUpload) {
+        return res.status(409).json({
+          error: "Similar question found. Review required.",
+          duplicate: true,
+          duplicateType: 'similar',
+          ...similarWarning,
+        });
+      }
+
       const questionData = {
         tenantId,
         content,
@@ -1507,6 +1659,7 @@ export async function registerRoutes(
         success: true,
         question: created,
         message: "Question submitted for HOD approval",
+        similarWarning,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2783,20 +2936,28 @@ export function registerPaperGenerationRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Auto-apply blueprint selection if test has blueprintId and no questions yet
+      // Auto-apply UNIFIED ENGINE selection if test has blueprintId and no questions yet
       if (existing.blueprintId && (!existing.questionIds || existing.questionIds.length === 0)) {
         const blueprint = await storage.getBlueprint(existing.blueprintId);
         if (blueprint && blueprint.sections) {
-          const sections = blueprint.sections as { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; chapters?: string[] }[];
-          const selectedQuestions = await storage.selectQuestionsForBlueprint(
-            existing.tenantId,
-            existing.subject,
-            existing.grade,
-            sections
-          );
-          const questionIds = selectedQuestions.map(q => q.id);
-          const totalMarks = selectedQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
-          await storage.updateTest(req.params.id, { questionIds, totalMarks, questionCount: questionIds.length });
+          // Use the unified engine for OFFLINE paper generation
+          const selectionResult = await storage.selectQuestionsUnified(blueprint, {
+            mode: 'offline',
+            tenantId: existing.tenantId,
+            subject: blueprint.subject || existing.subject,
+            grade: blueprint.grade || existing.grade,
+            setCount: 1,
+            fixedOrder: true,
+            shuffleQuestions: false,
+            shuffleOptions: false,
+            onlyApproved: true,
+          });
+
+          if (selectionResult.sets.length > 0) {
+            const questionIds = selectionResult.sets[0].questions.map(q => q.id);
+            const totalMarks = selectionResult.sets[0].totalMarks;
+            await storage.updateTest(req.params.id, { questionIds, totalMarks, questionCount: questionIds.length });
+          }
         }
       }
       
@@ -2827,16 +2988,26 @@ export function registerPaperGenerationRoutes(app: Express) {
         return res.status(404).json({ error: "Blueprint not found or has no sections" });
       }
       
-      const sections = blueprint.sections as { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; chapters?: string[] }[];
-      const selectedQuestions = await storage.selectQuestionsForBlueprint(
-        test.tenantId,
-        test.subject,
-        test.grade,
-        sections
-      );
+      // Determine mode from request body (default: offline for paper generation)
+      const mode = req.body.mode || 'offline';
       
+      // Use UNIFIED ENGINE for selection
+      const selectionResult = await storage.selectQuestionsUnified(blueprint, {
+        mode,
+        tenantId: test.tenantId,
+        subject: blueprint.subject || test.subject,
+        grade: blueprint.grade || test.grade,
+        setCount: req.body.setCount || 1,
+        shuffleQuestions: mode === 'online',
+        shuffleOptions: mode === 'online',
+        fixedOrder: mode === 'offline',
+        onlyApproved: true,
+      });
+      
+      // Use first set's questions for the test
+      const selectedQuestions = selectionResult.sets[0]?.questions || [];
       const questionIds = selectedQuestions.map(q => q.id);
-      const totalMarks = selectedQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+      const totalMarks = selectionResult.sets[0]?.totalMarks || 0;
       
       const updatedTest = await storage.updateTest(req.params.id, {
         questionIds,
@@ -2848,12 +3019,9 @@ export function registerPaperGenerationRoutes(app: Express) {
         test: updatedTest,
         selectedQuestions: selectedQuestions.length,
         totalMarks,
-        sectionBreakdown: sections.map(s => ({
-          name: s.name,
-          requested: s.questionCount,
-          marks: s.marks,
-          type: s.questionType,
-        })),
+        sectionBreakdown: selectionResult.sets[0]?.sectionBreakdown || [],
+        warnings: selectionResult.warnings,
+        stats: selectionResult.stats,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

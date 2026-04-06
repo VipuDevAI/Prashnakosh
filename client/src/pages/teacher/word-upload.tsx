@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Upload, FileText, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, AlertTriangle, CheckCircle, XCircle, Loader2, Copy, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -22,12 +22,22 @@ interface PreviewQuestion {
   correctAnswer: string | null;
   marks: number;
   difficulty: string;
+  duplicateStatus?: 'exact_duplicate' | 'similar_found' | 'unique';
+  duplicateMatchId?: string;
+  duplicateSimilarity?: number;
 }
 
 interface SkippedContent {
   lineNumber: number;
   content: string;
   reason: string;
+}
+
+interface DuplicateSummary {
+  exactDuplicates: number;
+  similarFound: number;
+  unique: number;
+  totalChecked: number;
 }
 
 interface PreviewResult {
@@ -37,6 +47,7 @@ interface PreviewResult {
     totalParsed: number;
     skippedContent: SkippedContent[];
     warnings: string[];
+    duplicateSummary?: DuplicateSummary;
   };
   metadata: {
     subject: string;
@@ -58,6 +69,7 @@ export default function TeacherWordUploadPage() {
   const [grade, setGrade] = useState("");
   const [previewData, setPreviewData] = useState<PreviewResult | null>(null);
   const [step, setStep] = useState<"upload" | "preview">("upload");
+  const [excludedIndices, setExcludedIndices] = useState<Set<number>>(new Set());
 
   const { data: chapters = [] } = useQuery<any[]>({
     queryKey: ["/api/chapters"],
@@ -91,6 +103,14 @@ export default function TeacherWordUploadPage() {
     onSuccess: (data) => {
       setPreviewData(data);
       setStep("preview");
+      // Auto-exclude exact duplicates
+      const excluded = new Set<number>();
+      data.preview.questions.forEach((q, idx) => {
+        if (q.duplicateStatus === 'exact_duplicate') {
+          excluded.add(idx);
+        }
+      });
+      setExcludedIndices(excluded);
     },
     onError: (error: any) => {
       toast({
@@ -104,9 +124,15 @@ export default function TeacherWordUploadPage() {
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!previewData) throw new Error("No preview data");
+      // Filter out excluded questions (exact duplicates + user-excluded)
+      const questionsToSave = previewData.rawQuestions.filter((_, idx) => !excludedIndices.has(idx));
+      if (questionsToSave.length === 0) {
+        throw new Error("No questions to save after removing duplicates");
+      }
       const response = await apiRequest("POST", "/api/teacher/upload/word/confirm", {
-        questions: previewData.rawQuestions,
+        questions: questionsToSave,
         metadata: previewData.metadata,
+        forceUpload: true, // Already filtered client-side
       });
       return response.json();
     },
@@ -180,6 +206,9 @@ export default function TeacherWordUploadPage() {
   };
 
   if (step === "preview" && previewData) {
+    const importableCount = previewData.preview.questions.filter((_, idx) => !excludedIndices.has(idx)).length;
+    const dupSummary = previewData.preview.duplicateSummary;
+    
     return (
       <PageLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -195,6 +224,31 @@ export default function TeacherWordUploadPage() {
               </Button>
             </div>
           </PageHeader>
+
+          {/* Duplicate Summary */}
+          {dupSummary && (dupSummary.exactDuplicates > 0 || dupSummary.similarFound > 0) && (
+            <Alert variant={dupSummary.exactDuplicates > 0 ? "destructive" : "default"} data-testid="duplicate-summary">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Duplicate Detection Results</AlertTitle>
+              <AlertDescription>
+                <div className="flex gap-4 mt-2">
+                  {dupSummary.exactDuplicates > 0 && (
+                    <span className="text-sm px-2 py-1 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
+                      {dupSummary.exactDuplicates} exact duplicate{dupSummary.exactDuplicates > 1 ? 's' : ''} (auto-excluded)
+                    </span>
+                  )}
+                  {dupSummary.similarFound > 0 && (
+                    <span className="text-sm px-2 py-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                      {dupSummary.similarFound} similar question{dupSummary.similarFound > 1 ? 's' : ''} found
+                    </span>
+                  )}
+                  <span className="text-sm px-2 py-1 rounded bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                    {dupSummary.unique} unique
+                  </span>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {previewData.preview.warnings.length > 0 && (
             <Alert variant="destructive">
@@ -233,7 +287,7 @@ export default function TeacherWordUploadPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                Questions to Import ({previewData.preview.totalParsed})
+                Questions to Import ({importableCount} of {previewData.preview.totalParsed})
               </CardTitle>
               <CardDescription>
                 Subject: {previewData.metadata.subject} | Grade: {previewData.metadata.grade}
@@ -242,33 +296,72 @@ export default function TeacherWordUploadPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {previewData.preview.questions.map((q) => (
-                  <div key={q.index} className="p-4 border rounded-lg" data-testid={`preview-question-${q.index}`}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium">Q{q.index}</span>
-                          <Badge className={getTypeBadgeColor(q.type)}>{q.type.replace("_", " ")}</Badge>
-                          <Badge variant="outline">{q.marks} mark{q.marks > 1 ? "s" : ""}</Badge>
-                          <Badge variant="secondary">{q.difficulty}</Badge>
-                        </div>
-                        <p className="text-sm">{q.content}</p>
-                        {q.options && (
-                          <div className="mt-2 grid grid-cols-2 gap-1 text-sm text-muted-foreground">
-                            {q.options.map((opt, i) => (
-                              <div key={i}>{String.fromCharCode(65 + i)}. {opt}</div>
-                            ))}
+                {previewData.preview.questions.map((q, idx) => {
+                  const isExcluded = excludedIndices.has(idx);
+                  const isExactDup = q.duplicateStatus === 'exact_duplicate';
+                  const isSimilar = q.duplicateStatus === 'similar_found';
+                  
+                  return (
+                    <div 
+                      key={q.index} 
+                      className={`p-4 border rounded-lg ${isExcluded ? 'opacity-50 bg-muted' : ''} ${isExactDup ? 'border-red-300 dark:border-red-700' : isSimilar ? 'border-amber-300 dark:border-amber-700' : ''}`}
+                      data-testid={`preview-question-${q.index}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="font-medium">Q{q.index}</span>
+                            <Badge className={getTypeBadgeColor(q.type)}>{q.type.replace("_", " ")}</Badge>
+                            <Badge variant="outline">{q.marks} mark{q.marks > 1 ? "s" : ""}</Badge>
+                            <Badge variant="secondary">{q.difficulty}</Badge>
+                            
+                            {/* Duplicate status badges */}
+                            {isExactDup && (
+                              <Badge variant="destructive" className="flex items-center gap-1" data-testid={`dup-badge-exact-${q.index}`}>
+                                <Ban className="w-3 h-3" /> Exact Duplicate
+                              </Badge>
+                            )}
+                            {isSimilar && (
+                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 flex items-center gap-1" data-testid={`dup-badge-similar-${q.index}`}>
+                                <Copy className="w-3 h-3" /> {Math.round((q.duplicateSimilarity || 0) * 100)}% Similar
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                        {q.correctAnswer && (
-                          <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                            Answer: {q.correctAnswer}
-                          </p>
+                          <p className="text-sm">{q.content}</p>
+                          {q.options && (
+                            <div className="mt-2 grid grid-cols-2 gap-1 text-sm text-muted-foreground">
+                              {q.options.map((opt, i) => (
+                                <div key={i}>{String.fromCharCode(65 + i)}. {opt}</div>
+                              ))}
+                            </div>
+                          )}
+                          {q.correctAnswer && (
+                            <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                              Answer: {q.correctAnswer}
+                            </p>
+                          )}
+                        </div>
+                        
+                        {/* Toggle exclude/include for similar (not exact) */}
+                        {isSimilar && !isExactDup && (
+                          <Button
+                            variant={isExcluded ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              const next = new Set(excludedIndices);
+                              if (isExcluded) next.delete(idx);
+                              else next.add(idx);
+                              setExcludedIndices(next);
+                            }}
+                            data-testid={`toggle-exclude-${q.index}`}
+                          >
+                            {isExcluded ? "Include" : "Exclude"}
+                          </Button>
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -284,7 +377,7 @@ export default function TeacherWordUploadPage() {
             </Button>
             <Button
               onClick={() => confirmMutation.mutate()}
-              disabled={confirmMutation.isPending || previewData.preview.totalParsed === 0}
+              disabled={confirmMutation.isPending || importableCount === 0}
               className="flex-1"
               data-testid="button-confirm-import"
             >
@@ -296,7 +389,7 @@ export default function TeacherWordUploadPage() {
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirm Import ({previewData.preview.totalParsed} questions)
+                  Confirm Import ({importableCount} questions)
                 </>
               )}
             </Button>
@@ -407,7 +500,7 @@ export default function TeacherWordUploadPage() {
                   <SelectValue placeholder="Select chapter (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific chapter</SelectItem>
+                  <SelectItem value="__none__">No specific chapter</SelectItem>
                   {chapters
                     .filter(c => c.subject === subject)
                     .map((c) => (

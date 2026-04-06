@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Plus, Trash2, Loader2, Image, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, Plus, Trash2, Loader2, Image, AlertCircle, Copy, PenLine, UploadCloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -41,6 +42,16 @@ export default function TeacherManualEntryPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Duplicate detection state
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    type: 'exact' | 'similar';
+    message: string;
+    similarQuestions?: any[];
+    recommendation?: string;
+  } | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<QuestionFormData | null>(null);
 
   const form = useForm<QuestionFormData>({
     resolver: zodResolver(questionSchema),
@@ -105,17 +116,20 @@ export default function TeacherManualEntryPage() {
   });
 
   const createQuestionMutation = useMutation({
-    mutationFn: async (data: QuestionFormData) => {
+    mutationFn: async (data: QuestionFormData & { forceUpload?: boolean }) => {
       const payload: any = {
         ...data,
         imageUrl: imageUrl || null,
         options: questionType === "mcq" ? options.filter(o => o.trim()) : null,
+        forceUpload: data.forceUpload || false,
       };
 
       const response = await apiRequest("POST", "/api/teacher/questions", payload);
       return response.json();
     },
     onSuccess: (data: any) => {
+      setDuplicateWarning(null);
+      setPendingSubmitData(null);
       toast({
         title: "Question submitted",
         description: data.message || "Question submitted for HOD approval",
@@ -124,6 +138,34 @@ export default function TeacherManualEntryPage() {
       navigate("/teacher/questions");
     },
     onError: (error: any) => {
+      // Parse the error response for duplicate detection
+      try {
+        const msg = error.message || '';
+        const jsonStart = msg.indexOf('{');
+        if (jsonStart >= 0) {
+          const errorData = JSON.parse(msg.substring(jsonStart));
+          if (errorData.duplicate) {
+            if (errorData.duplicateType === 'exact') {
+              setDuplicateWarning({
+                type: 'exact',
+                message: errorData.error,
+                similarQuestions: errorData.existingQuestion ? [errorData.existingQuestion] : [],
+              });
+            } else if (errorData.duplicateType === 'similar') {
+              setDuplicateWarning({
+                type: 'similar',
+                message: errorData.error || errorData.message,
+                similarQuestions: errorData.similarQuestions,
+                recommendation: errorData.recommendation,
+              });
+              setShowDuplicateModal(true);
+            }
+            return;
+          }
+        }
+      } catch {
+        // Not a duplicate error - handle normally
+      }
       toast({
         title: "Error",
         description: error.message,
@@ -131,6 +173,51 @@ export default function TeacherManualEntryPage() {
       });
     },
   });
+
+  // Real-time duplicate check (debounced)
+  const checkDuplicateMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await apiRequest("POST", "/api/questions/check-duplicate", {
+        content,
+        options: questionType === "mcq" ? options.filter(o => o.trim()) : undefined,
+        subject: form.getValues("subject"),
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.status === 'exact_duplicate') {
+        setDuplicateWarning({
+          type: 'exact',
+          message: data.message,
+          similarQuestions: data.exactMatch ? [data.exactMatch] : [],
+        });
+      } else if (data.status === 'similar_found') {
+        setDuplicateWarning({
+          type: 'similar',
+          message: data.message,
+          similarQuestions: data.similarQuestions,
+          recommendation: data.recommendation,
+        });
+      } else {
+        setDuplicateWarning(null);
+      }
+    },
+  });
+
+  // Debounced check on content blur  
+  const handleContentBlur = useCallback(() => {
+    const content = form.getValues("content");
+    if (content && content.length >= 10) {
+      checkDuplicateMutation.mutate(content);
+    }
+  }, [form, questionType, options]);
+
+  const handleForceUpload = () => {
+    if (pendingSubmitData) {
+      createQuestionMutation.mutate({ ...pendingSubmitData, forceUpload: true });
+    }
+    setShowDuplicateModal(false);
+  };
 
   if (!user) {
     navigate("/");
@@ -205,6 +292,17 @@ export default function TeacherManualEntryPage() {
       return;
     }
 
+    // If there's an exact duplicate warning, block submission
+    if (duplicateWarning?.type === 'exact') {
+      toast({
+        title: "Duplicate Question",
+        description: "This exact question already exists. Please modify it first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPendingSubmitData(data);
     createQuestionMutation.mutate(data);
   };
 
@@ -383,7 +481,7 @@ export default function TeacherManualEntryPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No specific chapter</SelectItem>
+                          <SelectItem value="__none__">No specific chapter</SelectItem>
                           {chapters
                             .filter(c => c.subject === selectedSubject)
                             .map((c) => (
@@ -407,6 +505,7 @@ export default function TeacherManualEntryPage() {
                           placeholder="Enter your question here. You can use LaTeX for math: $x^2 + y^2 = z^2$"
                           className="min-h-32"
                           {...field}
+                          onBlur={() => { field.onBlur(); handleContentBlur(); }}
                           data-testid="input-content"
                         />
                       </FormControl>
@@ -414,6 +513,39 @@ export default function TeacherManualEntryPage() {
                         Supports math notation: $x^2$, \frac{"{a}"}{"{b}"}, \sqrt{"{x}"}
                       </FormDescription>
                       <FormMessage />
+                      
+                      {/* Inline duplicate warning */}
+                      {checkDuplicateMutation.isPending && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Checking for duplicates...
+                        </p>
+                      )}
+                      {duplicateWarning?.type === 'exact' && (
+                        <div className="mt-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md" data-testid="duplicate-exact-warning">
+                          <p className="text-sm font-medium text-red-700 dark:text-red-300 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> Exact duplicate found
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{duplicateWarning.message}</p>
+                          {duplicateWarning.similarQuestions?.[0] && (
+                            <p className="text-xs text-red-500 dark:text-red-500 mt-1 italic">
+                              Existing: "{duplicateWarning.similarQuestions[0].content?.substring(0, 100)}..."
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {duplicateWarning?.type === 'similar' && (
+                        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md" data-testid="duplicate-similar-warning">
+                          <p className="text-sm font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> Similar question exists
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{duplicateWarning.message}</p>
+                          {duplicateWarning.similarQuestions?.map((sq: any, idx: number) => (
+                            <p key={idx} className="text-xs text-amber-500 dark:text-amber-500 mt-1">
+                              {Math.round((sq.similarity || 0) * 100)}% match: "{sq.content?.substring(0, 80)}..."
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -531,7 +663,7 @@ export default function TeacherManualEntryPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No passage</SelectItem>
+                          <SelectItem value="__none__">No passage</SelectItem>
                           {passages.map((p: any) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.title || p.content?.substring(0, 50) + "..."}
@@ -561,7 +693,7 @@ export default function TeacherManualEntryPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={createQuestionMutation.isPending}
+                disabled={createQuestionMutation.isPending || duplicateWarning?.type === 'exact'}
                 className="flex-1"
                 data-testid="button-submit"
               >
@@ -577,6 +709,68 @@ export default function TeacherManualEntryPage() {
             </div>
           </form>
         </Form>
+
+        {/* Duplicate Detection Modal (for >85% similarity) */}
+        <Dialog open={showDuplicateModal} onOpenChange={setShowDuplicateModal}>
+          <DialogContent className="max-w-2xl" data-testid="duplicate-modal">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-600">
+                <AlertCircle className="w-5 h-5" />
+                Similar Question Found
+              </DialogTitle>
+              <DialogDescription>
+                A similar question already exists in the question bank. Choose how to proceed.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 my-4">
+              {duplicateWarning?.similarQuestions?.map((sq: any, idx: number) => (
+                <div key={idx} className="p-4 bg-muted rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Existing Question</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                      {Math.round((sq.similarity || 0) * 100)}% match
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{sq.content}</p>
+                  {sq.chapter && <p className="text-xs text-muted-foreground mt-1">Chapter: {sq.chapter}</p>}
+                </div>
+              ))}
+              
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <span className="text-sm font-medium">Your Question</span>
+                <p className="text-sm text-muted-foreground mt-1">{pendingSubmitData?.content}</p>
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2 sm:gap-2">
+              <Button
+                variant="outline"
+                onClick={() => { setShowDuplicateModal(false); navigate("/teacher/questions"); }}
+                className="flex items-center gap-1"
+                data-testid="duplicate-use-existing"
+              >
+                <Copy className="w-4 h-4" /> Use Existing
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowDuplicateModal(false)}
+                className="flex items-center gap-1"
+                data-testid="duplicate-edit-new"
+              >
+                <PenLine className="w-4 h-4" /> Edit New
+              </Button>
+              <Button
+                onClick={handleForceUpload}
+                variant="default"
+                className="flex items-center gap-1"
+                data-testid="duplicate-upload-anyway"
+              >
+                <UploadCloud className="w-4 h-4" /> Upload Anyway
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageLayout>
   );
