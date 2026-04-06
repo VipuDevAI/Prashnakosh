@@ -18,6 +18,7 @@ Build a comprehensive education governance application with:
 - Bulk upload from .docx files
 - Question types: MCQ, Short Answer, Long Answer, True/False, Fill-in-blank
 - Blueprint-based paper generation
+- **Duplicate Detection** (exact hash + fuzzy similarity >85%)
 
 ### 3. Exam Workflow
 - Blueprint creation with sections, marks, chapters
@@ -32,6 +33,20 @@ Build a comprehensive education governance application with:
 - Test name, marks, duration display
 - Answer key generation
 
+### 5. Architecture Standardization (P0)
+- **Single unified question pool** - One pool, all modes
+- **Duplicate Detection** - Exact match blocked, fuzzy >85% warned with UX
+- **Unified Generation Engine** - `selectQuestionsUnified()` for both online and offline
+- **Mode Behaviors:**
+  - Online: Shuffle questions + options, timer/resume
+  - Offline: Fixed order, section headers, PDF/Word export, answer key
+
+## Tech Stack
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Shadcn UI
+- **Backend**: Node.js, Express.js
+- **Database**: PostgreSQL with Drizzle ORM
+- **Deployment**: Render
+
 ## What's Been Implemented
 
 ### December 2024
@@ -43,45 +58,66 @@ Build a comprehensive education governance application with:
 - [x] Blueprint creation with wing/exam/chapter selection
 - [x] Test creation linked to blueprints
 - [x] PDF/DOCX paper generation with multiple sets
-- [x] **NEW**: School logo support in paper generation
-- [x] **NEW**: Custom logo URL input for HODs
-- [x] **NEW**: Logo field in Super Admin school management
+- [x] School logo support in paper generation
 
-### Schools Created
-1. Original school (SCH001)
-2. Maharishi Vidya Mandir (MVMCHN) - 5 test students, Principal, HOD, Teacher
-
-## Tech Stack
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Shadcn UI
-- **Backend**: Node.js, Express.js
-- **Database**: PostgreSQL with Drizzle ORM
-- **Deployment**: Render
+### April 2026 - Architecture Standardization
+- [x] **Duplicate Detection Service** (duplicate-detection.ts) - exact hash + n-gram + Jaccard similarity
+- [x] **Unified Question Selection Engine** (question-selection-engine.ts) - single engine for online/offline
+- [x] **contentHash field** added to questions schema
+- [x] **Backend: Duplicate check on ALL upload paths:**
+  - POST /api/teacher/questions (manual) - blocks exact dupes, warns on similar
+  - POST /api/teacher/upload/word/preview - includes per-question duplicate status
+  - POST /api/teacher/upload/word/confirm - auto-filters exact duplicates
+  - POST /api/upload/word (direct) - filters exact duplicates
+  - POST /api/questions/bulk - filters exact duplicates
+- [x] **Backend: Unified Engine replaces ALL legacy selection:**
+  - POST /api/tests/:id/generate-paper - uses offline mode unified engine
+  - POST /api/tests/:id/select-by-blueprint - uses unified engine with mode param
+  - startExam() - uses online mode unified engine with question + option shuffling
+  - POST /api/blueprints/:id/generate-preview - uses unified engine
+- [x] **Option Randomization** for online mode (shuffleOptions in engine + startExam)
+- [x] **Frontend: Duplicate Detection UX:**
+  - Manual Entry: inline warning below content field, modal for >85% similar
+  - Word Upload: duplicate summary in preview, per-question status badges, exclude/include toggles
+- [x] **API Endpoints for duplicate checking:**
+  - POST /api/questions/check-duplicate (single)
+  - POST /api/questions/check-duplicates-bulk (batch)
+  - GET /api/questions/find-duplicates (admin cleanup)
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- [ ] Create remaining ~295 student accounts (pending user's list)
+### P0 (Critical) - COMPLETED
+- [x] Duplicate Detection integrated into all upload flows
+- [x] Unified Selection Engine replaces all legacy selection
+- [x] Option Randomization for online mode
+- [x] Frontend Duplicate UX
+
+### P0 (Next)
+- [ ] Multi-Set Generation (Set A/B/C) with no overlap + fair distribution
+  - Engine already supports setCount parameter
+  - Needs frontend UI and testing
 
 ### P1 (High Priority)
-- [ ] Test logo feature on production with actual school logos
+- [ ] Teacher bulk duplicate resolution UI (preview + edit before save)
+- [ ] Auto-triage / confidence scoring for parsed questions
+- [ ] Create remaining ~295 student accounts
 
-### P2 (Medium Priority)  
-- [ ] Integrate AWS S3 for file storage
-- [ ] Build PowerBI-level Principal Analytics
-- [ ] Clean up obsolete legacy admin pages
-- [ ] Address pre-existing TypeScript errors
+### P2 (Medium Priority)
+- [ ] Principal Analytics with materialized views
+- [ ] AWS S3 actual persistence (currently mocked locally)
+- [ ] Centralized logging (Winston/Sentry)
+- [ ] Fix pre-existing TypeScript errors
+- [ ] Refactor routes.ts (5500+ lines) into modular route files
 
 ## Key Files
-- `/app/client/src/pages/hod/paper-generator.tsx` - HOD paper generation UI
-- `/app/client/src/pages/superadmin/schools.tsx` - School management
-- `/app/client/src/pages/blueprints.tsx` - Blueprint creation
-- `/app/client/src/pages/tests/create.tsx` - Test creation
-- `/app/server/routes.ts` - API routes including PDF generation
-- `/app/server/pg-storage.ts` - Database operations
+- `/app/server/lib/duplicate-detection.ts` - Duplicate detection service
+- `/app/server/lib/question-selection-engine.ts` - Unified selection engine
+- `/app/server/routes.ts` - ALL API endpoints
+- `/app/server/pg-storage.ts` - Database operations with unified engine
+- `/app/client/src/pages/teacher/manual-entry.tsx` - Manual question entry with duplicate UX
+- `/app/client/src/pages/teacher/word-upload.tsx` - DOCX upload with duplicate preview
+- `/app/shared/schema.ts` - Database schema
 
-## Credentials (Render Production)
+## Credentials
 - **Super Admin**: SUPERADMIN / superadmin@safal.com / SuperAdmin@123
-- **Principal (MVM)**: MVMCHN / principal@mvmchennai.edu.in / Principal@123
-- **HOD CS (MVM)**: MVMCHN / hod.cs@mvmchennai.edu.in / HodCS@123
-- **Teacher (MVM)**: MVMCHN / teacher.cs@mvmchennai.edu.in / Teacher@123
-- **Student (Example)**: MVMCHN / appanraj@mvmchennai.edu.in / Student@123
+- **Test Teacher**: TESTSCH / teacher@test.com / Teacher@123
