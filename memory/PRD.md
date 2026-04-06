@@ -28,18 +28,27 @@ Build a comprehensive education governance application with:
 
 ### 4. Paper Generation Features
 - PDF and DOCX export
-- Multiple sets (Set 1, 2, 3) with shuffled questions
+- **Multi-Set Generation (Set A/B/C)** with zero overlap, difficulty parity, equal marks
 - School logo support
 - Test name, marks, duration display
-- Answer key generation
+- Answer key generation per set
 
-### 5. Architecture Standardization (P0)
+### 5. Architecture Standardization (P0 - COMPLETED)
 - **Single unified question pool** - One pool, all modes
 - **Duplicate Detection** - Exact match blocked, fuzzy >85% warned with UX
 - **Unified Generation Engine** - `selectQuestionsUnified()` for both online and offline
 - **Mode Behaviors:**
   - Online: Shuffle questions + options, timer/resume
   - Offline: Fixed order, section headers, PDF/Word export, answer key
+
+### 6. Multi-Set Generation (P0 - COMPLETED)
+- **Zero question overlap** across sets (non-negotiable)
+- **Difficulty parity** across all sets (proportional allocation)
+- **Chapter coverage consistency** across sets
+- **Marks consistency** (identical total marks per set)
+- **Failure handling**: Clear validation with remediation options (Reduce Sets, Allow Overlap)
+- **Validation summary UI** before generating
+- Uses unified engine for both online/offline multi-set
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, Shadcn UI
@@ -60,44 +69,41 @@ Build a comprehensive education governance application with:
 - [x] PDF/DOCX paper generation with multiple sets
 - [x] School logo support in paper generation
 
-### April 2026 - Architecture Standardization
-- [x] **Duplicate Detection Service** (duplicate-detection.ts) - exact hash + n-gram + Jaccard similarity
-- [x] **Unified Question Selection Engine** (question-selection-engine.ts) - single engine for online/offline
-- [x] **contentHash field** added to questions schema
-- [x] **Backend: Duplicate check on ALL upload paths:**
-  - POST /api/teacher/questions (manual) - blocks exact dupes, warns on similar
-  - POST /api/teacher/upload/word/preview - includes per-question duplicate status
-  - POST /api/teacher/upload/word/confirm - auto-filters exact duplicates
-  - POST /api/upload/word (direct) - filters exact duplicates
-  - POST /api/questions/bulk - filters exact duplicates
-- [x] **Backend: Unified Engine replaces ALL legacy selection:**
-  - POST /api/tests/:id/generate-paper - uses offline mode unified engine
-  - POST /api/tests/:id/select-by-blueprint - uses unified engine with mode param
-  - startExam() - uses online mode unified engine with question + option shuffling
-  - POST /api/blueprints/:id/generate-preview - uses unified engine
-- [x] **Option Randomization** for online mode (shuffleOptions in engine + startExam)
-- [x] **Frontend: Duplicate Detection UX:**
-  - Manual Entry: inline warning below content field, modal for >85% similar
-  - Word Upload: duplicate summary in preview, per-question status badges, exclude/include toggles
-- [x] **API Endpoints for duplicate checking:**
-  - POST /api/questions/check-duplicate (single)
-  - POST /api/questions/check-duplicates-bulk (batch)
-  - GET /api/questions/find-duplicates (admin cleanup)
+### April 2026 - Architecture Standardization (P0)
+- [x] Duplicate Detection Service (duplicate-detection.ts)
+- [x] Unified Question Selection Engine (question-selection-engine.ts)
+- [x] contentHash field added to questions schema
+- [x] Backend: Duplicate check on ALL upload paths
+- [x] Backend: Unified Engine replaces ALL legacy selection
+- [x] Option Randomization for online mode
+- [x] Frontend: Duplicate Detection UX (inline + modal)
+- [x] API Endpoints for duplicate checking
+
+### April 2026 - Multi-Set Generation (P0)
+- [x] `questionSets` field added to tests schema (stores per-set question IDs)
+- [x] `POST /api/tests/:id/validate-multiset` - Pre-generation pool validation
+- [x] `POST /api/tests/:id/generate-multiset` - Fair multi-set generation engine
+- [x] `selectMultiSetFair()` algorithm with difficulty-based partitioning
+- [x] `calculateDifficultyTargets()` for proportional allocation
+- [x] `validateBlueprintCapacity()` with remediation options
+- [x] Paper PDF/DOCX/Answer Key endpoints updated to use stored `questionSets`
+- [x] Frontend: `/hod/generate-paper` page with full multi-set UI
+- [x] Frontend: Validation summary with section analysis table
+- [x] Frontend: Remediation options (Reduce Sets, Allow Overlap)
+- [x] Frontend: Per-set download (PDF, DOCX, Answer Key)
+- [x] Frontend: Difficulty parity visualization across sets
+- [x] All tests passed: 14/14 backend, 100% frontend
 
 ## Prioritized Backlog
 
-### P0 (Critical) - COMPLETED
+### P0 (Critical) - ALL COMPLETED
 - [x] Duplicate Detection integrated into all upload flows
 - [x] Unified Selection Engine replaces all legacy selection
 - [x] Option Randomization for online mode
 - [x] Frontend Duplicate UX
+- [x] Multi-Set Generation (Set A/B/C) with zero overlap + fair distribution
 
-### P0 (Next)
-- [ ] Multi-Set Generation (Set A/B/C) with no overlap + fair distribution
-  - Engine already supports setCount parameter
-  - Needs frontend UI and testing
-
-### P1 (High Priority)
+### P1 (High Priority) - NEXT
 - [ ] Teacher bulk duplicate resolution UI (preview + edit before save)
 - [ ] Auto-triage / confidence scoring for parsed questions
 - [ ] Create remaining ~295 student accounts
@@ -111,13 +117,25 @@ Build a comprehensive education governance application with:
 
 ## Key Files
 - `/app/server/lib/duplicate-detection.ts` - Duplicate detection service
-- `/app/server/lib/question-selection-engine.ts` - Unified selection engine
+- `/app/server/lib/question-selection-engine.ts` - Unified selection engine + multi-set fair partitioning
 - `/app/server/routes.ts` - ALL API endpoints
 - `/app/server/pg-storage.ts` - Database operations with unified engine
 - `/app/client/src/pages/teacher/manual-entry.tsx` - Manual question entry with duplicate UX
 - `/app/client/src/pages/teacher/word-upload.tsx` - DOCX upload with duplicate preview
-- `/app/shared/schema.ts` - Database schema
+- `/app/client/src/pages/hod/paper-generator.tsx` - Multi-set generation UI
+- `/app/client/src/pages/dashboard.tsx` - Main dashboard (HOD tab with Generate Paper)
+- `/app/shared/schema.ts` - Database schema (includes questionSets)
+
+## Key API Endpoints
+- `POST /api/tests/:id/validate-multiset` - Validate pool capacity for N sets
+- `POST /api/tests/:id/generate-multiset` - Generate N non-overlapping sets
+- `GET /api/tests/:id/paper-pdf?set=N` - Download PDF for set N
+- `GET /api/tests/:id/paper-docx?set=N` - Download DOCX for set N
+- `GET /api/tests/:id/answer-key-pdf?set=N` - Download answer key for set N
+- `POST /api/questions/check-duplicate` - Single question duplicate check
+- `POST /api/questions/check-duplicates-bulk` - Batch duplicate check
 
 ## Credentials
 - **Super Admin**: SUPERADMIN / superadmin@safal.com / SuperAdmin@123
+- **Test HOD**: TESTSCH / hod@test.com / Hod@12345
 - **Test Teacher**: TESTSCH / teacher@test.com / Teacher@123
