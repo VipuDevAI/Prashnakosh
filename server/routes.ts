@@ -3123,6 +3123,9 @@ export function registerPaperGenerationRoutes(app: Express) {
         questionSets: questionSets as any,
         totalMarks,
         questionCount: firstSetIds.length,
+        setsApproved: false,
+        setsApprovedBy: null,
+        setsApprovedAt: null,
       });
       
       res.json({
@@ -3139,9 +3142,55 @@ export function registerPaperGenerationRoutes(app: Express) {
         stats: selectionResult.stats,
         validation: {
           overlapCount: selectionResult.stats.overlapCount || 0,
-          perSetStats: selectionResult.stats.perSetStats,
+          perSetStats: selectionResult.stats.perSetStats?.map(ps => ({
+            ...ps,
+            typeDistribution: (() => {
+              const td: Record<string, number> = {};
+              const setData = selectionResult.sets.find(s => s.setName === ps.setName);
+              if (setData) {
+                for (const q of setData.questions) {
+                  td[q.type] = (td[q.type] || 0) + 1;
+                }
+              }
+              return td;
+            })(),
+          })),
           allSetsEqualMarks: new Set(selectionResult.sets.map(s => s.totalMarks)).size <= 1,
         },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================================================
+  // APPROVE SETS: HOD marks generated sets as approved for download/exam use
+  // ========================================================================
+  app.post("/api/tests/:id/approve-sets", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const test = await storage.getTest(req.params.id);
+      if (!test) return res.status(404).json({ error: "Test not found" });
+      if (req.user?.role !== "super_admin" && test.tenantId !== req.tenantId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const storedSets = test.questionSets as any[] | null;
+      if (!storedSets || storedSets.length === 0) {
+        return res.status(400).json({ error: "No sets generated yet. Generate sets first." });
+      }
+      
+      await storage.updateTest(req.params.id, {
+        setsApproved: true,
+        setsApprovedBy: req.user?.id || null,
+        setsApprovedAt: new Date(),
+      });
+      
+      res.json({
+        success: true,
+        message: `${storedSets.length} sets approved for download and exam use`,
+        setsApproved: true,
+        approvedBy: req.user?.id,
+        approvedAt: new Date().toISOString(),
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -3179,6 +3228,12 @@ export function registerPaperGenerationRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
 
+      // Gate: multi-set downloads require approval
+      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+      if (storedSets && storedSets.length > 0 && !test.setsApproved) {
+        return res.status(403).json({ error: "Sets must be approved by HOD before downloading. Use the Set Comparison View to approve." });
+      }
+
       const setNumber = parseInt(req.query.set as string) || 1;
       const customLogoUrl = req.query.logoUrl as string | undefined;
 
@@ -3189,7 +3244,6 @@ export function registerPaperGenerationRoutes(app: Express) {
 
       // Determine question IDs based on stored multi-set data or fallback
       let questionIdsForSet: string[] = [];
-      const storedSets = test.questionSets as { setName: string; questionIds: string[]; totalMarks: number }[] | null;
       
       if (storedSets && storedSets.length >= setNumber) {
         questionIdsForSet = storedSets[setNumber - 1].questionIds;
@@ -3318,6 +3372,12 @@ export function registerPaperGenerationRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
 
+      // Gate: multi-set downloads require approval
+      const storedSetsAK = test.questionSets as any[] | null;
+      if (storedSetsAK && storedSetsAK.length > 0 && !test.setsApproved) {
+        return res.status(403).json({ error: "Sets must be approved before downloading answer keys." });
+      }
+
       const setNumber = parseInt(req.query.set as string) || 1;
       const customLogoUrl = req.query.logoUrl as string | undefined;
 
@@ -3407,6 +3467,12 @@ export function registerPaperGenerationRoutes(app: Express) {
       const test = (req as any).test;
       if (req.user?.role !== "super_admin" && test.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Gate: multi-set downloads require approval
+      const storedSetsDX = test.questionSets as any[] | null;
+      if (storedSetsDX && storedSetsDX.length > 0 && !test.setsApproved) {
+        return res.status(403).json({ error: "Sets must be approved before downloading." });
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;
@@ -3599,6 +3665,12 @@ export function registerPaperGenerationRoutes(app: Express) {
       const test = (req as any).test;
       if (req.user?.role !== "super_admin" && test.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Gate: multi-set downloads require approval
+      const storedSetsAKD = test.questionSets as any[] | null;
+      if (storedSetsAKD && storedSetsAKD.length > 0 && !test.setsApproved) {
+        return res.status(403).json({ error: "Sets must be approved before downloading answer keys." });
       }
 
       const setNumber = parseInt(req.query.set as string) || 1;

@@ -29,6 +29,9 @@ interface Test {
   workflowState: string;
   questionIds: string[] | null;
   questionSets: { setName: string; questionIds: string[]; totalMarks: number }[] | null;
+  setsApproved: boolean;
+  setsApprovedBy: string | null;
+  setsApprovedAt: string | null;
   hodApprovedBy: string | null;
   hodApprovedAt: string | null;
   hodComments: string | null;
@@ -77,13 +80,20 @@ interface MultiSetResult {
       setName: string;
       difficultyDistribution: Record<string, number>;
       chapterDistribution: Record<string, number>;
+      typeDistribution?: Record<string, number>;
       totalMarks: number;
     }[];
     allSetsEqualMarks: boolean;
   };
   validation: {
     overlapCount: number;
-    perSetStats: any[];
+    perSetStats: {
+      setName: string;
+      difficultyDistribution: Record<string, number>;
+      chapterDistribution: Record<string, number>;
+      typeDistribution?: Record<string, number>;
+      totalMarks: number;
+    }[];
     allSetsEqualMarks: boolean;
   };
 }
@@ -118,6 +128,7 @@ export default function HODPaperGeneratorPage() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [multiSetResult, setMultiSetResult] = useState<MultiSetResult | null>(null);
   const [allowOverlap, setAllowOverlap] = useState(false);
+  const [setsApproved, setSetsApproved] = useState(false);
 
   const { data: tests = [], isLoading } = useQuery<Test[]>({
     queryKey: ['/api/tests'],
@@ -148,11 +159,28 @@ export default function HODPaperGeneratorPage() {
     },
     onSuccess: (data: MultiSetResult) => {
       setMultiSetResult(data);
+      setSetsApproved(false);
       toast({ title: "Multi-set generated", description: `${data.setCount} sets generated successfully` });
       queryClient.invalidateQueries({ queryKey: ['/api/tests'] });
     },
     onError: (error: any) => {
       toast({ title: "Generation Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Approve sets
+  const approveSetsMutation = useMutation({
+    mutationFn: async (testId: string) => {
+      const res = await apiRequest("POST", `/api/tests/${testId}/approve-sets`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      setSetsApproved(true);
+      toast({ title: "Sets Approved", description: "All sets are now approved for download and exam use" });
+      queryClient.invalidateQueries({ queryKey: ['/api/tests'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Approval Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -214,6 +242,9 @@ export default function HODPaperGeneratorPage() {
   const selectedTest = tests.find(t => t.id === selectedTestId);
   const storedSets = selectedTest?.questionSets;
   const maxDownloadableSet = storedSets?.length || 3;
+  
+  // Sync setsApproved from test data when test selection changes
+  const testApprovalStatus = selectedTest?.setsApproved || false;
 
   return (
     <PageLayout>
@@ -282,7 +313,7 @@ export default function HODPaperGeneratorPage() {
             <div className="space-y-4 mt-4">
               <div>
                 <Label>Select Test</Label>
-                <Select onValueChange={(v) => { setSelectedTestId(v); setValidationResult(null); setMultiSetResult(null); }}>
+                <Select onValueChange={(v) => { setSelectedTestId(v); setValidationResult(null); setMultiSetResult(null); setSetsApproved(false); }}>
                   <SelectTrigger data-testid="select-test">
                     <SelectValue placeholder="Choose a test with blueprint" />
                   </SelectTrigger>
@@ -381,13 +412,24 @@ export default function HODPaperGeneratorPage() {
                 </Button>
               )}
 
-              {/* Multi-Set Result */}
+              {/* Multi-Set Result → Set Comparison View */}
               {multiSetResult && (
-                <MultiSetResultView 
+                <SetComparisonView 
                   result={multiSetResult} 
                   testId={selectedTestId!}
                   format={selectedFormat}
                   logoUrl={customLogoUrl}
+                  setsApproved={setsApproved}
+                  onApprove={() => selectedTestId && approveSetsMutation.mutate(selectedTestId)}
+                  onRegenerate={() => {
+                    setMultiSetResult(null);
+                    setSetsApproved(false);
+                    if (selectedTestId) {
+                      generateMultiSetMutation.mutate({ testId: selectedTestId, setCount: validationResult?.remediation.suggestedSetCount || setCount, allowOverlap });
+                    }
+                  }}
+                  approving={approveSetsMutation.isPending}
+                  regenerating={generateMultiSetMutation.isPending}
                 />
               )}
 
@@ -409,29 +451,39 @@ export default function HODPaperGeneratorPage() {
           {/* Download Section */}
           {selectedTestId && storedSets && storedSets.length > 0 && (
             <ContentCard title="Download Papers" description={`${storedSets.length} sets available for download`}>
-              <div className="space-y-3 mt-4">
-                {storedSets.map((set, idx) => (
-                  <Card key={set.setName} className="bg-background/50" data-testid={`download-set-${idx + 1}`}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium">{set.setName}</CardTitle>
-                        <Badge variant="outline">{set.questionIds.length} Qs | {set.totalMarks} marks</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardFooter className="pt-1 flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-pdf-set-${idx + 1}`}>
-                        <Download className="w-3 h-3 mr-1" /> PDF
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-docx?set=${idx + 1}`, '_blank')} data-testid={`btn-docx-set-${idx + 1}`}>
-                        <Download className="w-3 h-3 mr-1" /> DOCX
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-key-pdf-set-${idx + 1}`}>
-                        <Download className="w-3 h-3 mr-1" /> Answer Key
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
+              {!setsApproved && !testApprovalStatus ? (
+                <Alert className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Sets Not Approved</AlertTitle>
+                  <AlertDescription>
+                    Sets must be approved via the Set Comparison View before downloading. Review the comparison and click "Approve Sets".
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-3 mt-4">
+                  {storedSets.map((set, idx) => (
+                    <Card key={set.setName} className="bg-background/50" data-testid={`download-set-${idx + 1}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm font-medium">{set.setName}</CardTitle>
+                          <Badge variant="outline">{set.questionIds.length} Qs | {set.totalMarks} marks</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardFooter className="pt-1 flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-pdf?format=${selectedFormat}&set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-pdf-set-${idx + 1}`}>
+                          <Download className="w-3 h-3 mr-1" /> PDF
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/paper-docx?set=${idx + 1}`, '_blank')} data-testid={`btn-docx-set-${idx + 1}`}>
+                          <Download className="w-3 h-3 mr-1" /> DOCX
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => window.open(`/api/tests/${selectedTestId}/answer-key-pdf?set=${idx + 1}${customLogoUrl ? `&logoUrl=${encodeURIComponent(customLogoUrl)}` : ''}`, '_blank')} data-testid={`btn-key-pdf-set-${idx + 1}`}>
+                          <Download className="w-3 h-3 mr-1" /> Answer Key
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </ContentCard>
           )}
 
@@ -672,90 +724,274 @@ function ValidationSummary({
 }
 
 // ============================================================================
-// MULTI-SET RESULT COMPONENT
+// SET COMPARISON VIEW — Full side-by-side fairness verification
 // ============================================================================
 
-function MultiSetResultView({ 
-  result, 
-  testId, 
-  format, 
-  logoUrl 
+type DeviationLevel = 'balanced' | 'slight' | 'significant';
+
+function getDeviationLevel(values: number[]): DeviationLevel {
+  if (values.length <= 1) return 'balanced';
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  if (max === 0 && min === 0) return 'balanced';
+  const avg = values.reduce((s, v) => s + v, 0) / values.length;
+  const deviation = avg > 0 ? (max - min) / avg : 0;
+  if (deviation <= 0.1) return 'balanced';
+  if (deviation <= 0.3) return 'slight';
+  return 'significant';
+}
+
+function deviationColor(level: DeviationLevel): string {
+  switch (level) {
+    case 'balanced': return 'text-green-600 dark:text-green-400';
+    case 'slight': return 'text-amber-600 dark:text-amber-400';
+    case 'significant': return 'text-red-600 dark:text-red-400';
+  }
+}
+
+function deviationBg(level: DeviationLevel): string {
+  switch (level) {
+    case 'balanced': return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800';
+    case 'slight': return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
+    case 'significant': return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
+  }
+}
+
+function deviationLabel(level: DeviationLevel): string {
+  switch (level) {
+    case 'balanced': return 'Balanced';
+    case 'slight': return 'Slight Deviation';
+    case 'significant': return 'Significant Mismatch';
+  }
+}
+
+function SetComparisonView({ 
+  result, testId, format, logoUrl, setsApproved, onApprove, onRegenerate, approving, regenerating
 }: { 
   result: MultiSetResult; 
-  testId: string; 
-  format: string; 
-  logoUrl: string;
+  testId: string; format: string; logoUrl: string;
+  setsApproved: boolean;
+  onApprove: () => void;
+  onRegenerate: () => void;
+  approving: boolean;
+  regenerating: boolean;
 }) {
+  const perSetStats = result.validation.perSetStats || result.stats.perSetStats || [];
+  
+  // Collect all difficulty/chapter/type keys across sets
+  const allDiffs = new Set<string>();
+  const allChapters = new Set<string>();
+  const allTypes = new Set<string>();
+  for (const ps of perSetStats) {
+    Object.keys(ps.difficultyDistribution || {}).forEach(k => allDiffs.add(k));
+    Object.keys(ps.chapterDistribution || {}).forEach(k => allChapters.add(k));
+    Object.keys(ps.typeDistribution || {}).forEach(k => allTypes.add(k));
+  }
+  const diffs = ['easy', 'medium', 'hard'].filter(d => allDiffs.has(d));
+  const chapters = Array.from(allChapters).sort();
+  const types = Array.from(allTypes).sort();
+
+  // Calculate overall fairness score
+  const marksDeviation = getDeviationLevel(perSetStats.map(ps => ps.totalMarks));
+  const qCountDeviation = getDeviationLevel(result.sets.map(s => s.questionCount));
+  
+  const diffDeviations: Record<string, DeviationLevel> = {};
+  for (const d of diffs) {
+    diffDeviations[d] = getDeviationLevel(perSetStats.map(ps => ps.difficultyDistribution?.[d] || 0));
+  }
+  const chapterDeviations: Record<string, DeviationLevel> = {};
+  for (const c of chapters) {
+    chapterDeviations[c] = getDeviationLevel(perSetStats.map(ps => ps.chapterDistribution?.[c] || 0));
+  }
+  const typeDeviations: Record<string, DeviationLevel> = {};
+  for (const t of types) {
+    typeDeviations[t] = getDeviationLevel(perSetStats.map(ps => ps.typeDistribution?.[t] || 0));
+  }
+
+  const allDeviations = [
+    marksDeviation, qCountDeviation,
+    ...Object.values(diffDeviations),
+    ...Object.values(chapterDeviations),
+    ...Object.values(typeDeviations),
+  ];
+  const hasSignificant = allDeviations.includes('significant');
+  const hasSlight = allDeviations.includes('slight');
+  const overallStatus: DeviationLevel = hasSignificant ? 'significant' : hasSlight ? 'slight' : 'balanced';
+
   return (
-    <div className="space-y-3 p-4 border rounded-lg bg-green-50 dark:bg-green-950/20" data-testid="multiset-result">
-      <div className="flex items-center gap-2">
-        <CheckCircle className="w-5 h-5 text-green-600" />
-        <h3 className="font-semibold text-sm">{result.setCount} Sets Generated Successfully</h3>
+    <div className="space-y-4" data-testid="set-comparison-view">
+      {/* Header with overall status */}
+      <div className={`p-4 border rounded-lg ${deviationBg(overallStatus)}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {overallStatus === 'balanced' ? (
+              <ShieldCheck className="w-5 h-5 text-green-600" />
+            ) : overallStatus === 'slight' ? (
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            ) : (
+              <XCircle className="w-5 h-5 text-red-600" />
+            )}
+            <div>
+              <h3 className="font-semibold text-sm" data-testid="comparison-status">
+                {overallStatus === 'balanced' 
+                  ? `All ${result.setCount} sets are balanced and fair` 
+                  : overallStatus === 'slight'
+                    ? `Minor deviations detected across ${result.setCount} sets`
+                    : `Significant imbalance detected — consider regenerating`
+                }
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {result.validation.overlapCount} overlapping questions | 
+                {result.validation.allSetsEqualMarks ? ' Equal marks' : ' Unequal marks'}
+              </p>
+            </div>
+          </div>
+          {setsApproved && (
+            <Badge className="bg-green-600 text-white" data-testid="badge-approved">
+              <CheckCircle className="w-3 h-3 mr-1" /> Approved
+            </Badge>
+          )}
+        </div>
       </div>
 
-      {/* Parity validation */}
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div className="p-2 rounded bg-background border text-center" data-testid="parity-overlap">
-          <p className="font-semibold text-lg">{result.validation.overlapCount}</p>
-          <p className="text-muted-foreground">Overlap</p>
-        </div>
-        <div className="p-2 rounded bg-background border text-center" data-testid="parity-marks">
-          <p className="font-semibold text-lg">{result.validation.allSetsEqualMarks ? "Yes" : "No"}</p>
-          <p className="text-muted-foreground">Equal Marks</p>
-        </div>
-        <div className="p-2 rounded bg-background border text-center">
-          <p className="font-semibold text-lg">{result.sets.reduce((s, set) => s + set.questionCount, 0)}</p>
-          <p className="text-muted-foreground">Total Qs</p>
-        </div>
-      </div>
-
-      {/* Per-set summary */}
-      {result.sets.map((set, idx) => (
-        <div key={set.setName} className="flex items-center justify-between p-2 rounded bg-background border">
-          <div>
-            <p className="text-sm font-medium">{set.setName}</p>
-            <p className="text-xs text-muted-foreground">{set.questionCount} questions | {set.totalMarks} marks</p>
-          </div>
-          <div className="flex gap-1">
-            <Button size="sm" variant="ghost" onClick={() => window.open(`/api/tests/${testId}/paper-pdf?format=${format}&set=${idx + 1}${logoUrl ? `&logoUrl=${encodeURIComponent(logoUrl)}` : ''}`, '_blank')}>
-              <Download className="w-3 h-3" />
-            </Button>
-          </div>
-        </div>
-      ))}
-
-      {/* Per-set difficulty parity */}
-      {result.stats.perSetStats && result.stats.perSetStats.length > 1 && (
-        <details className="text-xs">
-          <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
-            <BarChart3 className="w-3 h-3" /> View difficulty parity across sets
-          </summary>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-1 px-2">Set</th>
-                  <th className="text-center py-1 px-2">Easy</th>
-                  <th className="text-center py-1 px-2">Medium</th>
-                  <th className="text-center py-1 px-2">Hard</th>
-                  <th className="text-center py-1 px-2">Total Marks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.stats.perSetStats.map((ss) => (
-                  <tr key={ss.setName} className="border-b border-border/50">
-                    <td className="py-1 px-2 font-medium">{ss.setName}</td>
-                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.easy || 0}</td>
-                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.medium || 0}</td>
-                    <td className="py-1 px-2 text-center">{ss.difficultyDistribution.hard || 0}</td>
-                    <td className="py-1 px-2 text-center font-medium">{ss.totalMarks}</td>
-                  </tr>
+      {/* ===== SIDE-BY-SIDE COMPARISON TABLE ===== */}
+      <div className="border rounded-lg overflow-hidden" data-testid="comparison-table">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left py-2 px-3 font-semibold text-sm border-b">Metric</th>
+                {result.sets.map(s => (
+                  <th key={s.setName} className="text-center py-2 px-3 font-semibold text-sm border-b border-l">{s.setName}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      )}
+                <th className="text-center py-2 px-3 font-semibold text-sm border-b border-l">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Total Questions */}
+              <tr className="border-b hover:bg-muted/20">
+                <td className="py-2 px-3 font-medium">Total Questions</td>
+                {result.sets.map(s => (
+                  <td key={s.setName} className="py-2 px-3 text-center border-l font-mono">{s.questionCount}</td>
+                ))}
+                <td className={`py-2 px-3 text-center border-l font-medium ${deviationColor(qCountDeviation)}`} data-testid="status-questions">
+                  {deviationLabel(qCountDeviation)}
+                </td>
+              </tr>
+
+              {/* Total Marks */}
+              <tr className="border-b hover:bg-muted/20">
+                <td className="py-2 px-3 font-medium">Total Marks</td>
+                {perSetStats.map(ps => (
+                  <td key={ps.setName} className="py-2 px-3 text-center border-l font-mono font-bold">{ps.totalMarks}</td>
+                ))}
+                <td className={`py-2 px-3 text-center border-l font-medium ${deviationColor(marksDeviation)}`} data-testid="status-marks">
+                  {deviationLabel(marksDeviation)}
+                </td>
+              </tr>
+
+              {/* Difficulty Distribution */}
+              {diffs.length > 0 && (
+                <tr className="bg-muted/30">
+                  <td colSpan={result.sets.length + 2} className="py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
+                    Difficulty Distribution
+                  </td>
+                </tr>
+              )}
+              {diffs.map(d => {
+                const totalPerSet = perSetStats.map(ps => {
+                  const sum = Object.values(ps.difficultyDistribution || {}).reduce((a, b) => a + b, 0);
+                  return sum;
+                });
+                return (
+                  <tr key={d} className="border-b hover:bg-muted/20">
+                    <td className="py-1.5 px-3 font-medium capitalize pl-6">{d}</td>
+                    {perSetStats.map((ps, idx) => {
+                      const count = ps.difficultyDistribution?.[d] || 0;
+                      const pct = totalPerSet[idx] > 0 ? Math.round((count / totalPerSet[idx]) * 100) : 0;
+                      return (
+                        <td key={ps.setName} className="py-1.5 px-3 text-center border-l">
+                          <span className="font-mono">{count}</span>
+                          <span className="text-muted-foreground ml-1">({pct}%)</span>
+                        </td>
+                      );
+                    })}
+                    <td className={`py-1.5 px-3 text-center border-l text-[10px] font-medium ${deviationColor(diffDeviations[d])}`} data-testid={`status-diff-${d}`}>
+                      {deviationLabel(diffDeviations[d])}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Chapter Distribution */}
+              {chapters.length > 0 && (
+                <tr className="bg-muted/30">
+                  <td colSpan={result.sets.length + 2} className="py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
+                    Chapter Coverage
+                  </td>
+                </tr>
+              )}
+              {chapters.map(c => (
+                <tr key={c} className="border-b hover:bg-muted/20">
+                  <td className="py-1.5 px-3 font-medium pl-6 truncate max-w-[120px]" title={c}>{c}</td>
+                  {perSetStats.map(ps => (
+                    <td key={ps.setName} className="py-1.5 px-3 text-center border-l font-mono">
+                      {ps.chapterDistribution?.[c] || 0}
+                    </td>
+                  ))}
+                  <td className={`py-1.5 px-3 text-center border-l text-[10px] font-medium ${deviationColor(chapterDeviations[c])}`}>
+                    {deviationLabel(chapterDeviations[c])}
+                  </td>
+                </tr>
+              ))}
+
+              {/* Question Type Distribution */}
+              {types.length > 0 && (
+                <tr className="bg-muted/30">
+                  <td colSpan={result.sets.length + 2} className="py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
+                    Question Type
+                  </td>
+                </tr>
+              )}
+              {types.map(t => (
+                <tr key={t} className="border-b hover:bg-muted/20">
+                  <td className="py-1.5 px-3 font-medium pl-6 capitalize">{t.replace('_', ' ')}</td>
+                  {perSetStats.map(ps => (
+                    <td key={ps.setName} className="py-1.5 px-3 text-center border-l font-mono">
+                      {ps.typeDistribution?.[t] || 0}
+                    </td>
+                  ))}
+                  <td className={`py-1.5 px-3 text-center border-l text-[10px] font-medium ${deviationColor(typeDeviations[t])}`}>
+                    {deviationLabel(typeDeviations[t])}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Section Breakdown per set */}
+      <details className="text-xs" data-testid="section-breakdown-toggle">
+        <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium py-1">
+          View per-section breakdown
+        </summary>
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+          {result.sets.map(set => (
+            <div key={set.setName} className="border rounded p-2">
+              <p className="font-semibold text-xs mb-1">{set.setName}</p>
+              {set.sectionBreakdown.map((sb: any, idx: number) => (
+                <div key={idx} className="flex justify-between text-[10px] py-0.5">
+                  <span className="truncate max-w-[100px]">{sb.name}</span>
+                  <span className={sb.selected < sb.requested ? 'text-red-500' : 'text-green-600'}>
+                    {sb.selected}/{sb.requested}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </details>
 
       {/* Warnings */}
       {result.warnings.length > 0 && (
@@ -765,6 +1001,61 @@ function MultiSetResultView({
             {result.warnings.map((w, i) => <p key={i}>{w}</p>)}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-2" data-testid="comparison-actions">
+        {!setsApproved ? (
+          <>
+            <Button
+              onClick={onApprove}
+              disabled={approving || hasSignificant}
+              className="flex-1"
+              data-testid="button-approve-sets"
+            >
+              {approving ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Approving...</>
+              ) : (
+                <><CheckCircle className="w-4 h-4 mr-2" /> Approve Sets</>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onRegenerate}
+              disabled={regenerating}
+              className="flex-1"
+              data-testid="button-regenerate-sets"
+            >
+              {regenerating ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regenerating...</>
+              ) : (
+                <><Layers className="w-4 h-4 mr-2" /> Regenerate Sets</>
+              )}
+            </Button>
+          </>
+        ) : (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 w-full" data-testid="approved-message">
+            <ShieldCheck className="w-5 h-5 text-green-600 shrink-0" />
+            <p className="text-sm text-green-700 dark:text-green-300">
+              Sets approved. You can now download papers from the Download section below.
+            </p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="ml-auto shrink-0" 
+              onClick={onRegenerate}
+              data-testid="button-regenerate-after-approval"
+            >
+              Regenerate
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {hasSignificant && !setsApproved && (
+        <p className="text-xs text-red-500">
+          Cannot approve: Significant deviations detected. Please regenerate or allow controlled overlap.
+        </p>
       )}
     </div>
   );
