@@ -5671,7 +5671,7 @@ export function registerPaperGenerationRoutes(app: Express) {
   // Create a new user for a school
   app.post("/api/superadmin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
-      const { tenantId, email, name, password, role, grade, section, wingId, subjects } = req.body;
+      const { tenantId, email, name, password, role, grade, section, rollNumber, wingId, subjects } = req.body;
       
       if (!tenantId) {
         return res.status(400).json({ error: "tenantId is required" });
@@ -5712,10 +5712,11 @@ export function registerPaperGenerationRoutes(app: Express) {
         tenantId,
         email,
         name,
-        password, // Note: In production, hash this!
+        password,
         role,
         grade: role === "student" ? grade : null,
         section: role === "student" ? section || null : null,
+        rollNumber: role === "student" ? rollNumber || null : null,
         wingId: role === "teacher" ? wingId : null,
         subjects: role === "teacher" ? subjects : [],
         userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
@@ -5840,6 +5841,7 @@ export function registerPaperGenerationRoutes(app: Express) {
           // Handle student-specific fields
           let grade = null;
           let section = null;
+          let rollNumber = null;
           if (role === "student") {
             grade = userData.class?.toString().trim() || userData.grade?.toString().trim();
             if (!grade) {
@@ -5848,6 +5850,7 @@ export function registerPaperGenerationRoutes(app: Express) {
               continue;
             }
             section = userData.section?.trim() || null;
+            rollNumber = userData.rollNumber?.toString().trim() || userData.roll_number?.toString().trim() || null;
           }
 
           await storage.createUser({
@@ -5858,6 +5861,7 @@ export function registerPaperGenerationRoutes(app: Express) {
             role,
             grade,
             section,
+            rollNumber,
             wingId,
             subjects,
             userCode: `${schoolCode}-${role.toUpperCase().substring(0, 3)}-${Date.now().toString(36).toUpperCase()}`,
@@ -5870,6 +5874,120 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       res.json({ created, failed, errors: errors.slice(0, 20) });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // BATCH MANAGEMENT (HOD/Admin creates batches for tests)
+  // =====================================================
+
+  // Get all batches for a test
+  app.get("/api/tests/:testId/batches", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const { testId } = req.params;
+      const batchList = await storage.getBatchesByTest(testId);
+      // For each batch, get student count
+      const batchesWithStudents = await Promise.all(
+        batchList.map(async (b) => {
+          const students = await storage.getStudentsByBatch(b.id);
+          return { ...b, studentCount: students.length, studentIds: students.map(s => s.id) };
+        })
+      );
+      res.json(batchesWithStudents);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a batch for a test
+  app.post("/api/tests/:testId/batches", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { testId } = req.params;
+      const { name, assignedSet } = req.body;
+      if (!name || !assignedSet) {
+        return res.status(400).json({ error: "name and assignedSet are required" });
+      }
+      const currentUser = req.user as AuthUser;
+      const batch = await storage.createBatch({
+        tenantId,
+        testId,
+        name,
+        assignedSet,
+        createdBy: currentUser.id,
+      });
+      res.status(201).json(batch);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update a batch
+  app.patch("/api/batches/:id", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, assignedSet } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (assignedSet !== undefined) updateData.assignedSet = assignedSet;
+      const batch = await storage.updateBatch(id, updateData);
+      if (!batch) return res.status(404).json({ error: "Batch not found" });
+      res.json(batch);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a batch
+  app.delete("/api/batches/:id", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const success = await storage.deleteBatch(req.params.id);
+      if (!success) return res.status(404).json({ error: "Batch not found" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Assign students to a batch
+  app.post("/api/batches/:id/students", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { studentIds } = req.body;
+      if (!Array.isArray(studentIds) || studentIds.length === 0) {
+        return res.status(400).json({ error: "studentIds array is required" });
+      }
+      await storage.assignStudentsToBatch(id, studentIds);
+      const students = await storage.getStudentsByBatch(id);
+      res.json({ success: true, assignedCount: students.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove students from a batch
+  app.delete("/api/batches/:id/students", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { studentIds } = req.body;
+      if (!Array.isArray(studentIds) || studentIds.length === 0) {
+        return res.status(400).json({ error: "studentIds array is required" });
+      }
+      await storage.removeStudentsFromBatch(id, studentIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get students in a batch
+  app.get("/api/batches/:id/students", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const students = await storage.getStudentsByBatch(req.params.id);
+      res.json(students.map(s => ({ id: s.id, name: s.name, email: s.email, grade: s.grade, section: s.section, rollNumber: s.rollNumber })));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

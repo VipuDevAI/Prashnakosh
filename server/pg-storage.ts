@@ -29,6 +29,7 @@ import {
   type SchoolWing, type InsertSchoolWing,
   type SchoolExam, type InsertSchoolExam,
   type ReferenceMaterial, type InsertReferenceMaterial,
+  type Batch, type InsertBatch,
   type WingType,
   type GradeGroup,
   type AuthUser,
@@ -63,6 +64,7 @@ import {
   schoolWings,
   schoolExams,
   referenceMaterials,
+  batches,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -138,6 +140,9 @@ export class PgStorage implements IStorage {
       name: user.name,
       role: user.role,
       grade: user.grade || undefined,
+      section: user.section,
+      rollNumber: user.rollNumber,
+      batchId: user.batchId,
       avatar: user.avatar,
       mustChangePassword: user.mustChangePassword || false,
       userCode: user.userCode,
@@ -656,12 +661,34 @@ export class PgStorage implements IStorage {
     const OBJECTIVE_TYPES = ["mcq", "true_false", "fill_blank", "numerical", "assertion_reason", "matching"];
     
     let questionsData: Question[] = [];
+    let assignedSetIndex: number | null = null;
     
-    if (test.questionIds && test.questionIds.length > 0) {
+    // BATCH-BASED SET ASSIGNMENT: If test has questionSets and student has a batch for this test
+    if (test.questionSets && test.questionSets.length > 0) {
+      const batch = await this.getBatchForStudentAndTest(studentId, testId);
+      if (batch) {
+        // Find the set index matching the batch's assignedSet
+        const setIdx = test.questionSets.findIndex(s => s.setName === batch.assignedSet);
+        if (setIdx >= 0) {
+          assignedSetIndex = setIdx;
+          const setQuestionIds = test.questionSets[setIdx].questionIds;
+          let setQuestions = await this.getQuestionsByIds(setQuestionIds);
+          // Shuffle for online mode
+          questionsData = shuffleArray(setQuestions);
+        }
+      }
+      // If no batch found but sets exist, assign randomly from available sets
+      if (questionsData.length === 0) {
+        const randomSetIdx = Math.floor(Math.random() * test.questionSets.length);
+        assignedSetIndex = randomSetIdx;
+        const setQuestionIds = test.questionSets[randomSetIdx].questionIds;
+        let setQuestions = await this.getQuestionsByIds(setQuestionIds);
+        questionsData = shuffleArray(setQuestions);
+      }
+    } else if (test.questionIds && test.questionIds.length > 0) {
       // Test has pre-selected questions - use them with online mode shuffling
       let preselectedQuestions = await this.getQuestionsByIds(test.questionIds);
       let objectiveQuestions = preselectedQuestions.filter(q => OBJECTIVE_TYPES.includes(q.type));
-      // Shuffle questions for online mode
       questionsData = shuffleArray(objectiveQuestions);
     } else if (test.blueprintId) {
       // Use UNIFIED ENGINE for online test question selection
@@ -710,6 +737,7 @@ export class PgStorage implements IStorage {
       tenantId,
       testId,
       studentId,
+      assignedSetIndex,
       assignedQuestionIds: questionsWithShuffledOptions.map(q => q.id),
       answers: {},
       questionStatuses: {},
@@ -2316,6 +2344,64 @@ export class PgStorage implements IStorage {
     }
 
     return stats.sort((a, b) => a.chapter.localeCompare(b.chapter));
+  }
+
+  // =====================================================
+  // BATCH MANAGEMENT
+  // =====================================================
+
+  async getBatchesByTest(testId: string): Promise<Batch[]> {
+    return db.select().from(batches).where(eq(batches.testId, testId));
+  }
+
+  async getBatch(id: string): Promise<Batch | undefined> {
+    const [batch] = await db.select().from(batches).where(eq(batches.id, id));
+    return batch;
+  }
+
+  async createBatch(data: InsertBatch): Promise<Batch> {
+    const [batch] = await db.insert(batches).values(data).returning();
+    return batch;
+  }
+
+  async updateBatch(id: string, data: Partial<InsertBatch>): Promise<Batch | undefined> {
+    const [batch] = await db.update(batches).set(data).where(eq(batches.id, id)).returning();
+    return batch;
+  }
+
+  async deleteBatch(id: string): Promise<boolean> {
+    // Unassign students from this batch first
+    const batch = await this.getBatch(id);
+    if (!batch) return false;
+    await db.update(users).set({ batchId: null }).where(eq(users.batchId, id));
+    await db.delete(batches).where(eq(batches.id, id));
+    return true;
+  }
+
+  async assignStudentsToBatch(batchId: string, studentIds: string[]): Promise<void> {
+    for (const studentId of studentIds) {
+      await db.update(users).set({ batchId }).where(eq(users.id, studentId));
+    }
+  }
+
+  async removeStudentsFromBatch(batchId: string, studentIds: string[]): Promise<void> {
+    for (const studentId of studentIds) {
+      await db.update(users).set({ batchId: null })
+        .where(and(eq(users.id, studentId), eq(users.batchId, batchId)));
+    }
+  }
+
+  async getStudentsByBatch(batchId: string): Promise<User[]> {
+    return db.select().from(users)
+      .where(and(eq(users.batchId, batchId), eq(users.role, "student")));
+  }
+
+  async getBatchForStudentAndTest(studentId: string, testId: string): Promise<Batch | undefined> {
+    const student = await this.getUser(studentId);
+    if (!student?.batchId) return undefined;
+    const [batch] = await db.select().from(batches)
+      .where(and(eq(batches.id, student.batchId), eq(batches.testId, testId)));
+    return batch;
   }
 }
 

@@ -22,6 +22,7 @@ import HODPaperGeneratorPage from "@/pages/hod/paper-generator";
 import HODQuestionsPage from "@/pages/hod/questions";
 import HODChaptersPage from "@/pages/hod/chapters";
 import HODBlueprintsPage from "@/pages/hod/blueprints";
+import BatchManagerPage from "@/pages/hod/batch-manager";
 import PrincipalApprovalPage from "@/pages/principal/approval";
 import CommitteePanelPage from "@/pages/committee/panel";
 import RiskAlertsPage from "@/pages/principal/risk-alerts";
@@ -169,6 +170,9 @@ function Router() {
       </Route>
       <Route path="/hod/generate-paper">
         <ProtectedRoute component={HODPaperGeneratorPage} />
+      </Route>
+      <Route path="/hod/batches/:testId">
+        <ProtectedRoute component={BatchManagerPage} />
       </Route>
       <Route path="/hod/questions">
         <ProtectedRoute component={HODQuestionsPage} />

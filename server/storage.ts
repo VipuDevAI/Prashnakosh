@@ -38,6 +38,7 @@ import {
   type SchoolWing, type InsertSchoolWing,
   type SchoolExam, type InsertSchoolExam,
   type ReferenceMaterial, type InsertReferenceMaterial,
+  type Batch, type InsertBatch,
   type WingType,
   type AuthUser,
   type QuestionStatus,
@@ -400,6 +401,17 @@ export interface IStorage {
   // School Storage Configs
   getSchoolStorageConfig(tenantId: string): Promise<SchoolStorageConfig | undefined>;
   createOrUpdateSchoolStorageConfig(tenantId: string, data: Partial<SchoolStorageConfig>): Promise<SchoolStorageConfig>;
+  
+  // Batch Management
+  getBatchesByTest(testId: string): Promise<Batch[]>;
+  getBatch(id: string): Promise<Batch | undefined>;
+  createBatch(data: InsertBatch): Promise<Batch>;
+  updateBatch(id: string, data: Partial<InsertBatch>): Promise<Batch | undefined>;
+  deleteBatch(id: string): Promise<boolean>;
+  assignStudentsToBatch(batchId: string, studentIds: string[]): Promise<void>;
+  removeStudentsFromBatch(batchId: string, studentIds: string[]): Promise<void>;
+  getStudentsByBatch(batchId: string): Promise<User[]>;
+  getBatchForStudentAndTest(studentId: string, testId: string): Promise<Batch | undefined>;
 }
 
 // =====================================================

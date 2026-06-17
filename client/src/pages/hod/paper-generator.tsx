@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, FileText, Send, CheckCircle, XCircle, Download, AlertTriangle, Image, Loader2, Copy, Layers, ShieldCheck, BarChart3 } from "lucide-react";
+import { ArrowLeft, FileText, Send, CheckCircle, XCircle, Download, AlertTriangle, Image, Loader2, Copy, Layers, ShieldCheck, BarChart3, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImg from "@/assets/logo.png";

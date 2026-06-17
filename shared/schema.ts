@@ -85,6 +85,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().$type<UserRole>(),
   grade: text("grade").default("V"),
   section: text("section"), // For students: A, B, C, etc.
+  rollNumber: text("roll_number"), // For students: roll number / admission ID
+  batchId: varchar("batch_id"), // For students: assigned batch for set-based test delivery
   wingId: varchar("wing_id"), // For teachers: assigned wing
   subjects: jsonb("subjects").$type<string[]>().default([]), // For teachers: multiple subjects
   avatar: text("avatar"),
@@ -309,6 +311,7 @@ export const attempts = pgTable("attempts", {
   tenantId: varchar("tenant_id").notNull(),
   testId: varchar("test_id").notNull(),
   studentId: varchar("student_id").notNull(),
+  assignedSetIndex: integer("assigned_set_index"), // Which set (0=A, 1=B, 2=C) was assigned via batch
   assignedQuestionIds: jsonb("assigned_question_ids").$type<string[]>(),
   answers: jsonb("answers").$type<Record<string, string>>(),
   questionStatuses: jsonb("question_statuses").$type<Record<string, QuestionStatus>>(),
@@ -334,6 +337,21 @@ export const insertAttemptSchema = createInsertSchema(attempts, {
 }).omit({ id: true });
 export type InsertAttempt = z.infer<typeof insertAttemptSchema>;
 export type Attempt = typeof attempts.$inferSelect;
+
+// Batches - Maps students to test sets
+export const batches = pgTable("batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  testId: varchar("test_id").notNull(),
+  name: text("name").notNull(), // "Batch A", "Batch B", etc.
+  assignedSet: text("assigned_set").notNull(), // "Set A", "Set B", etc.
+  createdAt: timestamp("created_at").default(sql`now()`),
+  createdBy: varchar("created_by"),
+});
+
+export const insertBatchSchema = createInsertSchema(batches).omit({ id: true });
+export type InsertBatch = z.infer<typeof insertBatchSchema>;
+export type Batch = typeof batches.$inferSelect;
 
 // Practice sessions
 export const practiceSessions = pgTable("practice_sessions", {
@@ -426,6 +444,9 @@ export type AuthUser = {
   name: string;
   role: UserRole;
   grade?: string;
+  section?: string | null;
+  rollNumber?: string | null;
+  batchId?: string | null;
   avatar: string | null;
   mustChangePassword?: boolean;
   userCode?: string | null;

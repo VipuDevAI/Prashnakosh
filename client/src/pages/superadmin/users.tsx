@@ -669,6 +669,7 @@ function UserForm({
   const [role, setRole] = useState(user?.role || "teacher");
   const [grade, setGrade] = useState(user?.grade || "");
   const [section, setSection] = useState(user?.section || "");
+  const [rollNumber, setRollNumber] = useState((user as any)?.rollNumber || "");
   const [wingId, setWingId] = useState(user?.wingId || "");
   const [subjects, setSubjects] = useState<string[]>(user?.subjects || []);
 
@@ -714,6 +715,7 @@ function UserForm({
       role,
       grade: role === "student" ? grade : null,
       section: role === "student" ? section || null : null,
+      rollNumber: role === "student" ? rollNumber || null : null,
       wingId: (role === "teacher" || role === "hod") ? wingId : null,
       subjects: (role === "teacher" || role === "hod") ? subjects : [],
     };
@@ -847,7 +849,7 @@ function UserForm({
 
       {/* Student specific fields */}
       {role === "student" && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Class <span className="text-red-500">*</span></Label>
             <Select value={grade} onValueChange={setGrade}>
@@ -872,9 +874,19 @@ function UserForm({
             <Input
               value={section}
               onChange={(e) => setSection(e.target.value.toUpperCase())}
-              placeholder="e.g., A, B, C"
+              placeholder="e.g., A, B"
               maxLength={5}
               data-testid="input-section"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Roll No.</Label>
+            <Input
+              value={rollNumber}
+              onChange={(e) => setRollNumber(e.target.value)}
+              placeholder="e.g., 101"
+              data-testid="input-roll-number"
             />
           </div>
         </div>
