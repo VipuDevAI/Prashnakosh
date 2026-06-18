@@ -6,70 +6,67 @@ Build a Question Bank + Blueprint + Question Paper Generation + Online Mock Test
 ## Tech Stack
 React + TypeScript + Vite + Shadcn/UI | Node.js + Express + Drizzle ORM | PostgreSQL (Neon) | Simple token auth
 
+## Design System
+- **Theme**: Dark cosmic (forced dark mode, no light mode)
+- **Colors**: Royal Blue (#4F46E5), Indigo, Deep Purple (#9333EA), Gold (#D4AF37)
+- **Background**: Gradient (#0B0A1F → #16113A → #0A0518)
+- **Glassmorphism**: rgba(255,255,255,0.05) + blur(24px) + border rgba(255,255,255,0.1)
+- **Typography**: Outfit (headings), Manrope (body)
+- **Sidebar**: 240px dark panel with icon+label nav, gold active indicator
+- **Branding**: "Prashnakosh" in gold, "Powered by SmartGenEduX @ 2026"
+- **Reference**: /app/design_guidelines.json
+
 ## What's Been Implemented
 
-### Phase 1: Foundation (DONE)
-- Multi-tenant architecture, role-based access, CSV onboarding, batch logic
+### Phase 1-5: Foundation through Blueprint Upload (DONE)
+- Multi-tenant, role-based access, department CMS, word parser, blueprint-driven upload
 
-### Phase 2: Department CMS (DONE)
-- Schema: schoolClasses, schoolSubjects, departments, userDepartments
-- Admin UI for department generation (Class x Subject matrix)
-
-### Phase 3: Department Permissions & Context Selector (DONE)
-- Backend: validateDepartmentAccess(), API filtering by departmentId, 403 security
-- Frontend: DepartmentProvider, DepartmentSelector dropdown, all pages scoped
-
-### Phase 4: Word Parser Enhancement (DONE)
-- Parser detects SECTION A/B/C, LESSON: <name>, TOPIC: <name> from plain text
-- Context switching, validation warnings, passage support, Unicode/Sanskrit support
-
-### Phase 5: Blueprint-Driven Upload (DONE)
-- Teacher selects blueprint → sees only its sections
-- Coverage API, Section Lock Validation, Schema update: section column
-
-### Phase 6: Academic Coverage Dashboard (DONE - June 18, 2026)
-- Unified Dashboard at /hod/academic-coverage: 4-level hierarchy
-- Backend API GET /api/departments/:id/academic-coverage
-- Schema: BlueprintSection.lessonWeightage field for future engine
-- Tested: 30/30 (iteration_10.json)
+### Phase 6: Academic Coverage Dashboard (DONE)
+- 4-level hierarchy: Department → Section → Lesson → Topic
+- Only approved questions count for coverage
 
 ### Phase 7: Blocker Resolution (DONE - June 18, 2026)
-- **BLOCKER 1 FIXED**: Paper generation now filters by departmentId (zero cross-department leakage)
-- **BLOCKER 4 FIXED**: Lesson balancing via round-robin spread + interleaving
-- **BLOCKER 5 FIXED**: submitExam correctly sets status='submitted' for tests with manual grading
-- **E2E TEST PASSED**: All 12 steps verified (Department → Blueprint → Upload → Approve → Coverage → Generate → Mock → Student → Submit → Results)
-- **S3 AUDITED**: Code complete, only environment variables missing
-- Tested: 90% backend (19/21), 100% frontend (iteration_11.json)
+- BLOCKER 1: Paper generation departmentId filter (zero cross-dept leakage)
+- BLOCKER 4: Lesson balancing via round-robin spread
+- BLOCKER 5: submitExam status fix
+- E2E Test: All 12 steps verified
+
+### Phase 8: UI/UX Premium Redesign (DONE - June 18, 2026)
+- **Global CSS**: Dark cosmic theme, glassmorphism utilities, CSS variables
+- **Login Page**: Glass card, cosmic gradient background, gold branding, feature cards
+- **AppShell**: Premium sidebar (icon+label, role-filtered, gold active state) + top bar (dept selector, user avatar)
+- **Dashboard**: Simplified, renders inside AppShell
+- **Coverage Page**: Updated to dark theme with glass stat cards
+- **All Pages**: Inherit dark theme automatically via CSS variables
+- Tested: 100% backend + 100% frontend (iteration_12.json)
 
 ## Prioritized Backlog
 
-### P0 (Pilot Readiness)
-- [x] Fix departmentId filter in paper generation (DONE)
-- [x] Lesson balancing (DONE)  
-- [x] Full E2E test (DONE)
-- [ ] S3 Configuration: Provide AWS_S3_BUCKET, AWS_S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+### P0 (Pilot Readiness) - ALL DONE
+- [x] Fix departmentId filter in paper generation
+- [x] Lesson balancing
+- [x] Full E2E test
+- [x] Premium UI/UX redesign
 
 ### P1 (Post-Pilot)
+- [ ] S3 Configuration: AWS_S3_BUCKET, AWS_S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 - [ ] HTML Storage Migration: mammoth.convertToHtml()
-- [ ] Lesson Weightage Engine UI: HOD defines per-lesson question targets
 - [ ] Session timeout (token expiry)
+- [ ] Admin Maintenance: Archive/SoftDelete/HardWipe question banks
+- [ ] Blueprint Versioning: academicYear + version fields
 
 ### P2
-- [ ] Auto-Reapproval: Editing approved question reverts to pending_approval
+- [ ] Auto-Reapproval: Edit approved → revert to pending
 - [ ] PDF Enhancements
 - [ ] Performance optimization for 5K+ questions
+- [ ] Syllabus Migration tools
 
 ## Key API Endpoints
-- `GET /api/departments/:id/academic-coverage` - Full hierarchical coverage dashboard
-- `POST /api/blueprints/:id/generate-preview` - Paper generation (now with departmentId filter)
-- `POST /api/tests/generate` - Create mock test from blueprint
-- `POST /api/exam/start` - Student starts exam (returns attempt + questions)
-- `POST /api/exam/submit` - Student submits (auto-grades MCQs, marks status='submitted')
+- `GET /api/departments/:id/academic-coverage` - Full hierarchical coverage
+- `POST /api/blueprints/:id/generate-preview` - Paper generation (departmentId filtered)
+- `POST /api/tests/generate` - Create mock test
+- `POST /api/exam/start` / `POST /api/exam/submit` - Student exam flow
 - `GET /api/student/results` - Student results (requires HOD reveal)
-- `POST /api/tests/:id/reveal-results` - HOD reveals results to students
-
-## Database Schema (Key Tables)
-- departments, userDepartments, questions, blueprints, tests, attempts
 
 ## Pilot Readiness: 78/100 (CONDITIONAL GO)
 - Text-only pilot: READY
