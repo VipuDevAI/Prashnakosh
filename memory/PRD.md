@@ -8,9 +8,7 @@ Build a Question Bank + Blueprint + Question Paper Generation + Online Mock Test
 - **Context Selector**: Frontend dropdown to switch active "Current Department" - scopes all views automatically.
 - **Blueprint-Driven**: Department Head creates Blueprint Template first, then teachers upload questions according to blueprint sections.
 - **Word Parser**: Support plain text markers (SECTION, LESSON:, TOPIC:) without special formatting.
-- **Coverage Dashboard**: Track counts of approved questions by Dept -> Section -> Lesson -> Topic.
-- **HTML Storage**: Use `contentFormat: 'html'` via `mammoth.convertToHtml()`.
-- **S3-Compatible Storage**: Abstraction layer for file/image uploads.
+- **Question Hierarchy**: Department -> Section -> Lesson -> Topic -> Question (never flatten into a single pool).
 
 ## Tech Stack
 - Frontend: React + TypeScript + Vite + Shadcn/UI + TanStack Query
@@ -34,38 +32,33 @@ Build a Question Bank + Blueprint + Question Paper Generation + Online Mock Test
 - Added `departmentId` and `contentFormat` to questions schema
 
 ### Phase 3: Department Permissions & Context Selector (DONE - June 18, 2026)
-- **Backend**:
-  - `validateDepartmentAccess()` helper function at module level
-  - Login response enriched with `departmentIds[]` and `activeDepartmentId`
-  - Auth middleware fetches user departments for every request
-  - `GET /api/my-departments` - enriched endpoint with className, subjectName, role
-  - `GET /api/questions?departmentId=` - filtered by department
-  - `GET /api/blueprints?departmentId=` - filtered by department
-  - `GET /api/tests?departmentId=` - filtered by department
-  - `GET /api/hod/questions/pending?departmentId=` - filtered by department
-  - `POST /api/questions` - requires `departmentId` (400 if missing)
-  - `POST /api/blueprints` - requires `departmentId` (400 if missing)
-  - `POST /api/tests/generate` - requires `departmentId` (400 if missing)
-  - `POST /api/questions/bulk` - accepts and passes `departmentId`
-  - `POST /api/upload/word` - accepts and passes `departmentId`
-  - Admin/super_admin bypass department access checks
-  - Security: 403 returned when user accesses unauthorized department
-- **Frontend**:
-  - `DepartmentProvider` context (fetches departments, persists active selection in localStorage)
-  - `DepartmentSelector` dropdown component in navigation header
-  - All data-fetching pages pass `departmentId` query param: dashboard, questions, blueprints, tests, paper-generator
-  - `authFetch()` utility for safe API calls with error handling
-  - Welcome message shows current department name
-- **Testing**: 14/14 tests passed (11 backend + 3 frontend)
+- Backend: `validateDepartmentAccess()`, enriched login, API filtering by departmentId
+- Frontend: DepartmentProvider, DepartmentSelector dropdown, all pages scoped by department
+- Security: 403 for unauthorized department access. Admin/super_admin bypass.
+- Tested: 14/14 (iteration_7.json)
+
+### Phase 4: Word Parser Enhancement (DONE - June 18, 2026)
+- **Parser rewrite**: Detects SECTION A/B/C, LESSON: <name>, TOPIC: <name> from plain text
+- **Context hierarchy**: Each question inherits section/lesson/topic from latest context
+- **Context switching**: New SECTION resets lesson+topic. New LESSON resets topic.
+- **Validation warnings**: Generated for questions before any SECTION, LESSON, or TOPIC marker
+- **Passage support**: Parser doesn't crash on passages, stores as passage-type content
+- **Unicode/Sanskrit**: Full support for रामायणम्, व्याकरणम्, शब्दकोशः etc.
+- **Preview hierarchy**: API returns `hierarchySummary[]` showing Section -> Lesson -> Topic -> count
+- **Per-question metadata**: Each question in preview includes section, lesson, topic fields
+- **Frontend preview**: Document Structure card shows hierarchical tree with color-coded badges
+- **Auto-populated fields**: Subject/Grade auto-filled from active department context
+- **Format guide**: Updated upload page with SECTION/LESSON/TOPIC example
+- Tested: 22/22 (iteration_8.json) - 10 backend + 12 frontend
 
 ## Prioritized Backlog
 
-### P0 (Next)
-- [ ] Word Parser Enhancement: Detect SECTION, LESSON:, TOPIC: markers in plain text
-- [ ] Blueprint-Driven Upload Flow: Teachers upload into specific blueprint sections
-- [ ] Coverage Dashboard: Approved question counts by Section -> Lesson -> Topic
+### P0 (Next - Phase 2 priorities)
+- [ ] Blueprint-Driven Upload Flow: Teachers select blueprint -> upload into specific sections
+- [ ] Coverage Dashboard: Approved question counts by Section -> Lesson -> Topic with low coverage warnings
+- [ ] Blueprint Health View: Required vs Available (approved) per section with coverage %
 
-### P1
+### P1 (After Phase 2)
 - [ ] HTML Storage Migration: `mammoth.convertToHtml()` for rich content
 - [ ] S3-Compatible Storage Setup: Abstraction layer for file uploads
 
@@ -75,4 +68,19 @@ Build a Question Bank + Blueprint + Question Paper Generation + Online Mock Test
 - [ ] PDF Enhancements: Tables, images, HTML formatting in output
 
 ### Technical Debt
-- [ ] `routes.ts` is ~6600 lines - refactor into modular route files (user deferred)
+- [ ] `routes.ts` is ~6700 lines - refactor into modular route files (user deferred)
+
+## Key API Endpoints
+- `GET /api/my-departments` - User's departments with enriched data
+- `GET /api/questions?departmentId=` - Department-filtered questions
+- `GET /api/blueprints?departmentId=` - Department-filtered blueprints
+- `GET /api/tests?departmentId=` - Department-filtered tests
+- `POST /api/teacher/upload/word/preview` - Parse .docx with hierarchy detection
+- `POST /api/teacher/upload/word/confirm` - Save parsed questions with departmentId
+
+## Database Schema (Key Tables)
+- `departments`: id, tenantId, classId, subjectId, name, headId
+- `userDepartments`: userId, departmentId, role
+- `questions`: id, departmentId, section, lesson, topic, contentFormat, contentHash
+- `blueprints`: id, departmentId, sections
+- `tests`: id, departmentId, blueprint
