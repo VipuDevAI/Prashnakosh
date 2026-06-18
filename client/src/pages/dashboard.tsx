@@ -83,73 +83,26 @@ export default function DashboardPage() {
   const config = roleConfig[user.role] || roleConfig.student;
 
   return (
-    <PageLayout>
-      <PageHeader>
-        <div className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-3">
-            <img 
-              src={BRAND.logo} 
-              alt={BRAND.name}
-              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white/50 dark:ring-slate-700/50"
-            />
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">{BRAND.name}</h1>
-            </div>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          Welcome, {user.name}
+        </h2>
+        <p className="text-sm text-white/40">
+          {activeDepartment 
+            ? `${activeDepartment.className} - ${activeDepartment.subjectName}`
+            : "Here's what's happening today"}
+        </p>
+      </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
-            <DepartmentSelector />
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" disabled title="Notifications coming soon" data-testid="button-notifications" className="hidden sm:flex">
-              <Bell className="w-5 h-5" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2" data-testid="button-user-menu">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                      {user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-left hidden sm:block">
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <Badge className={config.color} size="sm">{config.label}</Badge>
-                  </div>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleLogout} data-testid="menu-logout">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </PageHeader>
-
-      <PageContent>
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Welcome, {user.name}</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {activeDepartment 
-              ? `Current Department: ${activeDepartment.className} - ${activeDepartment.subjectName}`
-              : "Here's what's happening today"}
-          </p>
-        </div>
-
-        {user.role === "teacher" && <TeacherDashboard />}
-        {user.role === "student" && <StudentDashboard />}
-        {user.role === "parent" && <ParentDashboard />}
-        {user.role === "hod" && <HODDashboard />}
-        {user.role === "principal" && <PrincipalDashboard />}
-        {user.role === "exam_committee" && <ExamCommitteeDashboard />}
-        {(user.role === "admin" || user.role === "super_admin") && <AdminDashboard />}
-      </PageContent>
-      <AppFooter />
-    </PageLayout>
+      {user.role === "teacher" && <TeacherDashboard />}
+      {user.role === "student" && <StudentDashboard />}
+      {user.role === "parent" && <ParentDashboard />}
+      {user.role === "hod" && <HODDashboard />}
+      {user.role === "principal" && <PrincipalDashboard />}
+      {user.role === "exam_committee" && <ExamCommitteeDashboard />}
+      {(user.role === "admin" || user.role === "super_admin") && <AdminDashboard />}
+    </div>
   );
 }
 

@@ -237,23 +237,15 @@ export default function AcademicCoverageDashboard() {
     : [];
 
   return (
-    <PageLayout>
-      <PageHeader>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="btn-back">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold">Academic Coverage Dashboard</h1>
-            <p className="text-sm text-muted-foreground">
-              {activeDepartment ? `${activeDepartment.className} - ${activeDepartment.subjectName}` : "Select a department"}
-            </p>
-          </div>
-        </div>
-        <DepartmentSelector />
-      </PageHeader>
+    <div className="p-6 space-y-6">
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>Academic Coverage Dashboard</h2>
+        <p className="text-sm text-white/40">
+          {activeDepartment ? `${activeDepartment.className} - ${activeDepartment.subjectName}` : "Select a department"}
+        </p>
+      </div>
 
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="space-y-6">
         {!activeDepartmentId && (
           <Card><CardContent className="py-12 text-center text-muted-foreground">Select a department to view coverage</CardContent></Card>
         )}
@@ -378,17 +370,17 @@ export default function AcademicCoverageDashboard() {
           </>
         )}
       </div>
-    </PageLayout>
+    </div>
   );
 }
 
 // --- Summary Card ---
 function SummaryCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  const colorClass = color === "emerald" ? "text-emerald-600" : color === "amber" ? "text-amber-600" : color === "blue" ? "text-blue-600" : color === "red" ? "text-red-600" : "text-foreground";
+  const colorClass = color === "emerald" ? "text-emerald-400" : color === "amber" ? "text-amber-400" : color === "blue" ? "text-blue-400" : color === "red" ? "text-red-400" : "text-white";
   return (
-    <div className="text-center p-3 bg-muted/50 rounded-lg" data-testid={`summary-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+    <div className="text-center p-3 bg-white/[0.04] rounded-xl border border-white/[0.06]" data-testid={`summary-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <p className={`text-2xl font-bold ${colorClass}`}>{value}</p>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className="text-[10px] text-white/40 uppercase tracking-wide">{label}</p>
     </div>
   );
 }

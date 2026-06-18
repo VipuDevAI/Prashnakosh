@@ -10,10 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, Loader2 } from "lucide-react";
-import { Logo, LogoMark } from "@/components/logo";
-import { BRAND } from "@/lib/brand";
+import { LogIn, Loader2, Shield, BookOpen, GraduationCap } from "lucide-react";
 
 export default function LoginPage() {
   const [location, navigate] = useLocation();
@@ -22,7 +19,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      // Redirect based on user role
       if (user.role === "super_admin") {
         navigate("/superadmin");
       } else {
@@ -33,11 +29,7 @@ export default function LoginPage() {
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      schoolCode: "",
-      email: "",
-      password: "",
-    },
+    defaultValues: { schoolCode: "", email: "", password: "" },
   });
 
   const loginMutation = useMutation({
@@ -46,86 +38,114 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data: any) => {
-      if (!data || !data.user) {
-        toast({
-          title: "Login Failed",
-          description: "Invalid response from server",
-          variant: "destructive",
-        });
+      if (!data?.user) {
+        toast({ title: "Login failed", description: data?.error || "Invalid credentials", variant: "destructive" });
         return;
       }
       login(data.user, data.token);
-      
-      // Check if user must change password
-      if (data.user.mustChangePassword) {
-        toast({
-          title: "Password Change Required",
-          description: "Please change your password to continue",
-        });
-        navigate("/change-password");
-        return;
-      }
-      
-      toast({
-        title: "Welcome back!",
-        description: `Logged in as ${data.user.name}`,
-      });
-      
-      // Redirect super_admin to their dashboard
-      if (data.user.role === "super_admin") {
-        navigate("/superadmin");
-      } else {
-        navigate("/dashboard");
-      }
+      toast({ title: "Welcome back!", description: `Logged in as ${data.user.name}` });
     },
     onError: (error: any) => {
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid credentials",
-        variant: "destructive",
-      });
+      toast({ title: "Login failed", description: error.message || "Please check your credentials", variant: "destructive" });
     },
   });
 
-  const onSubmit = (data: LoginInput) => {
-    loginMutation.mutate(data);
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center cosmic-bg">
+        <Loader2 className="w-8 h-8 animate-spin text-[#D4AF37]" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen corporate-gradient flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col items-center mb-8" data-testid="img-logo">
-            <img 
-              src={BRAND.logo} 
-              alt={BRAND.name}
-              className="w-20 h-20 rounded-full object-cover shadow-xl ring-4 ring-white/50 dark:ring-slate-700/50 mb-4"
-            />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text text-transparent">
-              {BRAND.name}
+    <div className="min-h-screen cosmic-bg relative overflow-hidden flex" data-testid="login-page">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[#4F46E5]/8 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[#9333EA]/8 blur-[100px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[#D4AF37]/5 blur-[80px] animate-pulse" style={{ animationDelay: "4s" }} />
+      </div>
+
+      {/* Left Panel — Branding */}
+      <div className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 z-10">
+        <div>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#9333EA] flex items-center justify-center shadow-lg shadow-[#4F46E5]/20">
+              <BookOpen className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-light tracking-tight text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="text-[#D4AF37] font-semibold">Prashnakosh</span>
+              </h1>
+            </div>
+          </div>
+          <p className="text-5xl font-light text-white/90 mt-8 leading-tight tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="text-[#D4AF37]">Jignyasa</span> &bull; Knowledge &bull; Excellence
+          </p>
+          <p className="text-lg text-white/50 mt-4 max-w-lg leading-relaxed">
+            The premium academic assessment platform for schools and educational institutions. Create, manage, and deliver examinations with precision.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {[
+            { icon: <Shield className="w-5 h-5" />, title: "Secure Question Bank", desc: "Department-isolated, role-based access control" },
+            { icon: <BookOpen className="w-5 h-5" />, title: "Blueprint-Driven Papers", desc: "Generate Set A/B/C with lesson-balanced distribution" },
+            { icon: <GraduationCap className="w-5 h-5" />, title: "Online Mock Tests", desc: "Auto-graded assessments with instant results" },
+          ].map((f, i) => (
+            <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+              <div className="p-2.5 rounded-lg bg-[#4F46E5]/10 text-[#818CF8] flex-shrink-0">{f.icon}</div>
+              <div>
+                <h3 className="text-white font-medium text-sm">{f.title}</h3>
+                <p className="text-white/40 text-xs mt-0.5">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-white/30 text-xs">
+          Secure &bull; Reliable &bull; Built for Education
+        </div>
+      </div>
+
+      {/* Right Panel — Login Form */}
+      <div className="flex-1 flex items-center justify-center p-6 z-10">
+        <div className="w-full max-w-md" data-testid="login-form-container">
+          {/* Mobile branding */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#9333EA] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#4F46E5]/20">
+              <BookOpen className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-light text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <span className="text-[#D4AF37] font-semibold">Prashnakosh</span>
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">{BRAND.tagline}</p>
+            <p className="text-white/40 text-sm mt-1">Jignyasa &bull; Knowledge &bull; Excellence</p>
           </div>
 
-          <Card className="card-premium border-0 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.4)]">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-xl font-semibold text-[#0F172A] dark:text-[#F1F5F9]">Sign In</CardTitle>
-              <CardDescription className="text-[#64748B] dark:text-[#94A3B8]">Enter your school code and credentials</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          {/* Glass login card */}
+          <div className="glass-card p-8 space-y-6" data-testid="login-card">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                Welcome Back
+              </h2>
+              <p className="text-white/40 text-sm mt-1">Sign in to your account</p>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-5" data-testid="login-form">
                 <FormField
                   control={form.control}
                   name="schoolCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>School Code</FormLabel>
+                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">School Code</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           placeholder="Enter school code"
-                          data-testid="input-school-code"
+                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
+                          data-testid="login-school-code"
                         />
                       </FormControl>
                       <FormMessage />
@@ -138,13 +158,14 @@ export default function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">Email</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="email"
                           placeholder="Enter your email"
-                          data-testid="input-email"
+                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
+                          data-testid="login-email"
                         />
                       </FormControl>
                       <FormMessage />
@@ -157,13 +178,14 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">Password</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="password"
                           placeholder="Enter your password"
-                          data-testid="input-password"
+                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
+                          data-testid="login-password"
                         />
                       </FormControl>
                       <FormMessage />
@@ -173,36 +195,33 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  variant="premium"
-                  size="lg"
                   disabled={loginMutation.isPending}
-                  className="w-full mt-6"
-                  data-testid="button-login"
+                  className="w-full h-12 bg-gradient-to-r from-[#4F46E5] to-[#6366F1] hover:from-[#6366F1] hover:to-[#818CF8] text-white font-semibold rounded-lg shadow-lg shadow-[#4F46E5]/25 transition-all duration-300 hover:shadow-[#4F46E5]/40 hover:-translate-y-0.5"
+                  data-testid="login-submit-button"
                 >
                   {loginMutation.isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <LogIn className="w-5 h-5" />
-                      Sign In Securely
+                      <LogIn className="w-5 h-5 mr-2" />
+                      Sign In
                     </>
                   )}
                 </Button>
               </form>
             </Form>
-            </CardContent>
-          </Card>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 space-y-1">
+            <p className="text-white/20 text-xs">
+              Powered by{" "}
+              <span className="text-[#D4AF37]/60 font-medium">SmartGenEduX</span>
+              {" "}@ 2026
+            </p>
+            <p className="text-white/15 text-[10px] uppercase tracking-widest">Prashnakosh Beta</p>
+          </div>
         </div>
-      </div>
-      <footer className="py-4 px-4 sm:px-6 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
-        <div className="flex flex-col items-center gap-1 max-w-7xl mx-auto text-center">
-          <span>© 2025 {BRAND.footer.left}</span>
-          <span>{BRAND.footer.right}</span>
-        </div>
-      </footer>
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/10 to-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full blur-3xl" />
       </div>
     </div>
   );

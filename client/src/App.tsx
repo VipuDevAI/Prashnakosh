@@ -66,13 +66,15 @@ import SuperAdminUsers from "@/pages/superadmin/users";
 import SuperAdminReferenceMaterials from "@/pages/superadmin/reference-materials";
 import SuperAdminQuestionParser from "@/pages/superadmin/question-parser";
 
+import { AppShell } from "@/components/app-shell";
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center cosmic-bg">
+        <div className="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -81,7 +83,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/" />;
   }
 
-  return <Component />;
+  return (
+    <AppShell>
+      <Component />
+    </AppShell>
+  );
 }
 
 function Router() {
@@ -300,7 +306,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="prashnakosh-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="prashnakosh-theme">
         <TooltipProvider>
           <AuthProvider>
             <DepartmentProvider>

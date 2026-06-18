@@ -1,15 +1,13 @@
-import { BRAND } from "@/lib/brand";
-
-interface AppFooterProps {
-  className?: string;
-}
-
-export function AppFooter({ className = "" }: AppFooterProps) {
+export function AppFooter() {
   return (
-    <footer className={`py-4 px-6 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm ${className}`}>
-      <div className="max-w-6xl mx-auto flex flex-col items-center gap-1 text-sm text-slate-500 dark:text-slate-400 text-center">
-        <p>© 2025 {BRAND.footer.left}</p>
-        <p>{BRAND.footer.right}</p>
+    <footer className="py-4 px-4 sm:px-6 text-center border-t border-white/[0.06] bg-black/20 backdrop-blur-sm mt-auto">
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-white/30 text-sm">
+          Powered by{" "}
+          <span className="font-semibold text-[#D4AF37]/60">SmartGenEduX</span>
+          {" "}@ 2026
+        </span>
+        <span className="text-[10px] uppercase tracking-widest text-white/15">Prashnakosh Beta</span>
       </div>
     </footer>
   );
