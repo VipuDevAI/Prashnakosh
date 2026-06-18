@@ -1,30 +1,37 @@
-# Test Credentials
+# Test Credentials - Prashnakosh V1
 
 ## Super Admin
 - School Code: `SUPERADMIN`
 - Email: `superadmin@safal.com`
 - Password: `SuperAdmin@123`
 
-## School Admin (MVM Chennai)
+## School: MVM Chandigarh (MVMCHN)
+
+### Admin
 - School Code: `MVMCHN`
 - Email: `admin@mvm.com`
 - Password: `Admin@123`
-- Tenant ID: `5c7d9bbb-b3be-4057-892c-bd05c50bfa16`
 
-## HOD (Science)
+### HOD (Dr. Ram Kumar)
 - School Code: `MVMCHN`
 - Email: `hod.science@mvm.com`
 - Password: `Hod@12345`
-- Assigned: Head of IX_Science department
+- Departments: IX_Science, X_Science
 
-## Teacher (Science)
+### Teacher (Priya Singh)
 - School Code: `MVMCHN`
 - Email: `teacher.science@mvm.com`
 - Password: `Teacher@123`
-- Assigned: IX_Science, X_Science departments
+- Departments: IX_Science, X_Science
 
-## Test Data
-- 4 Classes: IX, X, XI, XII (grades 9-12)
-- 7 Subjects: Science, Mathematics, English, Hindi, Sanskrit, Social Science, Computer Science
-- 28 Departments auto-generated (4 classes × 7 subjects)
-- Wing: Senior Secondary (grades 9-12)
+## Department IDs
+- IX_Science: `9e5da805-3d9b-4ab4-9ca5-c8b6a983a716`
+- X_Science: `a5822520-0f9c-4225-b47e-86e8a453c5f7`
+- IX_English: `a450cb9b-8f0f-47dd-9c6f-11929f966810` (no users assigned - for security testing)
+
+## School Setup
+- Tenant ID: `1f0f1150-7322-498a-acb6-8a1e0f5b20f2`
+- Wing: Senior Secondary (ID: `7fa6148c-4849-4b5e-bb1a-f01896316719`)
+- Classes: IX, X, XI, XII
+- Subjects: Science, Mathematics, English, Hindi, Sanskrit, Social Science, Computer Science
+- Total Departments: 28 (4 classes x 7 subjects)
