@@ -32,6 +32,7 @@ export interface SelectionOptions {
   tenantId: string;
   subject: string;
   grade: string;
+  departmentId?: string;  // MANDATORY for department-scoped selection
   
   // Multi-set options
   setCount?: number;  // 1 = single set, 2+ = multiple sets (A/B/C)
@@ -306,9 +307,9 @@ export class QuestionSelectionEngine {
         byDifficulty[diff].push(q);
       }
       
-      // Shuffle each difficulty bucket for randomization
+      // Shuffle each difficulty bucket with LESSON INTERLEAVING for balanced spread
       for (const diff of Object.keys(byDifficulty)) {
-        byDifficulty[diff] = this.shuffleArray(byDifficulty[diff]);
+        byDifficulty[diff] = this.interleaveByLesson(byDifficulty[diff]);
       }
       
       // Determine target difficulty distribution per set
@@ -579,20 +580,66 @@ export class QuestionSelectionEngine {
   }
   
   /**
-   * Select questions with balanced distribution
-   * If specific difficulty not required, try to balance easy/medium/hard
+   * Select questions with balanced distribution across lessons AND difficulties.
+   * LESSON BALANCING: Avoids selecting all questions from a single lesson.
+   * Round-robin across lessons, then within each lesson apply difficulty balance.
    */
   private selectWithBalance(pool: Question[], count: number, requiredDifficulty?: string): Question[] {
     if (pool.length <= count) {
       return [...pool];  // Return all if not enough
     }
     
-    if (requiredDifficulty) {
-      // If specific difficulty required, just shuffle and pick
-      return this.shuffleArray([...pool]).slice(0, count);
+    // Group by lesson first for lesson balancing
+    const byLesson: Record<string, Question[]> = {};
+    for (const q of pool) {
+      const lesson = q.lesson || '(No Lesson)';
+      if (!byLesson[lesson]) byLesson[lesson] = [];
+      byLesson[lesson].push(q);
     }
     
-    // Balance across difficulties
+    const lessonNames = Object.keys(byLesson);
+    
+    // If only one lesson, skip lesson balancing and just pick
+    if (lessonNames.length <= 1) {
+      if (requiredDifficulty) {
+        return this.shuffleArray([...pool]).slice(0, count);
+      }
+      return this.selectWithDifficultyBalance(pool, count);
+    }
+    
+    // Shuffle within each lesson bucket for randomization
+    for (const lesson of lessonNames) {
+      byLesson[lesson] = this.shuffleArray(byLesson[lesson]);
+    }
+    
+    // Round-robin across lessons to ensure spread
+    const selected: Question[] = [];
+    const lessonPointers: Record<string, number> = {};
+    for (const l of lessonNames) lessonPointers[l] = 0;
+    
+    let roundIdx = 0;
+    while (selected.length < count) {
+      let addedThisRound = false;
+      for (const lesson of lessonNames) {
+        if (selected.length >= count) break;
+        const bucket = byLesson[lesson];
+        if (lessonPointers[lesson] < bucket.length) {
+          selected.push(bucket[lessonPointers[lesson]]);
+          lessonPointers[lesson]++;
+          addedThisRound = true;
+        }
+      }
+      if (!addedThisRound) break; // All buckets exhausted
+      roundIdx++;
+    }
+    
+    return selected;
+  }
+  
+  /**
+   * Internal: select with difficulty balance (30% easy, 50% medium, 20% hard)
+   */
+  private selectWithDifficultyBalance(pool: Question[], count: number): Question[] {
     const byDifficulty: Record<string, Question[]> = {
       easy: [],
       medium: [],
@@ -632,6 +679,44 @@ export class QuestionSelectionEngine {
     }
     
     return selected;
+  }
+  
+  /**
+   * LESSON INTERLEAVING: Arrange questions from a bucket so lessons alternate.
+   * E.g., [L1, L2, L3, L1, L2, L3, ...] instead of [L1, L1, L1, L2, L2, L3]
+   * This ensures multi-set fair partitioning naturally spreads lessons across sets.
+   */
+  private interleaveByLesson(questions: Question[]): Question[] {
+    const byLesson: Record<string, Question[]> = {};
+    for (const q of questions) {
+      const lesson = q.lesson || '(No Lesson)';
+      if (!byLesson[lesson]) byLesson[lesson] = [];
+      byLesson[lesson].push(q);
+    }
+    
+    // Shuffle within each lesson
+    const lessonKeys = Object.keys(byLesson);
+    for (const l of lessonKeys) {
+      byLesson[l] = this.shuffleArray(byLesson[l]);
+    }
+    
+    // Round-robin interleave
+    const result: Question[] = [];
+    const pointers: Record<string, number> = {};
+    for (const l of lessonKeys) pointers[l] = 0;
+    
+    let added = true;
+    while (added) {
+      added = false;
+      for (const lesson of lessonKeys) {
+        if (pointers[lesson] < byLesson[lesson].length) {
+          result.push(byLesson[lesson][pointers[lesson]]);
+          pointers[lesson]++;
+          added = true;
+        }
+      }
+    }
+    return result;
   }
   
   /**

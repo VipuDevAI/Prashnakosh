@@ -714,6 +714,7 @@ export class PgStorage implements IStorage {
           tenantId,
           subject: blueprint.subject || test.subject,
           grade: blueprint.grade || test.grade,
+          departmentId: blueprint.departmentId || test.departmentId || undefined,
           setCount: 1,
           shuffleQuestions: true,
           shuffleOptions: true,
@@ -802,7 +803,8 @@ export class PgStorage implements IStorage {
       score: autoScore,
       totalMarks,
       percentage: percentage.toFixed(2),
-      status: needsManualMarking ? "in_progress" : "submitted",
+      status: "submitted",
+      isSubmitted: true,
       submittedAt: new Date(),
     });
 
@@ -2242,10 +2244,15 @@ export class PgStorage implements IStorage {
     blueprint: Blueprint,
     options: SelectionOptions
   ): Promise<SelectionResult> {
-    // Get the question pool
-    const questionPool = await this.getQuestionsByTenant(options.tenantId);
+    // BLOCKER FIX: Use department-scoped query when departmentId is available
+    let questionPool: Question[];
+    if (options.departmentId) {
+      questionPool = await this.getQuestionsByDepartment(options.tenantId, options.departmentId);
+    } else {
+      questionPool = await this.getQuestionsByTenant(options.tenantId);
+    }
     
-    // Filter by subject and grade
+    // Filter by subject, grade, approved status, and not deleted
     const filteredPool = questionPool.filter(q => 
       q.subject === options.subject && 
       q.grade === options.grade &&
@@ -2293,13 +2300,20 @@ export class PgStorage implements IStorage {
     tenantId: string,
     subject: string,
     grade: string,
-    setCount: number = 1
+    setCount: number = 1,
+    departmentId?: string
   ): Promise<{
     valid: boolean;
     issues: string[];
     sectionAnalysis: { section: string; required: number; available: number; canFulfill: boolean }[];
   }> {
-    const questionPool = await this.getQuestionsByTenant(tenantId);
+    // Use department-scoped query when available
+    let questionPool: Question[];
+    if (departmentId) {
+      questionPool = await this.getQuestionsByDepartment(tenantId, departmentId);
+    } else {
+      questionPool = await this.getQuestionsByTenant(tenantId);
+    }
     const filteredPool = questionPool.filter(q => 
       q.subject === subject && 
       q.grade === grade &&
