@@ -223,6 +223,7 @@ export const questions = pgTable("questions", {
   passageId: varchar("passage_id"),
   instructionText: text("instruction_text"),
   subject: text("subject").notNull(),
+  section: text("section"), // Blueprint section: A, B, C, etc.
   lesson: text("lesson").notNull(), // was "chapter" — e.g., "Life Processes", "Motion"
   topic: text("topic"), // sub-unit — e.g., "Nutrition", "Distance"
   grade: text("grade").notNull(),

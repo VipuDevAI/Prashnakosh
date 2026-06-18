@@ -42,6 +42,7 @@ import TeacherUploadPage from "@/pages/teacher/upload";
 import TeacherWordUploadPage from "@/pages/teacher/word-upload";
 import TeacherManualEntryPage from "@/pages/teacher/manual-entry";
 import TeacherQuestionsPage from "@/pages/teacher/questions";
+import BlueprintUploadDashboard from "@/pages/teacher/blueprint-upload";
 import ChangePasswordPage from "@/pages/change-password";
 import AcademicYearsPage from "@/pages/admin/academic-years";
 import GradeConfigsPage from "@/pages/admin/grade-configs";
@@ -97,6 +98,9 @@ function Router() {
       </Route>
       <Route path="/teacher/upload">
         <ProtectedRoute component={TeacherUploadPage} />
+      </Route>
+      <Route path="/teacher/upload/blueprint">
+        <ProtectedRoute component={BlueprintUploadDashboard} />
       </Route>
       <Route path="/teacher/upload/word">
         <ProtectedRoute component={TeacherWordUploadPage} />

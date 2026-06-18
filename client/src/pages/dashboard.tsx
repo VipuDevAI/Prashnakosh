@@ -43,7 +43,7 @@ import {
   BookOpen, Clock, BarChart3, Users, Building2, Settings, LogOut, ChevronDown,
   PlayCircle, CheckCircle, Award, TrendingUp, Bell, FileCheck, Send, Lock,
   Printer, Shield, AlertTriangle, Download, ClipboardCheck, GraduationCap,
-  Plus, Image, RefreshCw, History, MessageSquare, Activity, ChevronRight, Trophy, Library
+  Plus, Image, RefreshCw, History, MessageSquare, Activity, ChevronRight, Trophy, Library, Layers
 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/logo";
 import { BRAND } from "@/lib/brand";
@@ -362,6 +362,27 @@ function TeacherDashboard() {
               </CardContent>
             </Card>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Blueprint Upload - Primary Action */}
+      <Card className="border-primary/30 bg-primary/5 dark:bg-primary/10" data-testid="blueprint-upload-card">
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Layers className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Blueprint Upload</h3>
+                <p className="text-sm text-muted-foreground">Upload questions section-by-section following the blueprint</p>
+              </div>
+            </div>
+            <Button onClick={() => navigate("/teacher/upload/blueprint")} data-testid="button-blueprint-upload">
+              <Upload className="w-4 h-4 mr-2" />
+              Open Blueprint Upload
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

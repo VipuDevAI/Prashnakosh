@@ -7,7 +7,7 @@ import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
 import * as XLSX from "xlsx";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer, PageBreak, BorderStyle } from "docx";
-import type { Attempt, AuthUser, WorkflowState, UserRole } from "@shared/schema";
+import type { Attempt, AuthUser, WorkflowState, UserRole, BlueprintSection } from "@shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { requireTenant, getTenantId, requireTenantId, TenantRequest } from "./middleware/tenant";
 import { uploadExamFile, getSignedDownloadUrl, deleteExamFile, initS3, isS3Configured, canUpload, canDownload } from "./services/s3-storage";
@@ -1489,6 +1489,8 @@ export async function registerRoutes(
       const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "";
       const departmentId = req.body.departmentId || null;
+      const targetSection = req.body.targetSection || null; // Blueprint section lock
+      const blueprintId = req.body.blueprintId || null;
 
       if (!subject || !grade) {
         return res.status(400).json({ error: "Subject and grade are required" });
@@ -1508,6 +1510,43 @@ export async function registerRoutes(
       }
 
       const parseResult = parseQuestionsFromTextWithPreview(text, subject, lesson, grade, tenantId);
+
+      // === SECTION LOCK VALIDATION ===
+      // If targetSection is specified (blueprint-driven upload), enforce section match
+      if (targetSection) {
+        const targetUpper = targetSection.trim().toUpperCase();
+        let mismatchCount = 0;
+        parseResult.questions.forEach((q, idx) => {
+          const qSection = (q.section || "").trim().toUpperCase();
+          if (qSection && qSection !== targetUpper) {
+            mismatchCount++;
+            parseResult.warnings.push(
+              `Q${idx + 1} (line): Belongs to Section ${q.section}, but upload target is Section ${targetSection}. This question will be reassigned to Section ${targetSection}.`
+            );
+            // Reassign to target section
+            q.section = targetSection;
+          } else if (!qSection) {
+            // Assign target section if none detected
+            q.section = targetSection;
+          }
+        });
+        if (mismatchCount > 0) {
+          parseResult.warnings.unshift(
+            `${mismatchCount} question(s) had section markers different from the target Section ${targetSection}. They have been reassigned.`
+          );
+        }
+        // Recalculate hierarchy summary after reassignment
+        parseResult.hierarchySummary = [];
+        const hierarchyMap = new Map<string, number>();
+        parseResult.questions.forEach(q => {
+          const key = `${q.section || ""}|${q.lesson || ""}|${q.topic || ""}`;
+          hierarchyMap.set(key, (hierarchyMap.get(key) || 0) + 1);
+        });
+        hierarchyMap.forEach((count, key) => {
+          const [section, lessonName, topic] = key.split("|");
+          parseResult.hierarchySummary!.push({ section, lesson: lessonName, topic, count });
+        });
+      }
 
       // === DUPLICATE DETECTION: Check parsed questions against existing pool ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
@@ -1555,6 +1594,8 @@ export async function registerRoutes(
           lesson,
           grade,
           filename: req.file.originalname,
+          targetSection: targetSection || undefined,
+          blueprintId: blueprintId || undefined,
         },
         rawQuestions: parseResult.questions,
       });
@@ -2805,6 +2846,100 @@ export function registerBlueprintRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
       res.json(blueprint);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Blueprint coverage: approved/pending question counts per section
+  app.get("/api/blueprints/:id/coverage", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const blueprint = await storage.getBlueprint(req.params.id);
+      if (!blueprint) {
+        return res.status(404).json({ error: "Blueprint not found" });
+      }
+      if (req.user?.role !== "super_admin" && blueprint.tenantId !== req.tenantId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Validate department access
+      if (blueprint.departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, blueprint.departmentId);
+        if (deptId === null) return;
+      }
+
+      // Get all questions in the same department
+      const deptQuestions = blueprint.departmentId
+        ? await storage.getQuestionsByDepartment(blueprint.tenantId, blueprint.departmentId)
+        : await storage.getQuestionsByTenant(blueprint.tenantId);
+
+      const sections = (blueprint.sections || []) as BlueprintSection[];
+      const coverage = sections.map(section => {
+        // Match questions to this section by section name (case-insensitive)
+        const sectionQuestions = deptQuestions.filter(q => {
+          const qSection = (q.section || "").trim().toUpperCase();
+          const bpSection = section.name.trim().toUpperCase();
+          // Match "A" to "A", "Section A" to "A", etc.
+          return qSection === bpSection || qSection === `SECTION ${bpSection}` || `SECTION ${qSection}` === bpSection;
+        });
+
+        const approved = sectionQuestions.filter(q => q.status === "approved").length;
+        const pending = sectionQuestions.filter(q => q.status === "pending_approval").length;
+        const rejected = sectionQuestions.filter(q => q.status === "rejected").length;
+        const draft = sectionQuestions.filter(q => q.status === "draft").length;
+        const total = sectionQuestions.length;
+        const required = section.questionCount || 0;
+        const coveragePercent = required > 0 ? Math.round((approved / required) * 100) : 0;
+
+        // Breakdown by lesson/topic
+        const lessonBreakdown: Record<string, { topics: Record<string, { approved: number; pending: number; total: number }>; total: number }> = {};
+        sectionQuestions.forEach(q => {
+          const lesson = q.lesson || "(No Lesson)";
+          const topic = q.topic || "(No Topic)";
+          if (!lessonBreakdown[lesson]) lessonBreakdown[lesson] = { topics: {}, total: 0 };
+          if (!lessonBreakdown[lesson].topics[topic]) lessonBreakdown[lesson].topics[topic] = { approved: 0, pending: 0, total: 0 };
+          lessonBreakdown[lesson].total++;
+          lessonBreakdown[lesson].topics[topic].total++;
+          if (q.status === "approved") {
+            lessonBreakdown[lesson].topics[topic].approved++;
+          } else if (q.status === "pending_approval") {
+            lessonBreakdown[lesson].topics[topic].pending++;
+          }
+        });
+
+        return {
+          sectionName: section.name,
+          marks: section.marks,
+          questionType: section.questionType,
+          questionCount: section.questionCount,
+          difficulty: section.difficulty,
+          required,
+          approved,
+          pending,
+          rejected,
+          draft,
+          total,
+          coveragePercent,
+          lessonBreakdown,
+        };
+      });
+
+      const totalRequired = sections.reduce((s, sec) => s + (sec.questionCount || 0), 0);
+      const totalApproved = coverage.reduce((s, c) => s + c.approved, 0);
+      const totalPending = coverage.reduce((s, c) => s + c.pending, 0);
+
+      res.json({
+        blueprintId: blueprint.id,
+        blueprintName: blueprint.name,
+        subject: blueprint.subject,
+        grade: blueprint.grade,
+        totalMarks: blueprint.totalMarks,
+        totalRequired,
+        totalApproved,
+        totalPending,
+        overallCoverage: totalRequired > 0 ? Math.round((totalApproved / totalRequired) * 100) : 0,
+        sections: coverage,
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

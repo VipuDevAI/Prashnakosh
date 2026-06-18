@@ -1,0 +1,85 @@
+{
+  "summary": "Tested Blueprint-Driven Upload feature for Prashnakosh V1. All 10 backend tests pass (100%). All 12 frontend tests pass (100%). Coverage endpoint returns section-wise stats with required/approved/pending/coveragePercent. Section lock validation correctly reassigns questions from wrong sections with warnings. Lesson breakdown shows Life Processes (3Q) and Motion (2Q) as expected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_blueprint_upload.py",
+    "/app/test_reports/pytest/pytest_blueprint_upload.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/blueprints/:id/coverage correctly returns section-wise coverage with required/approved/pending/coveragePercent",
+    "Coverage endpoint includes lessonBreakdown with topics and their approved/pending counts",
+    "Section lock validation (targetSection parameter) correctly reassigns questions from other sections with warnings",
+    "POST confirm endpoint saves questions with correct section/lesson/topic/departmentId",
+    "Blueprint Upload Dashboard shows 3 section cards (A, B, C) with stats",
+    "Upload button navigates to /teacher/upload/word with blueprintId and targetSection URL params",
+    "Word upload page shows 'Upload Section A Questions' title and blue section lock banner",
+    "Teacher dashboard has 'Blueprint Upload' card with 'Open Blueprint Upload' button"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_blueprint_upload.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (12/12 tests passed)"
+  },
+  "test_credentials": {
+    "teacher": {
+      "schoolCode": "MVMCHN",
+      "email": "teacher.science@mvm.com",
+      "password": "Teacher@123"
+    },
+    "hod": {
+      "schoolCode": "MVMCHN",
+      "email": "hod.science@mvm.com",
+      "password": "Hod@12345"
+    }
+  },
+  "seed_data_creation": "Used existing seeded data. Blueprint 'IX Science Half Yearly 2026' (ID: 9da18a60-202b-4d11-90d2-c634100cd7a0) with 3 sections (A, B, C). 7 questions in Section A (pending_approval status).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Blueprint-Driven Upload feature is fully functional. Coverage endpoint returns section-wise stats with lessonBreakdown. Section A has 7 pending questions with lessons: Life Processes (3Q: Nutrition 2, Respiration 1), Motion (2Q: Velocity 2), Test Confirm Lesson (2Q). Section lock validation works - questions from other sections are reassigned to target section with warnings. Blueprint Upload Dashboard at /teacher/upload/blueprint shows section cards with Required/Approved/Pending/Coverage stats. Upload button navigates to /teacher/upload/word?blueprintId=...&targetSection=A. Word upload page shows section lock banner.",
+  "verified_features": {
+    "backend_tests": [
+      "Test 1: GET /api/blueprints/:id/coverage returns 200 with correct structure - PASSED",
+      "Test 2: Coverage has section-wise stats (required/approved/pending/coveragePercent) - PASSED",
+      "Test 3: Section A has pending questions (7 pending) - PASSED",
+      "Test 4: Section A lesson breakdown shows Life Processes (3Q) and Motion (2Q) - PASSED",
+      "Test 5: Coverage endpoint requires authentication - PASSED",
+      "Test 6: Preview with targetSection=A reassigns questions from Section B with warnings - PASSED",
+      "Test 7: Confirm endpoint saves questions with correct metadata - PASSED",
+      "Test 8: GET /api/blueprints returns list of blueprints - PASSED",
+      "Test 9: GET /api/blueprints/:id returns specific blueprint with sections - PASSED",
+      "Test 10: Questions filtered by department - PASSED"
+    ],
+    "frontend_tests": [
+      "Test 1: Login page loads correctly - PASSED",
+      "Test 2: Teacher login successful - PASSED",
+      "Test 3: Teacher dashboard has 'Blueprint Upload' card - PASSED",
+      "Test 4: 'Open Blueprint Upload' button found on dashboard - PASSED",
+      "Test 5: Blueprint Upload Dashboard loads at /teacher/upload/blueprint - PASSED",
+      "Test 6: Blueprint selector dropdown works - PASSED",
+      "Test 7: 3 section cards (A, B, C) displayed after selecting blueprint - PASSED",
+      "Test 8: Section A shows Required/Approved/Pending/Coverage stats - PASSED",
+      "Test 9: 'Show Lesson Breakdown' toggle works for Section A - PASSED",
+      "Test 10: Lesson breakdown shows Life Processes, Motion with topic counts - PASSED",
+      "Test 11: Upload button navigates to /teacher/upload/word?blueprintId=...&targetSection=A - PASSED",
+      "Test 12: Word upload page shows 'Upload Section A Questions' title and section lock banner - PASSED"
+    ]
+  },
+  "department_ids": {
+    "IX_Science": "9e5da805-3d9b-4ab4-9ca5-c8b6a983a716",
+    "X_Science": "a5822520-0f9c-4225-b47e-86e8a453c5f7"
+  },
+  "blueprint_ids": {
+    "IX_Science_Half_Yearly_2026": "9da18a60-202b-4d11-90d2-c634100cd7a0"
+  }
+}

@@ -76,6 +76,11 @@ export default function TeacherWordUploadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  // Read blueprint context from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetSection = urlParams.get("targetSection") || null;
+  const blueprintId = urlParams.get("blueprintId") || null;
+
   const [file, setFile] = useState<File | null>(null);
   const [subject, setSubject] = useState("");
   const [chapter, setChapter] = useState("");
@@ -105,6 +110,12 @@ export default function TeacherWordUploadPage() {
       formData.append("grade", effectiveGrade || grade);
       if (activeDepartmentId) {
         formData.append("departmentId", activeDepartmentId);
+      }
+      if (targetSection) {
+        formData.append("targetSection", targetSection);
+      }
+      if (blueprintId) {
+        formData.append("blueprintId", blueprintId);
       }
 
       const token = localStorage.getItem("safal_token");
@@ -485,12 +496,18 @@ export default function TeacherWordUploadPage() {
         <PageHeader>
           <div className="flex items-center justify-between px-6 py-4">
             <div>
-              <h1 className="text-xl font-bold">Upload Word Document</h1>
-              <p className="text-sm text-muted-foreground">Upload a .docx file with questions in the required format</p>
+              <h1 className="text-xl font-bold">
+                {targetSection ? `Upload Section ${targetSection} Questions` : "Upload Word Document"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {targetSection 
+                  ? `Upload questions for Section ${targetSection} of the selected blueprint`
+                  : "Upload a .docx file with questions in the required format"}
+              </p>
             </div>
-            <Button variant="outline" onClick={() => navigate("/teacher/upload")} data-testid="button-back-modes">
+            <Button variant="outline" onClick={() => navigate(blueprintId ? "/teacher/upload/blueprint" : "/teacher/upload")} data-testid="button-back-modes">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {blueprintId ? "Back to Blueprint" : "Back"}
             </Button>
           </div>
         </PageHeader>
@@ -500,6 +517,16 @@ export default function TeacherWordUploadPage() {
           <AlertTitle>Required Document Format</AlertTitle>
           <AlertDescription>
             <div className="mt-2 space-y-2 text-sm">
+              {targetSection && (
+                <div className="mb-3 p-2 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">
+                    Uploading for Section {targetSection}
+                  </span>
+                  <span className="text-blue-600 dark:text-blue-400 ml-2 text-xs">
+                    Questions from other sections will be reassigned to Section {targetSection}
+                  </span>
+                </div>
+              )}
               <p><strong>Structure markers</strong> (plain text, no special formatting):</p>
               <pre className="bg-muted p-3 rounded text-xs leading-relaxed mt-1 overflow-x-auto whitespace-pre">
 {`SECTION A
