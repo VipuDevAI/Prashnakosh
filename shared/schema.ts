@@ -574,6 +574,12 @@ export type BlueprintSection = {
   difficulty?: DifficultyLevel;
   lessons?: string[]; // lesson names this section can draw from
   instructions?: string;
+  // Lesson-level question distribution for Lesson Weightage Engine
+  // Maps lesson name → { questionCount, optional per-topic breakdown }
+  lessonWeightage?: Record<string, {
+    questionCount: number;
+    topicWeightage?: Record<string, number>; // topic name → required question count
+  }>;
 };
 
 export const insertBlueprintSchema = createInsertSchema(blueprints).omit({ id: true });

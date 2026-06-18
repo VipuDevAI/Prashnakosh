@@ -1290,6 +1290,11 @@ function HODDashboard() {
       </Tabs>
 
       <GridContainer cols={3}>
+        <ContentCard title="Academic Coverage" description="Track approved questions coverage">
+          <CoinButton color="green" className="w-full mt-4" icon={<TrendingUp className="w-5 h-5" />} onClick={() => navigate("/hod/academic-coverage")} data-testid="button-academic-coverage">
+            View Coverage
+          </CoinButton>
+        </ContentCard>
         <ContentCard title="Analytics" description="View department stats">
           <CoinButton color="purple" className="w-full mt-4" icon={<BarChart3 className="w-5 h-5" />} onClick={() => navigate("/analytics")} data-testid="button-hod-analytics">
             View Analytics

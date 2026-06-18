@@ -2945,6 +2945,205 @@ export function registerBlueprintRoutes(app: Express) {
     }
   });
 
+  // =====================================================
+  // ACADEMIC COVERAGE DASHBOARD - Department-level coverage
+  // =====================================================
+  app.get("/api/departments/:id/academic-coverage", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const departmentId = req.params.id;
+      const deptId = await validateDepartmentAccess(req, res, departmentId);
+      if (deptId === null) return;
+
+      // Fetch department info
+      const dept = await storage.getDepartment(departmentId);
+      if (!dept) return res.status(404).json({ error: "Department not found" });
+
+      // Fetch all blueprints and questions for this department
+      const deptBlueprints = await storage.getBlueprintsByDepartment(tenantId, departmentId);
+      const deptQuestions = await storage.getQuestionsByDepartment(tenantId, departmentId);
+
+      // Build per-blueprint coverage
+      const blueprintsCoverage = deptBlueprints.map(bp => {
+        const sections = (bp.sections || []) as BlueprintSection[];
+
+        const sectionsCoverage = sections.map(section => {
+          // Match questions to this section
+          const sectionQuestions = deptQuestions.filter(q => {
+            const qSection = (q.section || "").trim().toUpperCase();
+            const bpSection = section.name.trim().toUpperCase();
+            return qSection === bpSection || qSection === `SECTION ${bpSection}` || `SECTION ${qSection}` === bpSection;
+          });
+
+          const approved = sectionQuestions.filter(q => q.status === "approved").length;
+          const pending = sectionQuestions.filter(q => q.status === "pending_approval").length;
+          const required = section.questionCount || 0;
+          const coveragePercent = required > 0 ? Math.round((approved / required) * 100) : 0;
+          const need = Math.max(0, required - approved);
+          const status = coveragePercent >= 100 ? "green" : coveragePercent >= 50 ? "yellow" : "red";
+
+          // Build lesson breakdown with required counts
+          const lessonMap: Record<string, {
+            approved: number; pending: number; total: number;
+            topics: Record<string, { approved: number; pending: number; total: number }>;
+          }> = {};
+
+          sectionQuestions.forEach(q => {
+            const lesson = q.lesson || "(No Lesson)";
+            const topic = q.topic || "(No Topic)";
+            if (!lessonMap[lesson]) lessonMap[lesson] = { approved: 0, pending: 0, total: 0, topics: {} };
+            if (!lessonMap[lesson].topics[topic]) lessonMap[lesson].topics[topic] = { approved: 0, pending: 0, total: 0 };
+            lessonMap[lesson].total++;
+            lessonMap[lesson].topics[topic].total++;
+            if (q.status === "approved") {
+              lessonMap[lesson].approved++;
+              lessonMap[lesson].topics[topic].approved++;
+            } else if (q.status === "pending_approval") {
+              lessonMap[lesson].pending++;
+              lessonMap[lesson].topics[topic].pending++;
+            }
+          });
+
+          // Calculate required per lesson/topic using lessonWeightage if available
+          const hasWeightage = section.lessonWeightage && Object.keys(section.lessonWeightage).length > 0;
+          const lessonNames = Object.keys(lessonMap);
+
+          const lessons = lessonNames.map(lessonName => {
+            const lData = lessonMap[lessonName];
+            // Get required from explicit weightage or distribute evenly
+            let lessonRequired = 0;
+            let topicWeightage: Record<string, number> | undefined;
+            if (hasWeightage && section.lessonWeightage![lessonName]) {
+              lessonRequired = section.lessonWeightage![lessonName].questionCount;
+              topicWeightage = section.lessonWeightage![lessonName].topicWeightage;
+            } else if (lessonNames.length > 0) {
+              lessonRequired = Math.ceil(required / lessonNames.length);
+            }
+
+            const topicNames = Object.keys(lData.topics);
+            const topics = topicNames.map(topicName => {
+              const tData = lData.topics[topicName];
+              let topicRequired = 0;
+              if (topicWeightage && topicWeightage[topicName]) {
+                topicRequired = topicWeightage[topicName];
+              } else if (topicNames.length > 0) {
+                topicRequired = Math.ceil(lessonRequired / topicNames.length);
+              }
+              const topicCoverage = topicRequired > 0 ? Math.round((tData.approved / topicRequired) * 100) : (tData.approved > 0 ? 100 : 0);
+              return {
+                name: topicName,
+                required: topicRequired,
+                approved: tData.approved,
+                pending: tData.pending,
+                total: tData.total,
+                coverage: Math.min(topicCoverage, 100),
+                need: Math.max(0, topicRequired - tData.approved),
+                status: topicCoverage >= 100 ? "green" : topicCoverage >= 50 ? "yellow" : "red",
+              };
+            });
+
+            const lessonCoverage = lessonRequired > 0 ? Math.round((lData.approved / lessonRequired) * 100) : (lData.approved > 0 ? 100 : 0);
+            return {
+              name: lessonName,
+              required: lessonRequired,
+              approved: lData.approved,
+              pending: lData.pending,
+              total: lData.total,
+              coverage: Math.min(lessonCoverage, 100),
+              need: Math.max(0, lessonRequired - lData.approved),
+              status: lessonCoverage >= 100 ? "green" : lessonCoverage >= 50 ? "yellow" : "red",
+              topics,
+            };
+          });
+
+          return {
+            sectionName: section.name,
+            marks: section.marks,
+            questionType: section.questionType,
+            questionCount: section.questionCount,
+            difficulty: section.difficulty,
+            required,
+            approved,
+            pending,
+            coverage: coveragePercent,
+            need,
+            status,
+            lessons,
+          };
+        });
+
+        const totalRequired = sections.reduce((s, sec) => s + (sec.questionCount || 0), 0);
+        const totalApproved = sectionsCoverage.reduce((s, c) => s + c.approved, 0);
+        const totalPending = sectionsCoverage.reduce((s, c) => s + c.pending, 0);
+        const overallCoverage = totalRequired > 0 ? Math.round((totalApproved / totalRequired) * 100) : 0;
+
+        return {
+          blueprintId: bp.id,
+          blueprintName: bp.name,
+          subject: bp.subject,
+          grade: bp.grade,
+          totalMarks: bp.totalMarks,
+          totalRequired,
+          totalApproved,
+          totalPending,
+          overallCoverage,
+          sections: sectionsCoverage,
+        };
+      });
+
+      // Department-level summary across all blueprints
+      const totalRequired = blueprintsCoverage.reduce((s, b) => s + b.totalRequired, 0);
+      const totalApproved = blueprintsCoverage.reduce((s, b) => s + b.totalApproved, 0);
+      const totalPending = blueprintsCoverage.reduce((s, b) => s + b.totalPending, 0);
+      const overallCoverage = totalRequired > 0 ? Math.round((totalApproved / totalRequired) * 100) : 0;
+
+      // Identify weak areas
+      const weakSections: { blueprint: string; section: string; coverage: number; need: number }[] = [];
+      const weakLessons: { blueprint: string; section: string; lesson: string; coverage: number; need: number }[] = [];
+      const weakTopics: { blueprint: string; section: string; lesson: string; topic: string; coverage: number; need: number }[] = [];
+
+      blueprintsCoverage.forEach(bp => {
+        bp.sections.forEach(sec => {
+          if (sec.coverage < 100) {
+            weakSections.push({ blueprint: bp.blueprintName, section: sec.sectionName, coverage: sec.coverage, need: sec.need });
+          }
+          sec.lessons.forEach(les => {
+            if (les.coverage < 100 && les.required > 0) {
+              weakLessons.push({ blueprint: bp.blueprintName, section: sec.sectionName, lesson: les.name, coverage: les.coverage, need: les.need });
+            }
+            les.topics.forEach(top => {
+              if (top.coverage < 100 && top.required > 0) {
+                weakTopics.push({ blueprint: bp.blueprintName, section: sec.sectionName, lesson: les.name, topic: top.name, coverage: top.coverage, need: top.need });
+              }
+            });
+          });
+        });
+      });
+
+      res.json({
+        departmentId,
+        departmentName: dept.name,
+        totalQuestions: deptQuestions.length,
+        totalApprovedQuestions: deptQuestions.filter(q => q.status === "approved").length,
+        totalPendingQuestions: deptQuestions.filter(q => q.status === "pending_approval").length,
+        blueprints: blueprintsCoverage,
+        summary: {
+          totalRequired,
+          totalApproved,
+          totalPending,
+          overallCoverage,
+          status: overallCoverage >= 100 ? "green" : overallCoverage >= 50 ? "yellow" : "red",
+          weakSections: weakSections.sort((a, b) => a.coverage - b.coverage),
+          weakLessons: weakLessons.sort((a, b) => a.coverage - b.coverage),
+          weakTopics: weakTopics.sort((a, b) => a.coverage - b.coverage),
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/blueprints", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
     try {
       const tenantId = requireTenantId(req, res);

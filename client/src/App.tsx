@@ -24,6 +24,7 @@ import HODQuestionsPage from "@/pages/hod/questions";
 import HODChaptersPage from "@/pages/hod/chapters";
 import HODBlueprintsPage from "@/pages/hod/blueprints";
 import BatchManagerPage from "@/pages/hod/batch-manager";
+import AcademicCoverageDashboard from "@/pages/hod/academic-coverage";
 import PrincipalApprovalPage from "@/pages/principal/approval";
 import CommitteePanelPage from "@/pages/committee/panel";
 import RiskAlertsPage from "@/pages/principal/risk-alerts";
@@ -194,6 +195,9 @@ function Router() {
       </Route>
       <Route path="/hod/blueprints">
         <ProtectedRoute component={HODBlueprintsPage} />
+      </Route>
+      <Route path="/hod/academic-coverage">
+        <ProtectedRoute component={AcademicCoverageDashboard} />
       </Route>
       <Route path="/hod/answer-key">
         <ProtectedRoute component={HODPaperGeneratorPage} />
