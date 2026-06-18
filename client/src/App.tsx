@@ -51,6 +51,7 @@ import BlueprintPoliciesPage from "@/pages/admin/blueprint-policies";
 import UserBulkUploadPage from "@/pages/admin/user-bulk-upload";
 import ReferenceLibraryPage from "@/pages/admin/reference-library";
 import StorageGovernancePage from "@/pages/admin/storage-governance";
+import DepartmentCMSPage from "@/pages/admin/department-cms";
 import StudentReferenceMaterialsPage from "@/pages/student/reference-materials";
 
 // Super Admin Pages
@@ -155,6 +156,9 @@ function Router() {
       </Route>
       <Route path="/admin/storage-governance">
         <ProtectedRoute component={StorageGovernancePage} />
+      </Route>
+      <Route path="/admin/departments">
+        <ProtectedRoute component={DepartmentCMSPage} />
       </Route>
       <Route path="/admin/storage">
         <ProtectedRoute component={StorageGovernancePage} />

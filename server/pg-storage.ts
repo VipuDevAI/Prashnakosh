@@ -4,7 +4,7 @@ import {
   type User, type InsertUser,
   type Tenant, type InsertTenant,
   type Question, type InsertQuestion,
-  type Chapter, type InsertChapter,
+  type Lesson, type InsertLesson,
   type Test, type InsertTest,
   type Attempt, type InsertAttempt,
   type PracticeSession, type InsertPracticeSession,
@@ -30,6 +30,10 @@ import {
   type SchoolExam, type InsertSchoolExam,
   type ReferenceMaterial, type InsertReferenceMaterial,
   type Batch, type InsertBatch,
+  type Department, type InsertDepartment,
+  type SchoolClass, type InsertSchoolClass,
+  type SchoolSubject, type InsertSchoolSubject,
+  type UserDepartment, type InsertUserDepartment,
   type WingType,
   type GradeGroup,
   type AuthUser,
@@ -39,7 +43,7 @@ import {
   users,
   tenants,
   questions,
-  chapters,
+  lessons,
   tests,
   attempts,
   practiceSessions,
@@ -65,6 +69,10 @@ import {
   schoolExams,
   referenceMaterials,
   batches,
+  schoolClasses,
+  schoolSubjects,
+  departments,
+  userDepartments,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -252,10 +260,10 @@ export class PgStorage implements IStorage {
     return db.select().from(questions).where(eq(questions.tenantId, tenantId));
   }
 
-  async getPracticeQuestions(tenantId: string, subject?: string, chapter?: string): Promise<Question[]> {
+  async getPracticeQuestions(tenantId: string, subject?: string, lesson?: string): Promise<Question[]> {
     let conditions = [eq(questions.tenantId, tenantId), eq(questions.isPractice, true)];
     if (subject) conditions.push(eq(questions.subject, subject));
-    if (chapter && chapter !== "all") conditions.push(eq(questions.chapter, chapter));
+    if (lesson && lesson !== "all") conditions.push(eq(questions.lesson, lesson));
     return db.select().from(questions).where(and(...conditions));
   }
 
@@ -275,8 +283,8 @@ export class PgStorage implements IStorage {
     subject: string, 
     options: {
       grade?: string;
-      chapter?: string;
-      chapters?: string[];
+      lesson?: string;
+      lessons?: string[];
       questionType?: string;
       objectiveOnly?: boolean;
       marks?: number;
@@ -295,11 +303,11 @@ export class PgStorage implements IStorage {
     if (options.marks) conditions.push(eq(questions.marks, options.marks));
     if (options.questionType) conditions.push(eq(questions.type, options.questionType));
     
-    // chapters array takes precedence over single chapter
-    if (options.chapters && options.chapters.length > 0) {
-      conditions.push(inArray(questions.chapter, options.chapters));
-    } else if (options.chapter) {
-      conditions.push(eq(questions.chapter, options.chapter));
+    // lessons array takes precedence over single lesson
+    if (options.lessons && options.lessons.length > 0) {
+      conditions.push(inArray(questions.lesson, options.lessons));
+    } else if (options.lesson) {
+      conditions.push(eq(questions.lesson, options.lesson));
     }
     
     let result = await db.select().from(questions).where(and(...conditions));
@@ -410,43 +418,43 @@ export class PgStorage implements IStorage {
     return passage;
   }
 
-  async getChapter(id: string): Promise<Chapter | undefined> {
-    const [chapter] = await db.select().from(chapters).where(eq(chapters.id, id));
-    return chapter;
+  async getLesson(id: string): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson;
   }
 
-  async getChaptersByTenant(tenantId: string): Promise<Chapter[]> {
-    return db.select().from(chapters).where(eq(chapters.tenantId, tenantId));
+  async getLessonsByTenant(tenantId: string): Promise<Lesson[]> {
+    return db.select().from(lessons).where(eq(lessons.tenantId, tenantId));
   }
 
-  async createChapter(insertChapter: InsertChapter): Promise<Chapter> {
-    const [chapter] = await db.insert(chapters).values({
-      ...insertChapter,
+  async createLesson(insertLesson: InsertLesson): Promise<Lesson> {
+    const [lesson] = await db.insert(lessons).values({
+      ...insertLesson,
       status: "draft",
       scoresRevealed: false,
     }).returning();
-    return chapter;
+    return lesson;
   }
 
-  async updateChapter(id: string, data: Partial<Chapter>): Promise<Chapter | undefined> {
-    const [updated] = await db.update(chapters).set(data).where(eq(chapters.id, id)).returning();
+  async updateLesson(id: string, data: Partial<Lesson>): Promise<Lesson | undefined> {
+    const [updated] = await db.update(lessons).set(data).where(eq(lessons.id, id)).returning();
     return updated;
   }
 
-  async unlockChapter(id: string): Promise<Chapter | undefined> {
-    return this.updateChapter(id, { status: "unlocked", unlockDate: new Date() });
+  async unlockLesson(id: string): Promise<Lesson | undefined> {
+    return this.updateLesson(id, { status: "unlocked", unlockDate: new Date() });
   }
 
-  async lockChapter(id: string): Promise<Chapter | undefined> {
-    return this.updateChapter(id, { status: "locked" });
+  async lockLesson(id: string): Promise<Lesson | undefined> {
+    return this.updateLesson(id, { status: "locked" });
   }
 
-  async setChapterDeadline(id: string, deadline: Date): Promise<Chapter | undefined> {
-    return this.updateChapter(id, { deadline });
+  async setLessonDeadline(id: string, deadline: Date): Promise<Lesson | undefined> {
+    return this.updateLesson(id, { deadline });
   }
 
-  async revealChapterScores(id: string): Promise<Chapter | undefined> {
-    return this.updateChapter(id, { scoresRevealed: true });
+  async revealLessonScores(id: string): Promise<Lesson | undefined> {
+    return this.updateLesson(id, { scoresRevealed: true });
   }
 
   async getTest(id: string): Promise<Test | undefined> {
@@ -574,15 +582,15 @@ export class PgStorage implements IStorage {
     return true;
   }
 
-  async startPracticeSession(tenantId: string, studentId: string, subject: string, chapter?: string): Promise<{ session: PracticeSession; questions: Question[] }> {
-    const practiceQuestions = await this.getPracticeQuestions(tenantId, subject, chapter);
+  async startPracticeSession(tenantId: string, studentId: string, subject: string, lesson?: string): Promise<{ session: PracticeSession; questions: Question[] }> {
+    const practiceQuestions = await this.getPracticeQuestions(tenantId, subject, lesson);
     const shuffled = shuffleArray(practiceQuestions).slice(0, 10);
 
     const [session] = await db.insert(practiceSessions).values({
       tenantId,
       studentId,
       subject,
-      chapter: chapter || null,
+      chapter: lesson || null,
       status: "active",
     }).returning();
 
@@ -614,14 +622,14 @@ export class PgStorage implements IStorage {
     tenantId: string,
     subject: string,
     grade: string,
-    sections: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; chapters?: string[] }[]
+    sections: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; lessons?: string[] }[]
   ): Promise<Question[]> {
     const selectedQuestions: Question[] = [];
     
     for (const section of sections) {
       const pool = await this.getFilteredAssessmentQuestions(tenantId, subject, {
         grade,
-        chapters: section.chapters,
+        lessons: section.lessons,
         questionType: section.questionType,
         marks: section.marks,
       });
@@ -1040,8 +1048,8 @@ export class PgStorage implements IStorage {
     return true;
   }
 
-  async updateChapterPortions(id: string, completedTopics: string[]): Promise<Chapter | undefined> {
-    return this.updateChapter(id, {});
+  async updateLessonPortions(id: string, completedTopics: string[]): Promise<Lesson | undefined> {
+    return this.updateLesson(id, {});
   }
 
   async getSubjectsByTenant(tenantId: string): Promise<{ id: string; name: string; classLevel: string }[]> {
@@ -1168,7 +1176,7 @@ export class PgStorage implements IStorage {
     testTitle: string;
     testType: string;
     subject: string;
-    chapter: string | null;
+    lesson: string | null;
     score: number | null;
     totalMarks: number | null;
     percentage: string | null;
@@ -1185,10 +1193,10 @@ export class PgStorage implements IStorage {
     const results = [];
     for (const a of studentAttempts) {
       const test = await this.getTest(a.testId);
-      let chapterName = null;
+      let lessonName = null;
       if (test?.chapterId) {
-        const chapter = await this.getChapter(test.chapterId);
-        chapterName = chapter?.name || null;
+        const lesson = await this.getLesson(test.chapterId);
+        lessonName = lesson?.name || null;
       }
       results.push({
         attemptId: a.id,
@@ -1196,7 +1204,7 @@ export class PgStorage implements IStorage {
         testTitle: test?.title || "Unknown Test",
         testType: test?.type || "mock",
         subject: test?.subject || "Unknown",
-        chapter: chapterName,
+        lesson: lessonName,
         score: a.score,
         totalMarks: a.totalMarks,
         percentage: a.percentage,
@@ -2296,10 +2304,10 @@ export class PgStorage implements IStorage {
   }
 
   /**
-   * Get chapter-wise question statistics for HOD dashboard
+   * Get lesson-wise question statistics for HOD dashboard
    */
-  async getChapterQuestionStats(tenantId: string, subject: string, grade?: string): Promise<{
-    chapter: string;
+  async getLessonQuestionStats(tenantId: string, subject: string, grade?: string): Promise<{
+    lesson: string;
     total: number;
     byType: Record<string, number>;
     byDifficulty: Record<string, number>;
@@ -2312,18 +2320,18 @@ export class PgStorage implements IStorage {
       !q.isDeleted
     );
 
-    // Group by chapter
-    const chapterMap = new Map<string, Question[]>();
+    // Group by lesson
+    const lessonMap = new Map<string, Question[]>();
     for (const q of filtered) {
-      if (!chapterMap.has(q.chapter)) {
-        chapterMap.set(q.chapter, []);
+      if (!lessonMap.has(q.lesson)) {
+        lessonMap.set(q.lesson, []);
       }
-      chapterMap.get(q.chapter)!.push(q);
+      lessonMap.get(q.lesson)!.push(q);
     }
 
     // Calculate stats
     const stats: any[] = [];
-    for (const [chapter, questions] of chapterMap) {
+    for (const [lesson, questions] of lessonMap) {
       const byType: Record<string, number> = {};
       const byDifficulty: Record<string, number> = {};
       const byStatus: Record<string, number> = {};
@@ -2335,7 +2343,7 @@ export class PgStorage implements IStorage {
       }
 
       stats.push({
-        chapter,
+        lesson,
         total: questions.length,
         byType,
         byDifficulty,
@@ -2343,7 +2351,7 @@ export class PgStorage implements IStorage {
       });
     }
 
-    return stats.sort((a, b) => a.chapter.localeCompare(b.chapter));
+    return stats.sort((a, b) => a.lesson.localeCompare(b.lesson));
   }
 
   // =====================================================
@@ -2402,6 +2410,113 @@ export class PgStorage implements IStorage {
     const [batch] = await db.select().from(batches)
       .where(and(eq(batches.id, student.batchId), eq(batches.testId, testId)));
     return batch;
+  }
+
+  // =====================================================
+  // DEPARTMENT CMS
+  // =====================================================
+
+  async getSchoolClasses(tenantId: string): Promise<SchoolClass[]> {
+    return db.select().from(schoolClasses)
+      .where(and(eq(schoolClasses.tenantId, tenantId), eq(schoolClasses.active, true)))
+      .orderBy(schoolClasses.sortOrder);
+  }
+
+  async createSchoolClass(data: InsertSchoolClass): Promise<SchoolClass> {
+    const [cls] = await db.insert(schoolClasses).values(data).returning();
+    return cls;
+  }
+
+  async updateSchoolClass(id: string, data: Partial<SchoolClass>): Promise<SchoolClass | undefined> {
+    const [cls] = await db.update(schoolClasses).set(data).where(eq(schoolClasses.id, id)).returning();
+    return cls;
+  }
+
+  async deleteSchoolClass(id: string): Promise<boolean> {
+    await db.update(schoolClasses).set({ active: false }).where(eq(schoolClasses.id, id));
+    return true;
+  }
+
+  async getSchoolSubjects(tenantId: string): Promise<SchoolSubject[]> {
+    return db.select().from(schoolSubjects)
+      .where(and(eq(schoolSubjects.tenantId, tenantId), eq(schoolSubjects.active, true)));
+  }
+
+  async createSchoolSubject(data: InsertSchoolSubject): Promise<SchoolSubject> {
+    const [subj] = await db.insert(schoolSubjects).values(data).returning();
+    return subj;
+  }
+
+  async updateSchoolSubject(id: string, data: Partial<SchoolSubject>): Promise<SchoolSubject | undefined> {
+    const [subj] = await db.update(schoolSubjects).set(data).where(eq(schoolSubjects.id, id)).returning();
+    return subj;
+  }
+
+  async deleteSchoolSubject(id: string): Promise<boolean> {
+    await db.update(schoolSubjects).set({ active: false }).where(eq(schoolSubjects.id, id));
+    return true;
+  }
+
+  async getDepartments(tenantId: string): Promise<Department[]> {
+    return db.select().from(departments)
+      .where(and(eq(departments.tenantId, tenantId), eq(departments.active, true)));
+  }
+
+  async getDepartment(id: string): Promise<Department | undefined> {
+    const [dept] = await db.select().from(departments).where(eq(departments.id, id));
+    return dept;
+  }
+
+  async createDepartment(data: InsertDepartment): Promise<Department> {
+    const [dept] = await db.insert(departments).values(data).returning();
+    return dept;
+  }
+
+  async updateDepartment(id: string, data: Partial<Department>): Promise<Department | undefined> {
+    const [dept] = await db.update(departments).set(data).where(eq(departments.id, id)).returning();
+    return dept;
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    await db.update(departments).set({ active: false }).where(eq(departments.id, id));
+    return true;
+  }
+
+  async getUserDepartments(userId: string): Promise<(UserDepartment & { department?: Department })[]> {
+    const assignments = await db.select().from(userDepartments)
+      .where(eq(userDepartments.userId, userId));
+    const result = [];
+    for (const a of assignments) {
+      const dept = await this.getDepartment(a.departmentId);
+      result.push({ ...a, department: dept });
+    }
+    return result;
+  }
+
+  async getDepartmentMembers(departmentId: string): Promise<(UserDepartment & { user?: User })[]> {
+    const assignments = await db.select().from(userDepartments)
+      .where(eq(userDepartments.departmentId, departmentId));
+    const result = [];
+    for (const a of assignments) {
+      const user = await this.getUser(a.userId);
+      result.push({ ...a, user });
+    }
+    return result;
+  }
+
+  async assignUserToDepartment(data: InsertUserDepartment): Promise<UserDepartment> {
+    // Check if already assigned
+    const existing = await db.select().from(userDepartments)
+      .where(and(eq(userDepartments.userId, data.userId), eq(userDepartments.departmentId, data.departmentId)));
+    if (existing.length > 0) return existing[0];
+    const [assignment] = await db.insert(userDepartments).values(data).returning();
+    return assignment;
+  }
+
+  async removeUserFromDepartment(userId: string, departmentId: string): Promise<boolean> {
+    await db.delete(userDepartments)
+      .where(and(eq(userDepartments.userId, userId), eq(userDepartments.departmentId, departmentId)));
+    return true;
   }
 }
 

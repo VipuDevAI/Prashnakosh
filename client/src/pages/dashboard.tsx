@@ -2309,6 +2309,10 @@ function AdminDashboard() {
                   <Building2 className="w-5 h-5 mr-2" />
                   Storage Governance
                 </CoinButton>
+                <CoinButton color="blue" onClick={() => navigate("/admin/departments")} data-testid="button-department-cms" className="w-full justify-start">
+                  <Building2 className="w-5 h-5 mr-2" />
+                  Department Management
+                </CoinButton>
               </div>
             </CardContent>
           </Card>

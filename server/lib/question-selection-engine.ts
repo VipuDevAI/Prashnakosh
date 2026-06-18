@@ -85,14 +85,14 @@ export interface SelectionStats {
   totalQuestionsRequested: number;
   totalQuestionsSelected: number;
   difficultyDistribution: Record<string, number>;
-  chapterDistribution: Record<string, number>;
+  lessonDistribution: Record<string, number>;
   typeDistribution: Record<string, number>;
   shortfalls: { section: string; shortage: number }[];
   // Per-set parity validation
   perSetStats?: {
     setName: string;
     difficultyDistribution: Record<string, number>;
-    chapterDistribution: Record<string, number>;
+    lessonDistribution: Record<string, number>;
     totalMarks: number;
   }[];
   overlapCount?: number;  // Should always be 0 for valid multi-set
@@ -283,7 +283,7 @@ export class QuestionSelectionEngine {
         if (section.questionType && q.type !== section.questionType) return false;
         if (section.marks && q.marks !== section.marks) return false;
         if (section.difficulty && q.difficulty !== section.difficulty) return false;
-        if (section.chapters?.length && !section.chapters.includes(q.chapter)) return false;
+        if (section.lessons?.length && !section.lessons.includes(q.lesson)) return false;
         return true;
       });
       
@@ -557,8 +557,8 @@ export class QuestionSelectionEngine {
       if (section.difficulty && q.difficulty !== section.difficulty) return false;
       
       // Chapter filter (if specified)
-      if (section.chapters && section.chapters.length > 0) {
-        if (!section.chapters.includes(q.chapter)) return false;
+      if (section.lessons && section.lessons.length > 0) {
+        if (!section.lessons.includes(q.lesson)) return false;
       }
       
       return true;
@@ -719,9 +719,9 @@ export class QuestionSelectionEngine {
     }
     
     // Chapter distribution (aggregate)
-    const chapterDistribution: Record<string, number> = {};
+    const lessonDistribution: Record<string, number> = {};
     for (const q of allQuestions) {
-      chapterDistribution[q.chapter] = (chapterDistribution[q.chapter] || 0) + 1;
+      lessonDistribution[q.lesson] = (lessonDistribution[q.lesson] || 0) + 1;
     }
     
     // Type distribution (aggregate)
@@ -746,16 +746,16 @@ export class QuestionSelectionEngine {
     // Per-set parity stats
     const perSetStats = sets.map(set => {
       const setDiffDist: Record<string, number> = {};
-      const setChapterDist: Record<string, number> = {};
+      const setLessonDist: Record<string, number> = {};
       for (const q of set.questions) {
         const diff = q.difficulty || 'medium';
         setDiffDist[diff] = (setDiffDist[diff] || 0) + 1;
-        setChapterDist[q.chapter] = (setChapterDist[q.chapter] || 0) + 1;
+        setLessonDist[q.lesson] = (setLessonDist[q.lesson] || 0) + 1;
       }
       return {
         setName: set.setName,
         difficultyDistribution: setDiffDist,
-        chapterDistribution: setChapterDist,
+        lessonDistribution: setLessonDist,
         totalMarks: set.totalMarks,
       };
     });
@@ -776,7 +776,7 @@ export class QuestionSelectionEngine {
       totalQuestionsRequested: totalRequested,
       totalQuestionsSelected: allQuestions.length,
       difficultyDistribution,
-      chapterDistribution,
+      lessonDistribution,
       typeDistribution,
       shortfalls,
       perSetStats,
@@ -828,7 +828,7 @@ export function validateBlueprintCapacity(
       if (section.questionType && q.type !== section.questionType) return false;
       if (section.marks && q.marks !== section.marks) return false;
       if (section.difficulty && q.difficulty !== section.difficulty) return false;
-      if (section.chapters?.length && !section.chapters.includes(q.chapter)) return false;
+      if (section.lessons?.length && !section.lessons.includes(q.lesson)) return false;
       return true;
     });
     

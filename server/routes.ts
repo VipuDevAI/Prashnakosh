@@ -305,93 +305,105 @@ export async function registerRoutes(
     }
   });
 
-  // Chapter routes - protected with auth and tenant isolation
-  app.get("/api/chapters", requireAuth, requireTenant, async (req, res) => {
+  // Lesson routes (was "chapters") - protected with auth and tenant isolation
+  app.get("/api/lessons", requireAuth, requireTenant, async (req, res) => {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
-      const chapters = await storage.getChaptersByTenant(tenantId);
-      res.json(chapters);
+      const lessonList = await storage.getLessonsByTenant(tenantId);
+      res.json(lessonList);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Create chapter
-  app.post("/api/chapters", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
+  // Backward compat: /api/chapters still works
+  app.get("/api/chapters", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const lessonList = await storage.getLessonsByTenant(tenantId);
+      res.json(lessonList);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create lesson
+  app.post("/api/lessons", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req, res) => {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const { name, subject, grade, isLocked } = req.body;
-      const chapter = await storage.createChapter({
+      const lesson = await storage.createLesson({
         tenantId,
         name,
         subject,
         grade,
         status: isLocked ? "locked" : "draft",
       });
-      res.json(chapter);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/chapters/:id/unlock", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/lessons/:id/unlock", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const chapter = await storage.unlockChapter(req.params.id);
-      if (!chapter) {
-        return res.status(404).json({ error: "Chapter not found" });
+      const lesson = await storage.unlockLesson(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
       }
-      if (req.user?.role !== "super_admin" && chapter.tenantId !== req.tenantId) {
+      if (req.user?.role !== "super_admin" && lesson.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      res.json(chapter);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/chapters/:id/lock", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/lessons/:id/lock", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const chapter = await storage.lockChapter(req.params.id);
-      if (!chapter) {
-        return res.status(404).json({ error: "Chapter not found" });
+      const lesson = await storage.lockLesson(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
       }
-      if (req.user?.role !== "super_admin" && chapter.tenantId !== req.tenantId) {
+      if (req.user?.role !== "super_admin" && lesson.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      res.json(chapter);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/chapters/:id/deadline", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/lessons/:id/deadline", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
       const { deadline } = req.body;
-      const chapter = await storage.setChapterDeadline(req.params.id, new Date(deadline));
-      if (!chapter) {
-        return res.status(404).json({ error: "Chapter not found" });
+      const lesson = await storage.setLessonDeadline(req.params.id, new Date(deadline));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
       }
-      if (req.user?.role !== "super_admin" && chapter.tenantId !== req.tenantId) {
+      if (req.user?.role !== "super_admin" && lesson.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      res.json(chapter);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/chapters/:id/reveal", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/lessons/:id/reveal", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const chapter = await storage.revealChapterScores(req.params.id);
-      if (!chapter) {
-        return res.status(404).json({ error: "Chapter not found" });
+      const lesson = await storage.revealLessonScores(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
       }
-      if (req.user?.role !== "super_admin" && chapter.tenantId !== req.tenantId) {
+      if (req.user?.role !== "super_admin" && lesson.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      res.json(chapter);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -400,12 +412,12 @@ export async function registerRoutes(
   // Practice routes - protected with auth and tenant isolation
   app.post("/api/practice/start", requireAuth, requireTenant, async (req, res) => {
     try {
-      const { subject, chapter } = req.body;
+      const { subject, lesson } = req.body;
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const studentId = req.user!.id;
       
-      const result = await storage.startPracticeSession(tenantId, studentId, subject, chapter);
+      const result = await storage.startPracticeSession(tenantId, studentId, subject, lesson);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1081,12 +1093,12 @@ export async function registerRoutes(
       if (!tenantId) return;
       const questions = await storage.getQuestionsByTenant(tenantId);
       
-      const rows = ["ID,Subject,Chapter,Topic,Type,Content,Correct Answer,Marks,Difficulty"];
+      const rows = ["ID,Subject,Lesson,Topic,Type,Content,Correct Answer,Marks,Difficulty"];
       for (const q of questions) {
         rows.push([
           q.id,
           q.subject,
-          q.chapter,
+          q.lesson,
           q.topic || "",
           q.type,
           `"${q.content.replace(/"/g, '""')}"`,
@@ -1291,13 +1303,13 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const subject = req.body.subject || "General";
-      const chapter = req.body.chapter || "";
+      const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "10";
 
       const result = await mammoth.extractRawText({ buffer: req.file.buffer });
       const text = result.value;
 
-      const questions = parseQuestionsFromText(text, subject, chapter, grade, tenantId);
+      const questions = parseQuestionsFromText(text, subject, lesson, grade, tenantId);
 
       if (questions.length === 0) {
         return res.status(400).json({ error: "No questions found in document" });
@@ -1366,7 +1378,7 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const subject = req.body.subject || "";
-      const chapter = req.body.chapter || "";
+      const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "";
 
       if (!subject || !grade) {
@@ -1380,7 +1392,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Document appears to be empty or contains only images/formatting" });
       }
 
-      const parseResult = parseQuestionsFromTextWithPreview(text, subject, chapter, grade, tenantId);
+      const parseResult = parseQuestionsFromTextWithPreview(text, subject, lesson, grade, tenantId);
 
       // === DUPLICATE DETECTION: Check parsed questions against existing pool ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
@@ -1420,7 +1432,7 @@ export async function registerRoutes(
         },
         metadata: {
           subject,
-          chapter,
+          lesson,
           grade,
           filename: req.file.originalname,
         },
@@ -1562,7 +1574,7 @@ export async function registerRoutes(
       if (!tenantId) return;
       const user = req.user as AuthUser;
 
-      const { content, type, subject, chapter, grade, options, correctAnswer, marks, difficulty, imageUrl, passageId } = req.body;
+      const { content, type, subject, lesson, chapter, grade, options, correctAnswer, marks, difficulty, imageUrl, passageId } = req.body;
 
       if (!content || content.length < 10) {
         return res.status(400).json({ error: "Question content is required (minimum 10 characters)" });
@@ -1643,7 +1655,7 @@ export async function registerRoutes(
         content,
         type,
         subject,
-        chapter: chapter || null,
+        lesson: lesson || chapter || "",
         grade,
         topic: null,
         options: type === "mcq" ? options : null,
@@ -1759,7 +1771,7 @@ export async function registerRoutes(
   // =====================================================
 
   // Get chapter-wise question statistics
-  app.get("/api/hod/chapter-stats", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+  app.get("/api/hod/lesson-stats", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
@@ -1770,11 +1782,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Subject is required" });
       }
 
-      const stats = await storage.getChapterQuestionStats(
+      const stats = await storage.getLessonQuestionStats(
         tenantId, 
         subject as string, 
         grade as string | undefined
       );
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Backward compat alias
+  app.get("/api/hod/chapter-stats", requireAuth, requireTenant, requireRole("hod", "admin", "super_admin"), async (req: Request, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { subject, grade } = req.query;
+      if (!subject) return res.status(400).json({ error: "Subject is required" });
+      const stats = await storage.getLessonQuestionStats(tenantId, subject as string, grade as string | undefined);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1904,11 +1930,11 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const subject = req.body.subject || "General";
-      const chapter = req.body.chapter || "";
+      const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "10";
 
       const csvContent = req.file.buffer.toString("utf-8");
-      const questions = parseCSVQuestions(csvContent, subject, chapter, grade, tenantId);
+      const questions = parseCSVQuestions(csvContent, subject, lesson, grade, tenantId);
 
       if (questions.length === 0) {
         return res.status(400).json({ error: "No valid questions found in CSV" });
@@ -1947,7 +1973,8 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
-      const { sheetUrl, subject = "General", chapter = "", grade = "10" } = req.body;
+      const { sheetUrl, subject = "General", lesson, chapter, grade = "10" } = req.body;
+      const lessonVal = lesson || chapter || "";
 
       if (!sheetUrl) {
         return res.status(400).json({ error: "Sheet URL is required" });
@@ -1969,7 +1996,7 @@ export async function registerRoutes(
       }
 
       const csvContent = await response.text();
-      const questions = parseCSVQuestions(csvContent, subject, chapter, grade, tenantId);
+      const questions = parseCSVQuestions(csvContent, subject, lessonVal, grade, tenantId);
 
       if (questions.length === 0) {
         return res.status(400).json({ error: "No valid questions found in sheet" });
@@ -2045,8 +2072,8 @@ export async function registerRoutes(
             Type: "mcq, true_false, fill_blank, numerical, short_answer, long_answer, matching, assertion_reason",
             Difficulty: "easy, medium, hard",
             Marks: "Number of marks for the question (default: 1)",
-            Topic: "Optional. Topic within the chapter.",
-            Chapter: "Optional. Chapter name.",
+            Topic: "Optional. Topic within the lesson.",
+            Lesson: "Optional. Lesson name.",
             Subject: "Optional. Subject name (can be set during upload).",
           },
         });
@@ -2067,7 +2094,7 @@ export async function registerRoutes(
       if (!tenantId) return;
       
       const subject = req.body.subject || "General";
-      const chapter = req.body.chapter || "";
+      const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "10";
       
       let questions: any[] = [];
@@ -2079,11 +2106,11 @@ export async function registerRoutes(
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const csvContent = XLSX.utils.sheet_to_csv(sheet);
-        questions = parseCSVQuestions(csvContent, subject, chapter, grade, tenantId);
+        questions = parseCSVQuestions(csvContent, subject, lesson, grade, tenantId);
       } else {
         // Handle CSV files
         const csvContent = req.file.buffer.toString("utf-8");
-        questions = parseCSVQuestions(csvContent, subject, chapter, grade, tenantId);
+        questions = parseCSVQuestions(csvContent, subject, lesson, grade, tenantId);
       }
       
       const validationErrors: { row: number; field: string; message: string }[] = [];
@@ -2236,7 +2263,7 @@ interface ParsedQuestionResult {
 function parseQuestionsFromTextWithPreview(
   text: string, 
   subject: string, 
-  chapter: string, 
+  lesson: string, 
   grade: string, 
   tenantId: string
 ): ParsedQuestionResult {
@@ -2336,7 +2363,7 @@ function parseQuestionsFromTextWithPreview(
       currentQuestion = {
         tenantId,
         subject,
-        chapter,
+        lesson,
         grade,
         topic: null,
         content: line.replace(qMatch[0], "").trim(),
@@ -2409,12 +2436,12 @@ function parseQuestionsFromTextWithPreview(
   return { questions, skippedContent, warnings };
 }
 
-function parseQuestionsFromText(text: string, subject: string, chapter: string, grade: string, tenantId: string): any[] {
-  const result = parseQuestionsFromTextWithPreview(text, subject, chapter, grade, tenantId);
+function parseQuestionsFromText(text: string, subject: string, lesson: string, grade: string, tenantId: string): any[] {
+  const result = parseQuestionsFromTextWithPreview(text, subject, lesson, grade, tenantId);
   return result.questions;
 }
 
-function parseCSVQuestions(csvContent: string, subject: string, chapter: string, grade: string, tenantId: string): any[] {
+function parseCSVQuestions(csvContent: string, subject: string, lesson: string, grade: string, tenantId: string): any[] {
   const questions: any[] = [];
   
   // Parse CSV properly handling multi-line quoted fields
@@ -2438,7 +2465,7 @@ function parseCSVQuestions(csvContent: string, subject: string, chapter: string,
     difficulty: headers.findIndex(h => h.includes("difficulty") || h.includes("level")),
     marks: headers.findIndex(h => h.includes("mark") || h.includes("point") || h.includes("score")),
     topic: headers.findIndex(h => h.includes("topic")),
-    chapter: headers.findIndex(h => h.includes("chapter")),
+    lesson: headers.findIndex(h => h.includes("lesson") || h.includes("chapter")),
     subject: headers.findIndex(h => h.includes("subject")),
   };
 
@@ -2461,13 +2488,13 @@ function parseCSVQuestions(csvContent: string, subject: string, chapter: string,
     const difficulty = colMap.difficulty >= 0 ? row[colMap.difficulty] || "medium" : "medium";
     const marks = colMap.marks >= 0 ? parseInt(row[colMap.marks]) || 1 : 1;
     const rowTopic = colMap.topic >= 0 ? row[colMap.topic] : null;
-    const rowChapter = colMap.chapter >= 0 ? row[colMap.chapter] || chapter : chapter;
+    const rowLesson = colMap.lesson >= 0 ? row[colMap.lesson] || lesson : lesson;
     const rowSubject = colMap.subject >= 0 ? row[colMap.subject] || subject : subject;
 
     questions.push({
       tenantId,
       subject: rowSubject,
-      chapter: rowChapter,
+      lesson: rowLesson,
       grade,
       topic: rowTopic,
       content: questionContent.trim(),
@@ -4062,18 +4089,32 @@ export function registerPaperGenerationRoutes(app: Express) {
   });
 
   // ============ Portions Routes - protected ============
-  app.patch("/api/chapters/:id/portions", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+  app.patch("/api/lessons/:id/portions", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const existing = await storage.getChapter(req.params.id);
+      const existing = await storage.getLesson(req.params.id);
       if (!existing) {
-        return res.status(404).json({ error: "Chapter not found" });
+        return res.status(404).json({ error: "Lesson not found" });
       }
       if (req.user?.role !== "super_admin" && existing.tenantId !== req.tenantId) {
         return res.status(403).json({ error: "Access denied" });
       }
       const { completedTopics } = req.body;
-      const chapter = await storage.updateChapterPortions(req.params.id, completedTopics);
-      res.json(chapter);
+      const lesson = await storage.updateLessonPortions(req.params.id, completedTopics);
+      res.json(lesson);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Backward compat alias
+  app.patch("/api/chapters/:id/portions", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
+    try {
+      const existing = await storage.getLesson(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Lesson not found" });
+      if (req.user?.role !== "super_admin" && existing.tenantId !== req.tenantId) return res.status(403).json({ error: "Access denied" });
+      const { completedTopics } = req.body;
+      const lesson = await storage.updateLessonPortions(req.params.id, completedTopics);
+      res.json(lesson);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -5679,8 +5720,8 @@ export function registerPaperGenerationRoutes(app: Express) {
       if (!email || !name || !password) {
         return res.status(400).json({ error: "email, name, and password are required" });
       }
-      if (!role || !["principal", "hod", "teacher", "student", "parent"].includes(role)) {
-        return res.status(400).json({ error: "Valid role is required (principal, hod, teacher, student, parent)" });
+      if (!role || !["principal", "hod", "teacher", "student", "parent", "admin"].includes(role)) {
+        return res.status(400).json({ error: "Valid role is required (principal, hod, teacher, student, parent, admin)" });
       }
 
       // Validate teacher requirements
@@ -5988,6 +6029,242 @@ export function registerPaperGenerationRoutes(app: Express) {
     try {
       const students = await storage.getStudentsByBatch(req.params.id);
       res.json(students.map(s => ({ id: s.id, name: s.name, email: s.email, grade: s.grade, section: s.section, rollNumber: s.rollNumber })));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // DEPARTMENT CMS - Classes, Subjects, Departments
+  // =====================================================
+
+  // --- School Classes ---
+  app.get("/api/admin/classes", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const classes = await storage.getSchoolClasses(tenantId);
+      res.json(classes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/classes", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { name, numericGrade, sortOrder } = req.body;
+      if (!name || numericGrade === undefined) return res.status(400).json({ error: "name and numericGrade required" });
+      const cls = await storage.createSchoolClass({ tenantId, name, numericGrade, sortOrder: sortOrder || numericGrade, active: true });
+      res.status(201).json(cls);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/classes/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const cls = await storage.updateSchoolClass(req.params.id, req.body);
+      if (!cls) return res.status(404).json({ error: "Class not found" });
+      res.json(cls);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/classes/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      await storage.deleteSchoolClass(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- School Subjects ---
+  app.get("/api/admin/subjects", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const subjects = await storage.getSchoolSubjects(tenantId);
+      res.json(subjects);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/subjects", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { name, code } = req.body;
+      if (!name) return res.status(400).json({ error: "name required" });
+      const subj = await storage.createSchoolSubject({ tenantId, name, code: code || name.substring(0, 3).toUpperCase(), active: true });
+      res.status(201).json(subj);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/subjects/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const subj = await storage.updateSchoolSubject(req.params.id, req.body);
+      if (!subj) return res.status(404).json({ error: "Subject not found" });
+      res.json(subj);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/subjects/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      await storage.deleteSchoolSubject(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Departments ---
+  app.get("/api/admin/departments", requireAuth, requireTenant, requireRole("admin", "super_admin", "hod"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const depts = await storage.getDepartments(tenantId);
+      // Enrich with class/subject names and member counts
+      const classes = await storage.getSchoolClasses(tenantId);
+      const subjects = await storage.getSchoolSubjects(tenantId);
+      const classMap = new Map(classes.map(c => [c.id, c]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s]));
+      
+      const enriched = await Promise.all(depts.map(async (d) => {
+        const members = await storage.getDepartmentMembers(d.id);
+        return {
+          ...d,
+          className: classMap.get(d.classId)?.name || d.classId,
+          numericGrade: classMap.get(d.classId)?.numericGrade,
+          subjectName: subjectMap.get(d.subjectId)?.name || d.subjectId,
+          memberCount: members.length,
+          headName: members.find(m => m.user?.id === d.headId)?.user?.name || null,
+        };
+      }));
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Auto-generate departments from class × subject combinations
+  app.post("/api/admin/departments/generate", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { classIds, subjectIds } = req.body;
+      if (!classIds?.length || !subjectIds?.length) return res.status(400).json({ error: "classIds and subjectIds required" });
+
+      const classes = await storage.getSchoolClasses(tenantId);
+      const subjects = await storage.getSchoolSubjects(tenantId);
+      const existingDepts = await storage.getDepartments(tenantId);
+      const existingKeys = new Set(existingDepts.map(d => `${d.classId}_${d.subjectId}`));
+
+      const created: any[] = [];
+      for (const classId of classIds) {
+        const cls = classes.find(c => c.id === classId);
+        if (!cls) continue;
+        for (const subjectId of subjectIds) {
+          const subj = subjects.find(s => s.id === subjectId);
+          if (!subj) continue;
+          const key = `${classId}_${subjectId}`;
+          if (existingKeys.has(key)) continue;
+          const dept = await storage.createDepartment({
+            tenantId,
+            classId,
+            subjectId,
+            name: `${cls.name}_${subj.name}`,
+            active: true,
+          });
+          created.push(dept);
+        }
+      }
+      res.status(201).json({ created: created.length, departments: created });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/departments/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { headId, headRoleLabel, active } = req.body;
+      const updates: any = {};
+      if (headId !== undefined) updates.headId = headId;
+      if (headRoleLabel !== undefined) updates.headRoleLabel = headRoleLabel;
+      if (active !== undefined) updates.active = active;
+      const dept = await storage.updateDepartment(req.params.id, updates);
+      if (!dept) return res.status(404).json({ error: "Department not found" });
+      
+      // If headId changed, auto-add as department member with 'hod' role
+      if (headId) {
+        await storage.assignUserToDepartment({ userId: headId, departmentId: req.params.id, role: "hod" });
+      }
+      res.json(dept);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/departments/:id", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      await storage.deleteDepartment(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Department Members ---
+  app.get("/api/admin/departments/:id/members", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const members = await storage.getDepartmentMembers(req.params.id);
+      res.json(members.map(m => ({
+        id: m.id,
+        userId: m.userId,
+        departmentId: m.departmentId,
+        role: m.role,
+        userName: m.user?.name,
+        userEmail: m.user?.email,
+        userRole: m.user?.role,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/departments/:id/members", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { userId, role } = req.body;
+      if (!userId || !role) return res.status(400).json({ error: "userId and role required" });
+      const assignment = await storage.assignUserToDepartment({ userId, departmentId: req.params.id, role });
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/departments/:deptId/members/:userId", requireAuth, requireTenant, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      await storage.removeUserFromDepartment(req.params.userId, req.params.deptId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's department assignments
+  app.get("/api/users/:userId/departments", requireAuth, requireTenant, async (req, res) => {
+    try {
+      const depts = await storage.getUserDepartments(req.params.userId);
+      res.json(depts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

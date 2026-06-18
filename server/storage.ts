@@ -12,7 +12,7 @@ import {
   type User, type InsertUser,
   type Tenant, type InsertTenant,
   type Question, type InsertQuestion,
-  type Chapter, type InsertChapter,
+  type Lesson, type InsertLesson,
   type Test, type InsertTest,
   type Attempt, type InsertAttempt,
   type PracticeSession, type InsertPracticeSession,
@@ -39,6 +39,10 @@ import {
   type SchoolExam, type InsertSchoolExam,
   type ReferenceMaterial, type InsertReferenceMaterial,
   type Batch, type InsertBatch,
+  type Department, type InsertDepartment,
+  type SchoolClass, type InsertSchoolClass,
+  type SchoolSubject, type InsertSchoolSubject,
+  type UserDepartment, type InsertUserDepartment,
   type WingType,
   type AuthUser,
   type QuestionStatus,
@@ -79,7 +83,7 @@ export interface IStorage {
   getQuestion(id: string): Promise<Question | undefined>;
   getQuestionsByIds(ids: string[]): Promise<Question[]>;
   getQuestionsByTenant(tenantId: string): Promise<Question[]>;
-  getPracticeQuestions(tenantId: string, subject?: string, chapter?: string): Promise<Question[]>;
+  getPracticeQuestions(tenantId: string, subject?: string, lesson?: string): Promise<Question[]>;
   getAssessmentQuestions(tenantId: string, subject: string, grade?: string): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   createQuestions(questions: InsertQuestion[]): Promise<Question[]>;
@@ -92,15 +96,15 @@ export interface IStorage {
   getPassagesByTenant(tenantId: string): Promise<Passage[]>;
   createPassage(passage: InsertPassage): Promise<Passage>;
   
-  // Chapters
-  getChapter(id: string): Promise<Chapter | undefined>;
-  getChaptersByTenant(tenantId: string): Promise<Chapter[]>;
-  createChapter(chapter: InsertChapter): Promise<Chapter>;
-  updateChapter(id: string, data: Partial<Chapter>): Promise<Chapter | undefined>;
-  unlockChapter(id: string): Promise<Chapter | undefined>;
-  lockChapter(id: string): Promise<Chapter | undefined>;
-  setChapterDeadline(id: string, deadline: Date): Promise<Chapter | undefined>;
-  revealChapterScores(id: string): Promise<Chapter | undefined>;
+  // Lessons (was Chapters)
+  getLesson(id: string): Promise<Lesson | undefined>;
+  getLessonsByTenant(tenantId: string): Promise<Lesson[]>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+  updateLesson(id: string, data: Partial<Lesson>): Promise<Lesson | undefined>;
+  unlockLesson(id: string): Promise<Lesson | undefined>;
+  lockLesson(id: string): Promise<Lesson | undefined>;
+  setLessonDeadline(id: string, deadline: Date): Promise<Lesson | undefined>;
+  revealLessonScores(id: string): Promise<Lesson | undefined>;
   
   // Tests
   getTest(id: string): Promise<Test | undefined>;
@@ -130,7 +134,7 @@ export interface IStorage {
   deleteUpload(id: string): Promise<boolean>;
   
   // Practice
-  startPracticeSession(tenantId: string, studentId: string, subject: string, chapter?: string): Promise<{ session: PracticeSession; questions: Question[] }>;
+  startPracticeSession(tenantId: string, studentId: string, subject: string, lesson?: string): Promise<{ session: PracticeSession; questions: Question[] }>;
   submitPractice(answers: Record<string, string>, questionIds: string[]): Promise<{ correct: number; total: number }>;
   
   // Exam Engine
@@ -199,12 +203,12 @@ export interface IStorage {
     tenantId: string,
     subject: string,
     grade: string,
-    sections: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; chapters?: string[] }[]
+    sections: { name: string; marks: number; questionCount: number; questionType: string; difficulty?: string; lessons?: string[] }[]
   ): Promise<Question[]>;
   
   // Additional Methods for New Pages
   deleteBlueprint(id: string): Promise<boolean>;
-  updateChapterPortions(id: string, completedTopics: string[]): Promise<Chapter | undefined>;
+  updateLessonPortions(id: string, completedTopics: string[]): Promise<Lesson | undefined>;
   getSubjectsByTenant(tenantId: string): Promise<{ id: string; name: string; classLevel: string }[]>;
   getMakeupTestsByTenant(tenantId: string): Promise<any[]>;
   createMakeupTest(data: any): Promise<any>;
@@ -234,7 +238,7 @@ export interface IStorage {
     testTitle: string;
     testType: string;
     subject: string;
-    chapter: string | null;
+    lesson: string | null;
     score: number | null;
     totalMarks: number | null;
     percentage: string | null;
@@ -412,6 +416,25 @@ export interface IStorage {
   removeStudentsFromBatch(batchId: string, studentIds: string[]): Promise<void>;
   getStudentsByBatch(batchId: string): Promise<User[]>;
   getBatchForStudentAndTest(studentId: string, testId: string): Promise<Batch | undefined>;
+  
+  // Department CMS
+  getSchoolClasses(tenantId: string): Promise<SchoolClass[]>;
+  createSchoolClass(data: InsertSchoolClass): Promise<SchoolClass>;
+  updateSchoolClass(id: string, data: Partial<SchoolClass>): Promise<SchoolClass | undefined>;
+  deleteSchoolClass(id: string): Promise<boolean>;
+  getSchoolSubjects(tenantId: string): Promise<SchoolSubject[]>;
+  createSchoolSubject(data: InsertSchoolSubject): Promise<SchoolSubject>;
+  updateSchoolSubject(id: string, data: Partial<SchoolSubject>): Promise<SchoolSubject | undefined>;
+  deleteSchoolSubject(id: string): Promise<boolean>;
+  getDepartments(tenantId: string): Promise<Department[]>;
+  getDepartment(id: string): Promise<Department | undefined>;
+  createDepartment(data: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, data: Partial<Department>): Promise<Department | undefined>;
+  deleteDepartment(id: string): Promise<boolean>;
+  getUserDepartments(userId: string): Promise<(UserDepartment & { department?: Department })[]>;
+  getDepartmentMembers(departmentId: string): Promise<(UserDepartment & { user?: User })[]>;
+  assignUserToDepartment(data: InsertUserDepartment): Promise<UserDepartment>;
+  removeUserFromDepartment(userId: string, departmentId: string): Promise<boolean>;
 }
 
 // =====================================================

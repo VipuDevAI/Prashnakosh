@@ -70,6 +70,69 @@ export const insertGradeConfigSchema = createInsertSchema(gradeConfigs).omit({ i
 export type InsertGradeConfig = z.infer<typeof insertGradeConfigSchema>;
 export type GradeConfig = typeof gradeConfigs.$inferSelect;
 
+// =====================================================
+// DEPARTMENT CMS - School Classes, Subjects, Departments
+// =====================================================
+
+// School Classes (CMS-managed by Admin)
+export const schoolClasses = pgTable("school_classes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  name: text("name").notNull(), // "IX", "X", "XI", "XII"
+  numericGrade: integer("numeric_grade").notNull(), // 9, 10, 11, 12
+  sortOrder: integer("sort_order").default(0),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertSchoolClassSchema = createInsertSchema(schoolClasses).omit({ id: true });
+export type InsertSchoolClass = z.infer<typeof insertSchoolClassSchema>;
+export type SchoolClass = typeof schoolClasses.$inferSelect;
+
+// School Subjects (CMS-managed by Admin)
+export const schoolSubjects = pgTable("school_subjects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  name: text("name").notNull(), // "Science", "Mathematics", "English"
+  code: text("code"), // "SCI", "MATH", "ENG"
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertSchoolSubjectSchema = createInsertSchema(schoolSubjects).omit({ id: true });
+export type InsertSchoolSubject = z.infer<typeof insertSchoolSubjectSchema>;
+export type SchoolSubject = typeof schoolSubjects.$inferSelect;
+
+// Departments (auto-generated from Class × Subject)
+export const departments = pgTable("departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  classId: varchar("class_id").notNull(), // FK → school_classes
+  subjectId: varchar("subject_id").notNull(), // FK → school_subjects
+  name: text("name").notNull(), // auto: "IX_Science", "X_Mathematics"
+  headId: varchar("head_id"), // department head user ID (HOD)
+  headRoleLabel: text("head_role_label").default("HOD"), // configurable: "HOD", "Department Coordinator", etc.
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true });
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Department = typeof departments.$inferSelect;
+
+// User-Department assignments (many-to-many)
+export const userDepartments = pgTable("user_departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  departmentId: varchar("department_id").notNull(),
+  role: text("role").notNull(), // "teacher", "hod"
+  assignedAt: timestamp("assigned_at").default(sql`now()`),
+});
+
+export const insertUserDepartmentSchema = createInsertSchema(userDepartments).omit({ id: true });
+export type InsertUserDepartment = z.infer<typeof insertUserDepartmentSchema>;
+export type UserDepartment = typeof userDepartments.$inferSelect;
+
 // User roles - Updated with HOD, Principal, Examination Committee
 export const userRoles = ["super_admin", "admin", "hod", "principal", "exam_committee", "teacher", "student", "parent"] as const;
 export type UserRole = typeof userRoles[number];
@@ -147,7 +210,9 @@ export type Passage = typeof passages.$inferSelect;
 export const questions = pgTable("questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
+  departmentId: varchar("department_id"), // FK → departments
   content: text("content").notNull(),
+  contentFormat: text("content_format").default("text"), // "text" | "html"
   type: text("type").notNull().$type<QuestionType>(),
   options: jsonb("options").$type<string[]>(),
   optionImages: jsonb("option_images").$type<string[]>(),
@@ -158,8 +223,8 @@ export const questions = pgTable("questions", {
   passageId: varchar("passage_id"),
   instructionText: text("instruction_text"),
   subject: text("subject").notNull(),
-  chapter: text("chapter").notNull(),
-  topic: text("topic"),
+  lesson: text("lesson").notNull(), // was "chapter" — e.g., "Life Processes", "Motion"
+  topic: text("topic"), // sub-unit — e.g., "Nutrition", "Distance"
   grade: text("grade").notNull(),
   difficulty: text("difficulty").$type<DifficultyLevel>().default("medium"),
   bloomLevel: text("bloom_level").$type<BloomLevel>(),
@@ -194,27 +259,28 @@ export const insertQuestionSchema = createInsertSchema(questions, {
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type Question = typeof questions.$inferSelect;
 
-// Chapter status
-export const chapterStatuses = ["draft", "locked", "unlocked", "completed"] as const;
-export type ChapterStatus = typeof chapterStatuses[number];
+// Lesson status (was "chapter status")
+export const lessonStatuses = ["draft", "locked", "unlocked", "completed"] as const;
+export type LessonStatus = typeof lessonStatuses[number];
 
-// Chapters
-export const chapters = pgTable("chapters", {
+// Lessons (was "chapters" — unit of curriculum under a department)
+export const lessons = pgTable("lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
+  departmentId: varchar("department_id"), // FK → departments
   name: text("name").notNull(),
   subject: text("subject").notNull(),
   grade: text("grade").notNull(),
   orderIndex: integer("order_index").default(0),
-  status: text("status").$type<ChapterStatus>().default("draft"),
+  status: text("status").$type<LessonStatus>().default("draft"),
   unlockDate: timestamp("unlock_date"),
   deadline: timestamp("deadline"),
   scoresRevealed: boolean("scores_revealed").default(false),
 });
 
-export const insertChapterSchema = createInsertSchema(chapters).omit({ id: true });
-export type InsertChapter = z.infer<typeof insertChapterSchema>;
-export type Chapter = typeof chapters.$inferSelect;
+export const insertLessonSchema = createInsertSchema(lessons).omit({ id: true });
+export type InsertLesson = z.infer<typeof insertLessonSchema>;
+export type Lesson = typeof lessons.$inferSelect;
 
 // Tests
 export const testTypes = ["unit_test", "review_test", "quarterly", "half_yearly", "revision", "preparatory", "annual", "mock"] as const;
@@ -241,6 +307,7 @@ export type WorkflowState = typeof workflowStates[number];
 export const tests = pgTable("tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
+  departmentId: varchar("department_id"), // FK → departments
   title: text("title").notNull(),
   type: text("type").$type<TestType>().notNull(),
   subject: text("subject").notNull(),
@@ -452,6 +519,9 @@ export type AuthUser = {
   userCode?: string | null;
   wingId?: string | null;
   subjects?: string[] | null;
+  // Department context
+  departmentIds?: string[]; // all departments user belongs to
+  activeDepartmentId?: string; // currently selected department
 };
 
 // API response types
@@ -472,6 +542,7 @@ export function calculateExamDuration(totalMarks: number): number {
 export const blueprints = pgTable("blueprints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
+  departmentId: varchar("department_id"), // FK → departments
   academicYearId: varchar("academic_year_id"), // Link to academic year for governance
   examFrameworkId: varchar("exam_framework_id"), // Link to specific exam type (legacy)
   examConfigId: varchar("exam_config_id"), // Link to admin exam config
@@ -500,7 +571,7 @@ export type BlueprintSection = {
   questionCount: number;
   questionType: QuestionType;
   difficulty?: DifficultyLevel;
-  chapters?: string[];
+  lessons?: string[]; // lesson names this section can draw from
   instructions?: string;
 };
 
