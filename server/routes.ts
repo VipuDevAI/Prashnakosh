@@ -3764,6 +3764,8 @@ export function registerPaperGenerationRoutes(app: Express) {
         setName: set.setName,
         questionIds: set.questions.map(q => q.id),
         totalMarks: set.totalMarks,
+        // Blueprint-assigned marks per question (decoupled from stored q.marks)
+        questionMarksMap: Object.fromEntries(set.questions.map(q => [q.id, q.marks || 0])),
       }));
       
       // Also store first set's questions in questionIds for backward compat
@@ -3873,6 +3875,17 @@ export function registerPaperGenerationRoutes(app: Express) {
     return Math.abs(hash) + 1;
   }
 
+  // Apply blueprint-assigned marks to questions from test's questionMarksMap
+  function applyBlueprintMarks(questions: Question[], storedSets: any[] | null) {
+    if (!storedSets) return questions;
+    const marksMap: Record<string, number> = {};
+    for (const s of storedSets) {
+      if (s.questionMarksMap) Object.assign(marksMap, s.questionMarksMap);
+    }
+    if (Object.keys(marksMap).length === 0) return questions;
+    return questions.map(q => marksMap[q.id] !== undefined ? { ...q, marks: marksMap[q.id] } : q);
+  }
+
   app.get("/api/tests/:id/paper-pdf", requireAuth, requireTenant, requireRole("hod", "exam_committee", "admin", "super_admin"), requireDownloadableState(), async (req, res) => {
     try {
       const test = (req as any).test;
@@ -3911,7 +3924,7 @@ export function registerPaperGenerationRoutes(app: Express) {
 
       // Only shuffle if no stored sets (backward compat)
       const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
-      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? applyBlueprintMarks(questions, storedSets as any) : seededShuffle(questions, shuffleSeed);
       
       const setLabel = storedSets && storedSets.length >= setNumber 
         ? ` - ${storedSets[setNumber - 1].setName}` 
@@ -4055,7 +4068,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       }
 
       const shuffleSeed = hashString(`${test.id}-set-${setNumber}`);
-      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? applyBlueprintMarks(questions, storedSets as any) : seededShuffle(questions, shuffleSeed);
       
       const setLabel = storedSets && storedSets.length >= setNumber 
         ? ` - ${storedSets[setNumber - 1].setName}` 
@@ -4148,7 +4161,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? applyBlueprintMarks(questions, storedSets as any) : seededShuffle(questions, shuffleSeed);
       
       const setLabel = storedSets && storedSets.length >= setNumber 
         ? ` - ${storedSets[setNumber - 1].setName}` 
@@ -4346,7 +4359,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         if (q) questions.push(q);
       }
 
-      const shuffledQuestions = storedSets ? questions : seededShuffle(questions, shuffleSeed);
+      const shuffledQuestions = storedSets ? applyBlueprintMarks(questions, storedSets as any) : seededShuffle(questions, shuffleSeed);
       
       const setLabel = storedSets && storedSets.length >= setNumber 
         ? ` - ${storedSets[setNumber - 1].setName}` 

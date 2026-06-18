@@ -282,7 +282,8 @@ export class QuestionSelectionEngine {
         if (this.options.subject && q.subject !== this.options.subject) return false;
         if (this.options.grade && q.grade !== this.options.grade) return false;
         if (section.questionType && q.type !== section.questionType) return false;
-        if (section.marks && q.marks !== section.marks) return false;
+        // DECOUPLED: Marks no longer used as selection filter.
+        // Blueprint assigns marks at paper generation time.
         if (section.difficulty && q.difficulty !== section.difficulty) return false;
         if (section.lessons?.length && !section.lessons.includes(q.lesson)) return false;
         return true;
@@ -371,6 +372,7 @@ export class QuestionSelectionEngine {
             ...q,
             sectionName: section.name,
             questionNumber: 0, // Will be renumbered later
+            marks: section.marks, // Blueprint assigns marks, not the question's stored value
           };
           
           if (this.options.mode === 'online' && this.options.shuffleOptions !== false) {
@@ -501,7 +503,8 @@ export class QuestionSelectionEngine {
         const selectedQ: SelectedQuestion = {
           ...q,
           sectionName: section.name,
-          questionNumber: questionNumber++
+          questionNumber: questionNumber++,
+          marks: section.marks, // Blueprint assigns marks, not the question's stored value
         };
         
         // Apply option shuffling for online mode
@@ -551,8 +554,8 @@ export class QuestionSelectionEngine {
       // Question type match
       if (section.questionType && q.type !== section.questionType) return false;
       
-      // Marks match (if specified)
-      if (section.marks && q.marks !== section.marks) return false;
+      // DECOUPLED: Marks no longer used as selection filter.
+      // Blueprint assigns marks at paper generation time.
       
       // Difficulty match (if specified)
       if (section.difficulty && q.difficulty !== section.difficulty) return false;
@@ -911,7 +914,7 @@ export function validateBlueprintCapacity(
     const pool = availableQuestions.filter(q => {
       if (q.status !== 'approved') return false;
       if (section.questionType && q.type !== section.questionType) return false;
-      if (section.marks && q.marks !== section.marks) return false;
+      // DECOUPLED: Marks no longer used for capacity validation.
       if (section.difficulty && q.difficulty !== section.difficulty) return false;
       if (section.lessons?.length && !section.lessons.includes(q.lesson)) return false;
       return true;

@@ -745,13 +745,30 @@ export class PgStorage implements IStorage {
       questionsData = shuffleArray(availableQuestions).slice(0, test.questionCount || 50);
     }
 
-    // Shuffle options for each MCQ in online mode
-    const questionsWithShuffledOptions = questionsData.map(q => {
-      if (q.options && q.options.length > 0 && q.correctAnswer && OBJECTIVE_TYPES.includes(q.type)) {
-        const shuffledOpts = shuffleArray([...q.options]);
-        return { ...q, options: shuffledOpts };
+    // Build blueprint marks map from test's questionSets
+    let questionMarksMap: Record<string, number> = {};
+    if (test.questionSets) {
+      const sets = test.questionSets as any[];
+      for (const s of sets) {
+        if (s.questionMarksMap) {
+          Object.assign(questionMarksMap, s.questionMarksMap);
+        }
       }
-      return q;
+    }
+
+    // Shuffle options for each MCQ in online mode
+    // Also override marks with blueprint-assigned values
+    const questionsWithShuffledOptions = questionsData.map(q => {
+      const overriddenQ = { ...q };
+      // Apply blueprint-assigned marks if available
+      if (questionMarksMap[q.id] !== undefined) {
+        overriddenQ.marks = questionMarksMap[q.id];
+      }
+      if (overriddenQ.options && overriddenQ.options.length > 0 && overriddenQ.correctAnswer && OBJECTIVE_TYPES.includes(overriddenQ.type)) {
+        const shuffledOpts = shuffleArray([...overriddenQ.options]);
+        return { ...overriddenQ, options: shuffledOpts };
+      }
+      return overriddenQ;
     });
 
     const attempt = await this.createAttempt({
@@ -783,12 +800,25 @@ export class PgStorage implements IStorage {
       ? await this.getQuestionsByIds(attempt.assignedQuestionIds)
       : [];
 
+    // Load blueprint-assigned marks from test's questionSets (decoupled from stored q.marks)
+    const test = await this.getTest(attempt.testId);
+    let questionMarksMap: Record<string, number> = {};
+    if (test?.questionSets) {
+      const sets = test.questionSets as any[];
+      for (const s of sets) {
+        if (s.questionMarksMap) {
+          Object.assign(questionMarksMap, s.questionMarksMap);
+        }
+      }
+    }
+
     let autoScore = 0;
     let autoTotal = 0;
     let needsManualMarking = false;
 
     for (const q of questionsData) {
-      const marks = q.marks || 1;
+      // Use blueprint-assigned marks if available, otherwise fall back to stored marks
+      const marks = questionMarksMap[q.id] ?? q.marks ?? 1;
       if (["short_answer", "long_answer"].includes(q.type)) {
         needsManualMarking = true;
       } else {
@@ -799,7 +829,6 @@ export class PgStorage implements IStorage {
       }
     }
 
-    const test = await this.getTest(attempt.testId);
     const totalMarks = test?.totalMarks || autoTotal;
     const percentage = totalMarks > 0 ? (autoScore / totalMarks) * 100 : 0;
 

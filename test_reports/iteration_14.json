@@ -1,0 +1,132 @@
+{
+  "summary": "Prashnakosh V1 Blueprint Marks Decoupling - All features verified. Backend: 16/16 tests passed. Login works for all 4 roles (Super Admin, HOD, Teacher, Student) with correct session TTL (Student=3h, others=24h). Session expiry returns 401 with SESSION_EXPIRED code. Blueprint validation endpoint (validate-multiset) returns capacity analysis. Multi-set generation (generate-multiset) stores questionMarksMap in questionSets. Select-by-blueprint returns questions with blueprint-assigned marks. Academic coverage dashboard loads correctly with section/lesson/topic breakdown. Frontend: Dark cosmic UI with glassmorphism applied. HOD dashboard has 4 tabs (Review Questions, Blueprint Manager, Generate Paper, Send for Approval). Sidebar navigation works across all pages. Question list shows original teacher marks as metadata.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_blueprint_marks_decoupling.py",
+    "/app/test_reports/pytest/pytest_blueprint_marks.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "question-selection-engine.ts: Lines 285, 555 correctly REMOVED marks filter from selection criteria",
+    "question-selection-engine.ts: Lines 370, 501 correctly override marks with section.marks (blueprint assigns marks)",
+    "routes.ts Line 3767: questionMarksMap correctly stored in questionSets JSONB",
+    "routes.ts Lines 3920,4071,4164,4362: applyBlueprintMarks helper correctly reads from questionMarksMap",
+    "pg-storage.ts: submitExam uses questionMarksMap for grading (line 821)",
+    "pg-storage.ts: startMockExam overrides marks from questionMarksMap (lines 764-765)",
+    "session-config.ts: Role-based TTL correctly defined (student=3h, others=24h)",
+    "auth.ts: Token expiry enforcement correctly returns SESSION_EXPIRED code"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_blueprint_marks_decoupling.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "test_credentials": {
+    "super_admin": {
+      "schoolCode": "SUPERADMIN",
+      "email": "superadmin@safal.com",
+      "password": "SuperAdmin@123",
+      "ttl": "24 hours"
+    },
+    "hod": {
+      "schoolCode": "MVMCHN",
+      "email": "hod.science@mvm.com",
+      "password": "Hod@12345",
+      "ttl": "24 hours"
+    },
+    "teacher": {
+      "schoolCode": "MVMCHN",
+      "email": "teacher.science@mvm.com",
+      "password": "Teacher@123",
+      "ttl": "24 hours"
+    },
+    "student": {
+      "schoolCode": "MVMCHN",
+      "email": "student1@mvm.com",
+      "password": "Student@123",
+      "ttl": "3 hours"
+    }
+  },
+  "seed_data_creation": "Used existing seeded data. Department 3bedf6c1-d838-4851-a27d-9774fa2b027a has 15 approved questions (12 mcq + 3 short_answer) out of 41 required by blueprint.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Blueprint marks decoupling fully implemented and tested. Key architectural change: selection engine no longer filters by marks - blueprint assigns marks at paper generation time. questionMarksMap stored in test.questionSets JSONB. Mock test grading + PDF/Word export all read from questionMarksMap. Multi-set generation correctly returns partial results with warnings when pool is insufficient. All login flows working with correct expiresAt field and role-based TTL.",
+  "verified_features": {
+    "login_all_roles": {
+      "status": "PASS",
+      "roles_tested": ["super_admin", "hod", "teacher", "student"],
+      "expiresAt_field": "Returned in all login responses",
+      "ttl_verified": {
+        "student": "3 hours",
+        "others": "24 hours"
+      }
+    },
+    "session_expiry": {
+      "status": "PASS",
+      "expired_token_response": "401 with SESSION_EXPIRED code",
+      "valid_token_access": "Protected endpoints accessible"
+    },
+    "validate_multiset": {
+      "status": "PASS",
+      "endpoint": "POST /api/tests/:id/validate-multiset",
+      "returns": "Capacity analysis with sectionAnalysis, remediation, maxSetsNoOverlap"
+    },
+    "generate_multiset": {
+      "status": "PASS",
+      "endpoint": "POST /api/tests/:id/generate-multiset",
+      "stores": "questionMarksMap in questionSets JSONB",
+      "returns": "Sets with sectionBreakdown, warnings, stats"
+    },
+    "select_by_blueprint": {
+      "status": "PASS",
+      "endpoint": "POST /api/tests/:id/select-by-blueprint",
+      "returns": "Selected questions with blueprint-assigned marks"
+    },
+    "academic_coverage": {
+      "status": "PASS",
+      "endpoint": "GET /api/departments/:id/academic-coverage",
+      "returns": "Department overview with sections, lessons, topics, coverage percentages"
+    },
+    "hod_dashboard": {
+      "status": "PASS",
+      "tabs": ["Review Questions", "Blueprint Manager", "Generate Paper", "Send for Approval"],
+      "sidebar_items": ["Dashboard", "Questions", "Blueprints", "Upload", "Approvals", "Coverage", "Paper Gen", "Mock Tests", "Analytics"]
+    },
+    "dark_cosmic_ui": {
+      "status": "PASS",
+      "glassmorphism_elements": "8 found on dashboard",
+      "theme": "Dark cosmic with gradient background"
+    },
+    "sidebar_navigation": {
+      "status": "PASS",
+      "pages_tested": ["/dashboard", "/hod/blueprints", "/hod/academic-coverage"]
+    },
+    "question_list_metadata": {
+      "status": "PASS",
+      "marks_field": "Present in all questions (original teacher marks)"
+    }
+  },
+  "api_endpoints_tested": [
+    "POST /api/auth/login - All 4 roles",
+    "POST /api/tests/:id/validate-multiset",
+    "POST /api/tests/:id/generate-multiset",
+    "POST /api/tests/:id/select-by-blueprint",
+    "GET /api/departments/:id/academic-coverage",
+    "GET /api/tests",
+    "GET /api/questions?departmentId=:id"
+  ],
+  "known_limitations": {
+    "question_pool": "Department has only 15 approved questions out of 41 required by blueprint",
+    "s3_upload": "S3/image upload not tested (missing AWS keys per instructions)"
+  }
+}
