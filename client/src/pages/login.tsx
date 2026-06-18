@@ -27,6 +27,14 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, isLoading, navigate, user]);
 
+  // Show session expired toast if redirected
+  useEffect(() => {
+    if (window.location.search.includes("expired=1")) {
+      toast({ title: "Session expired", description: "Please log in again to continue.", variant: "destructive" });
+      window.history.replaceState({}, "", "/");
+    }
+  }, [toast]);
+
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { schoolCode: "", email: "", password: "" },
@@ -42,7 +50,7 @@ export default function LoginPage() {
         toast({ title: "Login failed", description: data?.error || "Invalid credentials", variant: "destructive" });
         return;
       }
-      login(data.user, data.token);
+      login(data.user, data.token, data.expiresAt);
       toast({ title: "Welcome back!", description: `Logged in as ${data.user.name}` });
     },
     onError: (error: any) => {

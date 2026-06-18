@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "../storage";
 import type { AuthUser } from "@shared/schema";
+import { getSessionTTL, extractTokenTimestamp } from "../lib/session-config";
 
 const tokenUserCache = new Map<string, { user: AuthUser; expiry: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
+
+export { getSessionTTL } from "../lib/session-config";
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -20,6 +23,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   const cached = tokenUserCache.get(token);
   if (cached && cached.expiry > Date.now()) {
+    // Check session expiry even for cached tokens
+    const tokenTs = extractTokenTimestamp(token);
+    if (tokenTs) {
+      const ttl = getSessionTTL(cached.user.role);
+      if (Date.now() - tokenTs > ttl) {
+        tokenUserCache.delete(token);
+        return res.status(401).json({ error: "Session expired", code: "SESSION_EXPIRED" });
+      }
+    }
     req.user = cached.user;
     if (req.user.tenantId) {
       req.tenantId = req.user.tenantId;
@@ -37,6 +49,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   
   if (!user || !user.active) {
     return res.status(401).json({ error: "User not found or inactive" });
+  }
+
+  // Check token expiry based on role
+  const tokenTimestamp = extractTokenTimestamp(token);
+  if (tokenTimestamp) {
+    const ttl = getSessionTTL(user.role);
+    if (Date.now() - tokenTimestamp > ttl) {
+      return res.status(401).json({ error: "Session expired", code: "SESSION_EXPIRED" });
+    }
   }
 
   // Fetch user's department assignments

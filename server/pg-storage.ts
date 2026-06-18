@@ -95,6 +95,7 @@ import {
   type SelectionOptions,
   type SelectionResult
 } from "./lib/question-selection-engine";
+import { getSessionTTL } from "./lib/session-config";
 
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
@@ -115,6 +116,7 @@ export class PgStorage implements IStorage {
           eq(users.role, "super_admin")
         ));
       if (superAdmin) {
+        const now = Date.now();
         const authUser: AuthUser = {
           id: superAdmin.id,
           tenantId: superAdmin.tenantId,
@@ -126,7 +128,8 @@ export class PgStorage implements IStorage {
           mustChangePassword: superAdmin.mustChangePassword || false,
           userCode: superAdmin.userCode,
         };
-        return { user: authUser, token: `token-${superAdmin.id}-${Date.now()}` };
+        const ttl = getSessionTTL(superAdmin.role);
+        return { user: authUser, token: `token-${superAdmin.id}-${now}`, expiresAt: now + ttl };
       }
     }
 
@@ -164,7 +167,9 @@ export class PgStorage implements IStorage {
       departmentIds,
       activeDepartmentId: departmentIds[0] || undefined,
     };
-    return { user: authUser, token: `token-${user.id}-${Date.now()}` };
+    const ttl = getSessionTTL(user.role);
+    const now = Date.now();
+    return { user: authUser, token: `token-${user.id}-${now}`, expiresAt: now + ttl };
   }
 
   async getUser(id: string): Promise<User | undefined> {

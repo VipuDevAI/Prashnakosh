@@ -10,11 +10,10 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       "shadcn-card rounded-xl border",
-      "bg-white dark:bg-[hsl(210_25%_16%)]",
-      "border-[hsl(200_20%_92%)] dark:border-[hsl(210_20%_22%)]",
-      "text-[hsl(210_20%_20%)] dark:text-[hsl(200_20%_95%)]",
-      "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08),0_8px_16px_-8px_rgba(0,0,0,0.06)]",
-      "dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3),0_8px_16px_-8px_rgba(0,0,0,0.2)]",
+      "bg-white/[0.04] backdrop-blur-xl",
+      "border-white/[0.08]",
+      "text-white/80",
+      "shadow-[0_4px_20px_rgba(0,0,0,0.15)]",
       className
     )}
     {...props}
@@ -42,7 +41,7 @@ const CardTitle = React.forwardRef<
     ref={ref}
     className={cn(
       "text-2xl font-semibold leading-none tracking-tight",
-      "text-[hsl(210_25%_20%)] dark:text-[hsl(200_20%_95%)]",
+      "text-white",
       className
     )}
     {...props}
@@ -58,7 +57,7 @@ const CardDescription = React.forwardRef<
     ref={ref}
     className={cn(
       "text-sm",
-      "text-[hsl(210_15%_50%)] dark:text-[hsl(200_15%_60%)]",
+      "text-white/40",
       className
     )}
     {...props}

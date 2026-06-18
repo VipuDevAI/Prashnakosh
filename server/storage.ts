@@ -58,7 +58,7 @@ import {
 
 export interface IStorage {
   // Auth
-  authenticateUser(email: string, password: string, schoolCode: string): Promise<{ user: AuthUser; token: string } | null>;
+  authenticateUser(email: string, password: string, schoolCode: string): Promise<{ user: AuthUser; token: string; expiresAt: number } | null>;
   
   // Users
   getUser(id: string): Promise<User | undefined>;

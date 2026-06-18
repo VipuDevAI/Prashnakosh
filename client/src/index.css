@@ -194,6 +194,193 @@
   .bg-card, [class*="bg-card"] {
     color: hsl(var(--card-foreground));
   }
+
+  /* ============================================
+     PREMIUM SHADCN COMPONENT OVERRIDES
+     Applied globally so ALL pages inherit the dark cosmic theme.
+     ============================================ */
+
+  /* Cards - Glassmorphism treatment */
+  .shadcn-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    color: #E2E8F0 !important;
+  }
+
+  /* Card Headers */
+  [data-slot="card-header"] h3,
+  [data-slot="card-title"],
+  .card-title {
+    color: #F1F5F9 !important;
+  }
+
+  [data-slot="card-description"],
+  .card-description {
+    color: rgba(255, 255, 255, 0.4) !important;
+  }
+
+  /* Tables - Dark premium treatment */
+  table {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  thead tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  thead th,
+  th[class*="text-muted-foreground"] {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    transition: background-color 0.15s ease;
+  }
+
+  tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  td {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Badges - Premium dark variants */
+  [data-slot="badge"] {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    font-weight: 500;
+  }
+
+  /* Tabs - Premium glassmorphism */
+  [role="tablist"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+  }
+
+  [role="tab"] {
+    color: rgba(255, 255, 255, 0.4) !important;
+    border-radius: 8px !important;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  [role="tab"]:hover {
+    color: rgba(255, 255, 255, 0.6) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  [role="tab"][data-state="active"],
+  [role="tab"][aria-selected="true"] {
+    background: rgba(79, 70, 229, 0.2) !important;
+    color: #818CF8 !important;
+    border: 1px solid rgba(79, 70, 229, 0.3) !important;
+    box-shadow: 0 0 12px rgba(79, 70, 229, 0.1);
+  }
+
+  /* Muted/secondary backgrounds */
+  .bg-muted,
+  [class*="bg-muted"] {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Dialog/Modal - Dark glassmorphism */
+  [role="dialog"] > div,
+  [data-slot="dialog-content"] {
+    background: rgba(11, 10, 31, 0.95) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #E2E8F0;
+  }
+
+  /* Progress bars */
+  [role="progressbar"] {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  /* Select/Dropdown menus */
+  [data-slot="select-content"],
+  [role="listbox"],
+  [data-radix-popper-content-wrapper] [role="listbox"] {
+    background: rgba(22, 17, 58, 0.98) !important;
+    backdrop-filter: blur(24px) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  [role="option"] {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  [role="option"]:hover,
+  [role="option"][data-highlighted] {
+    background: rgba(79, 70, 229, 0.15) !important;
+    color: #E2E8F0 !important;
+  }
+
+  /* Separator/dividers */
+  [role="separator"],
+  hr {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* Dashed borders for upload areas */
+  .border-dashed {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Text color overrides for common patterns */
+  .text-muted-foreground {
+    color: rgba(255, 255, 255, 0.4) !important;
+  }
+
+  /* Green/Red status text ensure visibility on dark */
+  .text-green-600 { color: #34D399 !important; }
+  .text-red-600 { color: #F87171 !important; }
+  .text-yellow-600 { color: #FBBF24 !important; }
+  .text-blue-600 { color: #60A5FA !important; }
+  .text-purple-600 { color: #A78BFA !important; }
+  .text-amber-600 { color: #F59E0B !important; }
+
+  /* Button base overrides */
+  button[class*="bg-primary"] {
+    background: #4F46E5 !important;
+    color: white !important;
+  }
+
+  button[class*="bg-primary"]:hover {
+    background: #4338CA !important;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
 }
 
 @layer components {

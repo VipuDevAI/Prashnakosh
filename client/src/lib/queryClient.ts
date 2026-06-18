@@ -1,6 +1,22 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+function handleSessionExpired() {
+  localStorage.removeItem("safal_user");
+  localStorage.removeItem("safal_token");
+  localStorage.removeItem("safal_expires_at");
+  if (!window.location.search.includes("expired=1")) {
+    window.location.href = "/?expired=1";
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
+  if (res.status === 401) {
+    const text = await res.text().catch(() => "");
+    if (text.includes("SESSION_EXPIRED") || text.includes("Session expired")) {
+      handleSessionExpired();
+    }
+    throw new Error(`${res.status}: ${text || res.statusText}`);
+  }
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
@@ -51,11 +67,23 @@ export const getQueryFn: <T>(options: {
       headers,
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      const text = await res.text().catch(() => "");
+      if (text.includes("SESSION_EXPIRED") || text.includes("Session expired")) {
+        handleSessionExpired();
+        throw new Error("Session expired");
+      }
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      throw new Error(`401: ${text || res.statusText}`);
     }
 
-    await throwIfResNotOk(res);
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
+
     return await res.json();
   };
 
@@ -80,6 +108,13 @@ export async function authFetch(url: string): Promise<any> {
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  if (res.status === 401) {
+    const text = await res.text().catch(() => "");
+    if (text.includes("SESSION_EXPIRED") || text.includes("Session expired")) {
+      handleSessionExpired();
+    }
+    throw new Error(`401: ${text || res.statusText}`);
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${text}`);
