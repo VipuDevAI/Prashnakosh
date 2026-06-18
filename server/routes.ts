@@ -1488,9 +1488,16 @@ export async function registerRoutes(
       const subject = req.body.subject || "";
       const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "";
+      const departmentId = req.body.departmentId || null;
 
       if (!subject || !grade) {
         return res.status(400).json({ error: "Subject and grade are required" });
+      }
+
+      // Validate department access
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null) return;
       }
 
       const result = await mammoth.extractRawText({ buffer: req.file.buffer });
@@ -1522,6 +1529,9 @@ export async function registerRoutes(
             correctAnswer: q.correctAnswer,
             marks: q.marks,
             difficulty: q.difficulty,
+            section: q.section || "",
+            lesson: q.lesson || "",
+            topic: q.topic || "",
             // Include duplicate status per question
             duplicateStatus: duplicateCheckResults.results[idx]?.status || 'unique',
             duplicateMatchId: duplicateCheckResults.results[idx]?.matchId,
@@ -1530,6 +1540,8 @@ export async function registerRoutes(
           totalParsed: parseResult.questions.length,
           skippedContent: parseResult.skippedContent,
           warnings: parseResult.warnings,
+          // Hierarchy summary: Section -> Lesson -> Topic -> count
+          hierarchySummary: parseResult.hierarchySummary || [],
           // Aggregate duplicate stats
           duplicateSummary: {
             exactDuplicates: duplicateCheckResults.exactDuplicates,
@@ -1558,7 +1570,7 @@ export async function registerRoutes(
       if (!tenantId) return;
       const user = req.user as AuthUser;
 
-      const { questions, metadata } = req.body;
+      const { questions, metadata, departmentId } = req.body;
 
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
         return res.status(400).json({ error: "No questions to save" });
@@ -1566,6 +1578,12 @@ export async function registerRoutes(
 
       if (!metadata?.subject || !metadata?.grade) {
         return res.status(400).json({ error: "Metadata with subject and grade required" });
+      }
+
+      // Validate department access if provided
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null) return;
       }
 
       const validQuestions: any[] = [];
@@ -1653,6 +1671,7 @@ export async function registerRoutes(
       const questionsToSave = questionsToProcess.map((q: any) => ({
         ...q,
         tenantId,
+        departmentId: departmentId || q.departmentId || null,
         uploadId: uploadRecord.id,
         status: "pending_approval",
         createdBy: user.id,
@@ -2366,6 +2385,7 @@ interface ParsedQuestionResult {
   questions: any[];
   skippedContent: { lineNumber: number; content: string; reason: string }[];
   warnings: string[];
+  hierarchySummary?: { section: string; lesson: string; topic: string; count: number }[];
 }
 
 function parseQuestionsFromTextWithPreview(
@@ -2381,12 +2401,41 @@ function parseQuestionsFromTextWithPreview(
   const lines = text.split("\n").map(l => l.trim());
   const nonEmptyLines = lines.map((l, i) => ({ line: l, originalIndex: i + 1 })).filter(l => l.line);
 
+  // === HIERARCHY CONTEXT ===
+  let currentSection: string | null = null;
+  let currentLesson: string | null = lesson || null;
+  let currentTopic: string | null = null;
+
   let currentQuestion: any = null;
   let currentQuestionStartLine = 0;
   let options: string[] = [];
   let assertionText: string | null = null;
   let reasonText: string | null = null;
   let hasMarks = false;
+  let inPassageBlock = false;
+  let passageContent = "";
+  let passageStartLine = 0;
+
+  // === HIERARCHY SUMMARY for preview ===
+  const hierarchySummary: { section: string; lesson: string; topic: string; count: number }[] = [];
+  function incrementHierarchy(sec: string, les: string, top: string) {
+    const existing = hierarchySummary.find(h => h.section === sec && h.lesson === les && h.topic === top);
+    if (existing) {
+      existing.count++;
+    } else {
+      hierarchySummary.push({ section: sec, lesson: les, topic: top, count: 1 });
+    }
+  }
+
+  // === SECTION/LESSON/TOPIC PATTERNS (plain text, Unicode, case-insensitive) ===
+  const sectionPattern = /^SECTION\s+([A-Z])\s*$/i;
+  const sectionWithDash = /^SECTION\s*[-–—:]\s*([A-Z])\s*$/i;
+  const lessonPattern = /^LESSON\s*[:：]\s*(.+)/i;
+  const topicPattern = /^TOPIC\s*[:：]\s*(.+)/i;
+  
+  // Passage detection - don't crash, capture as content
+  const passageStartPattern = /^(?:PASSAGE|Read the following passage|Read the following|Read the passage)/i;
+  const passageEndPattern = /^(?:Q\d+[\.\):\s]|Question\s*\d*[\.\):\s]|\d+[\.\)]\s|SECTION\s|LESSON\s*[:：]|TOPIC\s*[:：])/i;
 
   const skipPatterns = [
     { pattern: /\[image\]/i, reason: "Contains image reference" },
@@ -2395,11 +2444,6 @@ function parseQuestionsFromTextWithPreview(
     { pattern: /\[map\]/i, reason: "Contains map reference" },
     { pattern: /\[chart\]/i, reason: "Contains chart reference" },
     { pattern: /\[graph\]/i, reason: "Contains graph reference" },
-    { pattern: /^passage\s*:/i, reason: "Passage content (use manual entry)" },
-    { pattern: /^poem\s*:/i, reason: "Poem content (use manual entry)" },
-    { pattern: /^comprehension\s*:/i, reason: "Comprehension content (use manual entry)" },
-    { pattern: /^read the (following )?passage/i, reason: "Passage-based question (use manual entry)" },
-    { pattern: /^read the (following )?poem/i, reason: "Poem-based question (use manual entry)" },
   ];
 
   function finalizeQuestion() {
@@ -2440,22 +2484,106 @@ function parseQuestionsFromTextWithPreview(
       }
     }
 
+    // Track in hierarchy summary
+    incrementHierarchy(
+      currentQuestion.section || "(No Section)",
+      currentQuestion.lesson || "(No Lesson)",
+      currentQuestion.topic || "(No Topic)"
+    );
+
     questions.push(currentQuestion);
+  }
+
+  function finalizePassage() {
+    if (passageContent.trim()) {
+      // Store passage as a long_answer question for now (V1 passage support)
+      questions.push({
+        tenantId,
+        subject,
+        lesson: currentLesson || lesson || "",
+        grade,
+        section: currentSection || "",
+        topic: currentTopic || "",
+        content: passageContent.trim(),
+        type: "passage",
+        options: null,
+        correctAnswer: null,
+        difficulty: "medium",
+        marks: 5,
+        pool: "assessment",
+        status: "pending_approval",
+        imageUrl: null,
+        passageId: null,
+        uploadId: null,
+      });
+      incrementHierarchy(
+        currentSection || "(No Section)",
+        currentLesson || lesson || "(No Lesson)",
+        currentTopic || "(No Topic)"
+      );
+      warnings.push(`Passage detected at line ${passageStartLine}: Stored as passage content. Full passage grouping will be available in a later version.`);
+    }
+    inPassageBlock = false;
+    passageContent = "";
   }
 
   for (let i = 0; i < nonEmptyLines.length; i++) {
     const { line, originalIndex } = nonEmptyLines[i];
 
+    // === SECTION DETECTION ===
+    const sectionMatch = line.match(sectionPattern) || line.match(sectionWithDash);
+    if (sectionMatch) {
+      if (currentQuestion) { finalizeQuestion(); currentQuestion = null; options = []; assertionText = null; reasonText = null; hasMarks = false; }
+      if (inPassageBlock) { finalizePassage(); }
+      currentSection = sectionMatch[1].toUpperCase();
+      currentLesson = null; // Reset lesson on section change
+      currentTopic = null;  // Reset topic on section change
+      continue;
+    }
+
+    // === LESSON DETECTION (Unicode supported) ===
+    const lessonMatch = line.match(lessonPattern);
+    if (lessonMatch) {
+      if (currentQuestion) { finalizeQuestion(); currentQuestion = null; options = []; assertionText = null; reasonText = null; hasMarks = false; }
+      if (inPassageBlock) { finalizePassage(); }
+      currentLesson = lessonMatch[1].trim();
+      currentTopic = null; // Reset topic on lesson change
+      continue;
+    }
+
+    // === TOPIC DETECTION (Unicode supported) ===
+    const topicMatch = line.match(topicPattern);
+    if (topicMatch) {
+      if (currentQuestion) { finalizeQuestion(); currentQuestion = null; options = []; assertionText = null; reasonText = null; hasMarks = false; }
+      if (inPassageBlock) { finalizePassage(); }
+      currentTopic = topicMatch[1].trim();
+      continue;
+    }
+
+    // === PASSAGE DETECTION ===
+    if (passageStartPattern.test(line)) {
+      if (currentQuestion) { finalizeQuestion(); currentQuestion = null; options = []; assertionText = null; reasonText = null; hasMarks = false; }
+      inPassageBlock = true;
+      passageContent = line + "\n";
+      passageStartLine = originalIndex;
+      continue;
+    }
+
+    // If in passage block, accumulate until we hit a question or structural marker
+    if (inPassageBlock) {
+      if (passageEndPattern.test(line)) {
+        finalizePassage();
+        // Don't continue - let the line be processed below
+      } else {
+        passageContent += line + "\n";
+        continue;
+      }
+    }
+
+    // === SKIP PATTERNS (images, diagrams) ===
     const skipMatch = skipPatterns.find(p => p.pattern.test(line));
     if (skipMatch) {
-      if (currentQuestion) {
-        finalizeQuestion();
-        currentQuestion = null;
-        options = [];
-        assertionText = null;
-        reasonText = null;
-        hasMarks = false;
-      }
+      if (currentQuestion) { finalizeQuestion(); currentQuestion = null; options = []; assertionText = null; reasonText = null; hasMarks = false; }
       skippedContent.push({
         lineNumber: originalIndex,
         content: line.substring(0, 100) + (line.length > 100 ? "..." : ""),
@@ -2464,16 +2592,29 @@ function parseQuestionsFromTextWithPreview(
       continue;
     }
 
+    // === QUESTION DETECTION ===
     const qMatch = line.match(/^(?:Q\d+[\.\):\s]|Question\s*\d*[\.\):\s]|\d+[\.\)]\s)/i);
     if (qMatch) {
       finalizeQuestion();
 
+      // === VALIDATION WARNINGS ===
+      if (!currentSection) {
+        warnings.push(`Q at line ${originalIndex}: Question found before any SECTION marker`);
+      }
+      if (!currentLesson && !lesson) {
+        warnings.push(`Q at line ${originalIndex}: Question found before any LESSON marker`);
+      }
+      if (!currentTopic) {
+        warnings.push(`Q at line ${originalIndex}: Question found before any TOPIC marker`);
+      }
+
       currentQuestion = {
         tenantId,
         subject,
-        lesson,
+        lesson: currentLesson || lesson || "",
         grade,
-        topic: null,
+        section: currentSection || "",
+        topic: currentTopic || "",
         content: line.replace(qMatch[0], "").trim(),
         type: "short_answer",
         options: null,
@@ -2494,6 +2635,7 @@ function parseQuestionsFromTextWithPreview(
       continue;
     }
 
+    // === ASSERTION/REASON ===
     const assertionMatch = line.match(/^assertion\s*[:]\s*(.+)/i);
     if (assertionMatch && currentQuestion) {
       assertionText = assertionMatch[1].trim();
@@ -2506,18 +2648,21 @@ function parseQuestionsFromTextWithPreview(
       continue;
     }
 
+    // === MCQ OPTIONS ===
     const optMatch = line.match(/^(?:[A-D][\.\):\s]|[a-d][\.\):\s])/i);
     if (optMatch && currentQuestion) {
       options.push(line.replace(optMatch[0], "").trim());
       continue;
     }
 
+    // === ANSWER ===
     const ansMatch = line.match(/^(?:Answer|Ans|Correct Answer)\s*[:]\s*(.+)/i);
     if (ansMatch && currentQuestion) {
       currentQuestion.correctAnswer = ansMatch[1].trim();
       continue;
     }
 
+    // === MARKS ===
     const marksMatch = line.match(/^(?:Marks|Points)\s*[:]\s*(\d+)/i);
     if (marksMatch && currentQuestion) {
       const marksValue = parseInt(marksMatch[1], 10);
@@ -2528,20 +2673,24 @@ function parseQuestionsFromTextWithPreview(
       continue;
     }
 
+    // === DIFFICULTY ===
     const difficultyMatch = line.match(/^difficulty\s*[:]\s*(easy|medium|hard)/i);
     if (difficultyMatch && currentQuestion) {
       currentQuestion.difficulty = difficultyMatch[1].toLowerCase();
       continue;
     }
 
+    // === CONTINUATION (append to current question) ===
     if (currentQuestion) {
       currentQuestion.content += " " + line;
     }
   }
 
+  // Finalize last items
+  if (inPassageBlock) { finalizePassage(); }
   finalizeQuestion();
 
-  return { questions, skippedContent, warnings };
+  return { questions, skippedContent, warnings, hierarchySummary };
 }
 
 function parseQuestionsFromText(text: string, subject: string, lesson: string, grade: string, tenantId: string): any[] {

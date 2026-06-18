@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
 import { PageLayout, PageHeader } from "@/components/page-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Upload, FileText, AlertTriangle, CheckCircle, XCircle, Loader2, Copy, Ban } from "lucide-react";
+import { ArrowLeft, Upload, FileText, AlertTriangle, CheckCircle, XCircle, Loader2, Copy, Ban, BookOpen, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 
 interface PreviewQuestion {
   index: number;
@@ -22,6 +23,9 @@ interface PreviewQuestion {
   correctAnswer: string | null;
   marks: number;
   difficulty: string;
+  section?: string;
+  lesson?: string;
+  topic?: string;
   duplicateStatus?: 'exact_duplicate' | 'similar_found' | 'unique';
   duplicateMatchId?: string;
   duplicateSimilarity?: number;
@@ -40,6 +44,13 @@ interface DuplicateSummary {
   totalChecked: number;
 }
 
+interface HierarchyItem {
+  section: string;
+  lesson: string;
+  topic: string;
+  count: number;
+}
+
 interface PreviewResult {
   success: boolean;
   preview: {
@@ -47,11 +58,12 @@ interface PreviewResult {
     totalParsed: number;
     skippedContent: SkippedContent[];
     warnings: string[];
+    hierarchySummary?: HierarchyItem[];
     duplicateSummary?: DuplicateSummary;
   };
   metadata: {
     subject: string;
-    chapter: string;
+    lesson: string;
     grade: string;
     filename: string;
   };
@@ -60,6 +72,7 @@ interface PreviewResult {
 
 export default function TeacherWordUploadPage() {
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -70,6 +83,10 @@ export default function TeacherWordUploadPage() {
   const [previewData, setPreviewData] = useState<PreviewResult | null>(null);
   const [step, setStep] = useState<"upload" | "preview">("upload");
   const [excludedIndices, setExcludedIndices] = useState<Set<number>>(new Set());
+
+  // Auto-populate subject and grade from department context
+  const effectiveSubject = activeDepartment?.subjectName || subject;
+  const effectiveGrade = activeDepartment?.numericGrade?.toString() || grade;
 
   const { data: chapters = [] } = useQuery<any[]>({
     queryKey: ["/api/chapters"],
@@ -83,14 +100,18 @@ export default function TeacherWordUploadPage() {
       if (!file) throw new Error("No file selected");
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("subject", subject);
+      formData.append("subject", effectiveSubject || subject);
       formData.append("chapter", chapter);
-      formData.append("grade", grade);
+      formData.append("grade", effectiveGrade || grade);
+      if (activeDepartmentId) {
+        formData.append("departmentId", activeDepartmentId);
+      }
 
+      const token = localStorage.getItem("safal_token");
       const response = await fetch("/api/teacher/upload/word/preview", {
         method: "POST",
         body: formData,
-        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!response.ok) {
@@ -124,7 +145,6 @@ export default function TeacherWordUploadPage() {
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!previewData) throw new Error("No preview data");
-      // Filter out excluded questions (exact duplicates + user-excluded)
       const questionsToSave = previewData.rawQuestions.filter((_, idx) => !excludedIndices.has(idx));
       if (questionsToSave.length === 0) {
         throw new Error("No questions to save after removing duplicates");
@@ -132,7 +152,8 @@ export default function TeacherWordUploadPage() {
       const response = await apiRequest("POST", "/api/teacher/upload/word/confirm", {
         questions: questionsToSave,
         metadata: previewData.metadata,
-        forceUpload: true, // Already filtered client-side
+        departmentId: activeDepartmentId || undefined,
+        forceUpload: true,
       });
       return response.json();
     },
@@ -184,7 +205,9 @@ export default function TeacherWordUploadPage() {
   };
 
   const handlePreview = () => {
-    if (!file || !subject || !grade) {
+    const subj = effectiveSubject || subject;
+    const gr = effectiveGrade || grade;
+    if (!file || !subj || !gr) {
       toast({
         title: "Missing fields",
         description: "Please select a file, subject, and grade",
@@ -208,6 +231,15 @@ export default function TeacherWordUploadPage() {
   if (step === "preview" && previewData) {
     const importableCount = previewData.preview.questions.filter((_, idx) => !excludedIndices.has(idx)).length;
     const dupSummary = previewData.preview.duplicateSummary;
+    const hierarchy = previewData.preview.hierarchySummary || [];
+    
+    // Group hierarchy by section for display
+    const sectionGroups: Record<string, { lesson: string; topic: string; count: number }[]> = {};
+    hierarchy.forEach(h => {
+      const key = h.section || "(No Section)";
+      if (!sectionGroups[key]) sectionGroups[key] = [];
+      sectionGroups[key].push({ lesson: h.lesson, topic: h.topic, count: h.count });
+    });
     
     return (
       <PageLayout>
@@ -215,7 +247,7 @@ export default function TeacherWordUploadPage() {
           <PageHeader>
             <div className="flex items-center justify-between px-6 py-4">
               <div>
-                <h1 className="text-xl font-bold">Preview Parsed Questions</h1>
+                <h1 className="text-xl font-bold" data-testid="preview-title">Preview Parsed Questions</h1>
                 <p className="text-sm text-muted-foreground">{previewData.preview.totalParsed} questions found in {previewData.metadata.filename}</p>
               </div>
               <Button variant="outline" onClick={() => setStep("upload")} data-testid="button-back-upload">
@@ -225,13 +257,55 @@ export default function TeacherWordUploadPage() {
             </div>
           </PageHeader>
 
+          {/* === HIERARCHY SUMMARY === */}
+          {hierarchy.length > 0 && (
+            <Card data-testid="hierarchy-summary">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Layers className="w-5 h-5 text-primary" />
+                  Document Structure
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(sectionGroups).map(([section, items]) => (
+                    <div key={section} className="border rounded-lg p-3" data-testid={`hierarchy-section-${section}`}>
+                      <h4 className="font-semibold text-sm text-primary mb-2">Section {section}</h4>
+                      {/* Group by lesson */}
+                      {Object.entries(
+                        items.reduce((acc, item) => {
+                          if (!acc[item.lesson]) acc[item.lesson] = [];
+                          acc[item.lesson].push(item);
+                          return acc;
+                        }, {} as Record<string, typeof items>)
+                      ).map(([lessonName, topics]) => (
+                        <div key={lessonName} className="ml-4 mb-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+                            <BookOpen className="w-3.5 h-3.5" />
+                            {lessonName}
+                          </div>
+                          {topics.map((t, ti) => (
+                            <div key={ti} className="ml-6 flex items-center justify-between text-sm py-0.5">
+                              <span className="text-muted-foreground">{t.topic}</span>
+                              <Badge variant="secondary" className="text-xs">{t.count} Q</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Duplicate Summary */}
           {dupSummary && (dupSummary.exactDuplicates > 0 || dupSummary.similarFound > 0) && (
             <Alert variant={dupSummary.exactDuplicates > 0 ? "destructive" : "default"} data-testid="duplicate-summary">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Duplicate Detection Results</AlertTitle>
               <AlertDescription>
-                <div className="flex gap-4 mt-2">
+                <div className="flex gap-4 mt-2 flex-wrap">
                   {dupSummary.exactDuplicates > 0 && (
                     <span className="text-sm px-2 py-1 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
                       {dupSummary.exactDuplicates} exact duplicate{dupSummary.exactDuplicates > 1 ? 's' : ''} (auto-excluded)
@@ -251,13 +325,13 @@ export default function TeacherWordUploadPage() {
           )}
 
           {previewData.preview.warnings.length > 0 && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" data-testid="warnings-alert">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Warnings</AlertTitle>
+              <AlertTitle>Warnings ({previewData.preview.warnings.length})</AlertTitle>
               <AlertDescription>
-                <ul className="list-disc list-inside mt-2">
+                <ul className="list-disc list-inside mt-2 space-y-1">
                   {previewData.preview.warnings.map((w, i) => (
-                    <li key={i}>{w}</li>
+                    <li key={i} className="text-sm">{w}</li>
                   ))}
                 </ul>
               </AlertDescription>
@@ -265,7 +339,7 @@ export default function TeacherWordUploadPage() {
           )}
 
           {previewData.preview.skippedContent.length > 0 && (
-            <Alert>
+            <Alert data-testid="skipped-content">
               <XCircle className="h-4 w-4" />
               <AlertTitle>Skipped Content ({previewData.preview.skippedContent.length} items)</AlertTitle>
               <AlertDescription>
@@ -291,7 +365,7 @@ export default function TeacherWordUploadPage() {
               </CardTitle>
               <CardDescription>
                 Subject: {previewData.metadata.subject} | Grade: {previewData.metadata.grade}
-                {previewData.metadata.chapter && ` | Chapter: ${previewData.metadata.chapter}`}
+                {activeDepartment && ` | Department: ${activeDepartment.className} - ${activeDepartment.subjectName}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -309,13 +383,12 @@ export default function TeacherWordUploadPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-medium">Q{q.index}</span>
                             <Badge className={getTypeBadgeColor(q.type)}>{q.type.replace("_", " ")}</Badge>
                             <Badge variant="outline">{q.marks} mark{q.marks > 1 ? "s" : ""}</Badge>
                             <Badge variant="secondary">{q.difficulty}</Badge>
                             
-                            {/* Duplicate status badges */}
                             {isExactDup && (
                               <Badge variant="destructive" className="flex items-center gap-1" data-testid={`dup-badge-exact-${q.index}`}>
                                 <Ban className="w-3 h-3" /> Exact Duplicate
@@ -327,6 +400,14 @@ export default function TeacherWordUploadPage() {
                               </Badge>
                             )}
                           </div>
+                          {/* Section/Lesson/Topic tags */}
+                          {(q.section || q.lesson || q.topic) && (
+                            <div className="flex items-center gap-1.5 mb-2 flex-wrap text-xs">
+                              {q.section && <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">Sec {q.section}</span>}
+                              {q.lesson && <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{q.lesson}</span>}
+                              {q.topic && <span className="px-1.5 py-0.5 rounded bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">{q.topic}</span>}
+                            </div>
+                          )}
                           <p className="text-sm">{q.content}</p>
                           {q.options && (
                             <div className="mt-2 grid grid-cols-2 gap-1 text-sm text-muted-foreground">
@@ -342,7 +423,6 @@ export default function TeacherWordUploadPage() {
                           )}
                         </div>
                         
-                        {/* Toggle exclude/include for similar (not exact) */}
                         {isSimilar && !isExactDup && (
                           <Button
                             variant={isExcluded ? "default" : "outline"}
@@ -417,16 +497,32 @@ export default function TeacherWordUploadPage() {
 
         <Alert>
           <FileText className="h-4 w-4" />
-          <AlertTitle>Required Format</AlertTitle>
+          <AlertTitle>Required Document Format</AlertTitle>
           <AlertDescription>
             <div className="mt-2 space-y-2 text-sm">
-              <p><strong>Questions:</strong> Start with Q1., Q2., or 1., 2., etc.</p>
-              <p><strong>MCQ Options:</strong> A., B., C., D. on separate lines</p>
-              <p><strong>Answer:</strong> Answer: B (required for MCQ)</p>
-              <p><strong>Marks:</strong> Marks: 3 (required for non-MCQ)</p>
-              <p><strong>Assertion-Reason:</strong> Use "Assertion:" and "Reason:" labels</p>
+              <p><strong>Structure markers</strong> (plain text, no special formatting):</p>
+              <pre className="bg-muted p-3 rounded text-xs leading-relaxed mt-1 overflow-x-auto whitespace-pre">
+{`SECTION A
+
+LESSON: Life Processes
+
+TOPIC: Nutrition
+
+Q1. What is the role of HCl in the stomach?
+A. Kills bacteria
+B. Digests proteins
+C. Both A and B
+D. None of these
+Answer: C
+Marks: 1
+
+TOPIC: Respiration
+
+Q2. Differentiate between aerobic and anaerobic respiration.
+Marks: 3`}</pre>
               <p className="text-muted-foreground mt-2">
-                Questions with images, diagrams, passages, or poems will be skipped.
+                Each question inherits the current SECTION, LESSON, and TOPIC context.
+                Warnings will be shown for questions without proper context.
               </p>
             </div>
           </AlertDescription>
@@ -456,63 +552,48 @@ export default function TeacherWordUploadPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject *</Label>
-                <Select value={subject} onValueChange={setSubject}>
-                  <SelectTrigger id="subject" data-testid="select-subject">
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.length > 0 ? (
-                      subjects.map((s) => (
+                {activeDepartment ? (
+                  <Input id="subject" value={activeDepartment.subjectName} disabled className="bg-muted" data-testid="input-subject" />
+                ) : (
+                  <Select value={subject} onValueChange={setSubject}>
+                    <SelectTrigger id="subject" data-testid="select-subject">
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Science", "Mathematics", "English", "Hindi", "Sanskrit", "Social Science", "Computer Science"].map((s) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))
-                    ) : (
-                      <>
-                        <SelectItem value="Mathematics">Mathematics</SelectItem>
-                        <SelectItem value="Science">Science</SelectItem>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="Social Studies">Social Studies</SelectItem>
-                        <SelectItem value="Hindi">Hindi</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade *</Label>
-                <Select value={grade} onValueChange={setGrade}>
-                  <SelectTrigger id="grade" data-testid="select-grade">
-                    <SelectValue placeholder="Select grade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {grades.map((g) => (
-                      <SelectItem key={g} value={g}>Grade {g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {activeDepartment ? (
+                  <Input id="grade" value={`Class ${activeDepartment.className}`} disabled className="bg-muted" data-testid="input-grade" />
+                ) : (
+                  <Select value={grade} onValueChange={setGrade}>
+                    <SelectTrigger id="grade" data-testid="select-grade">
+                      <SelectValue placeholder="Select grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grades.map((g) => (
+                        <SelectItem key={g} value={g}>Grade {g}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="chapter">Chapter (Optional)</Label>
-              <Select value={chapter} onValueChange={setChapter}>
-                <SelectTrigger id="chapter" data-testid="select-chapter">
-                  <SelectValue placeholder="Select chapter (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No specific chapter</SelectItem>
-                  {chapters
-                    .filter(c => c.subject === subject)
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              LESSON and TOPIC are detected automatically from the document content. No manual selection needed.
+            </p>
 
             <Button
               onClick={handlePreview}
-              disabled={!file || !subject || !grade || previewMutation.isPending}
+              disabled={!file || (!(effectiveSubject || subject)) || (!(effectiveGrade || grade)) || previewMutation.isPending}
               className="w-full"
               data-testid="button-preview"
             >
