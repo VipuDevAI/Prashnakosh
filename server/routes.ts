@@ -32,11 +32,29 @@ if (process.env.AWS_S3_BUCKET && process.env.AWS_ACCESS_KEY_ID && process.env.AW
   });
 }
 
+// =====================================================
+// DEPARTMENT ACCESS HELPER (Module-level for use by all route functions)
+// =====================================================
+// Returns departmentId if user has access, or null + sends 403
+async function validateDepartmentAccess(req: Request, res: Response, departmentId: string | undefined | null): Promise<string | null> {
+  if (!departmentId) return null; // no filtering
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Auth required" }); return null; }
+  // Admin/super_admin bypass department check
+  if (user.role === "admin" || user.role === "super_admin") return departmentId;
+  const hasAccess = await storage.isUserInDepartment(user.id, departmentId);
+  if (!hasAccess) {
+    res.status(403).json({ error: "You do not have access to this department" });
+    return null;
+  }
+  return departmentId;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -51,6 +69,45 @@ export async function registerRoutes(
       }
       
       res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =====================================================
+  // USER DEPARTMENT CONTEXT ENDPOINTS
+  // =====================================================
+
+  // Get current user's departments (enriched with class/subject names)
+  app.get("/api/my-departments", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.user?.tenantId;
+      const deptAssignments = await storage.getUserDepartments(userId);
+      
+      if (!tenantId) {
+        return res.json(deptAssignments);
+      }
+
+      // Enrich with class/subject names
+      const classes = await storage.getSchoolClasses(tenantId);
+      const subjects = await storage.getSchoolSubjects(tenantId);
+      const classMap = new Map(classes.map(c => [c.id, c]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s]));
+
+      const enriched = deptAssignments.map(a => ({
+        id: a.id,
+        departmentId: a.departmentId,
+        role: a.role,
+        departmentName: a.department?.name || "",
+        className: a.department?.classId ? classMap.get(a.department.classId)?.name : "",
+        numericGrade: a.department?.classId ? classMap.get(a.department.classId)?.numericGrade : null,
+        subjectName: a.department?.subjectId ? subjectMap.get(a.department.subjectId)?.name : "",
+        headRoleLabel: a.department?.headRoleLabel || "HOD",
+        active: a.department?.active ?? true,
+      }));
+
+      res.json(enriched.filter(d => d.active));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -225,6 +282,17 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      // For teacher/hod: department filtering is mandatory if they have departments
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null && departmentId) return; // access denied was sent
+        const questions = await storage.getQuestionsByDepartment(tenantId, departmentId);
+        return res.json(questions);
+      }
+      
+      // Admin/super_admin can see all tenant questions without department filter
       const questions = await storage.getQuestionsByTenant(tenantId);
       res.json(questions);
     } catch (error: any) {
@@ -236,9 +304,16 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const { departmentId } = req.body;
+      if (!departmentId) {
+        return res.status(400).json({ error: "departmentId is required" });
+      }
+      const deptId = await validateDepartmentAccess(req, res, departmentId);
+      if (deptId === null) return;
       const question = await storage.createQuestion({
         ...req.body,
         tenantId,
+        departmentId,
       });
       res.json(question);
     } catch (error: any) {
@@ -749,6 +824,15 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null && departmentId) return;
+        const tests = await storage.getTestsByDepartment(tenantId, departmentId);
+        return res.json(tests);
+      }
+      
       const tests = await storage.getTestsByTenant(tenantId);
       res.json(tests);
     } catch (error: any) {
@@ -760,9 +844,16 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const { departmentId } = req.body;
+      if (!departmentId) {
+        return res.status(400).json({ error: "departmentId is required" });
+      }
+      const deptId = await validateDepartmentAccess(req, res, departmentId);
+      if (deptId === null) return;
       const test = await storage.createTest({
         ...req.body,
         tenantId,
+        departmentId,
       });
       res.json(test);
     } catch (error: any) {
@@ -1147,12 +1238,18 @@ export async function registerRoutes(
   // Bulk question creation - protected with auth and tenant isolation
   app.post("/api/questions/bulk", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), async (req, res) => {
     try {
-      const { questions: questionsInput, uploadId, forceUpload } = req.body;
+      const { questions: questionsInput, uploadId, forceUpload, departmentId } = req.body;
       // For super_admin, use tenantId from the first question; for others, use user's tenantId
       const userTenantId = req.tenantId || req.user?.tenantId;
       const tenantId = userTenantId || questionsInput?.[0]?.tenantId;
       if (!tenantId) {
         return res.status(400).json({ error: "tenantId is required" });
+      }
+      
+      // Validate department access if departmentId provided
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null) return;
       }
       
       // === DUPLICATE DETECTION: Check BEFORE saving ===
@@ -1181,6 +1278,7 @@ export async function registerRoutes(
       const questionsWithTenant = nonDuplicates.map((q: any) => ({
         ...q,
         tenantId,
+        departmentId: departmentId || q.departmentId || null,
         uploadId: uploadId || null,
       }));
       
@@ -1305,24 +1403,34 @@ export async function registerRoutes(
       const subject = req.body.subject || "General";
       const lesson = req.body.lesson || req.body.chapter || "";
       const grade = req.body.grade || "10";
+      const departmentId = req.body.departmentId || null;
+
+      // Validate department access if provided
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null) return;
+      }
 
       const result = await mammoth.extractRawText({ buffer: req.file.buffer });
       const text = result.value;
 
       const questions = parseQuestionsFromText(text, subject, lesson, grade, tenantId);
+      
+      // Attach departmentId to all parsed questions
+      const questionsWithDept = questions.map(q => ({ ...q, departmentId }));
 
-      if (questions.length === 0) {
+      if (questionsWithDept.length === 0) {
         return res.status(400).json({ error: "No questions found in document" });
       }
 
       // === DUPLICATE DETECTION: Check BEFORE saving ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
         tenantId,
-        questions.map(q => ({ content: q.content, options: q.options || undefined }))
+        questionsWithDept.map(q => ({ content: q.content, options: q.options || undefined }))
       );
 
       // Filter out exact duplicates
-      const nonDuplicateQuestions = questions.filter((q, idx) => {
+      const nonDuplicateQuestions = questionsWithDept.filter((q, idx) => {
         const dupResult = duplicateCheckResults.results[idx];
         return dupResult?.status !== 'exact_duplicate';
       });
@@ -1332,7 +1440,7 @@ export async function registerRoutes(
           error: "All questions are duplicates of existing ones",
           duplicateSummary: {
             exactDuplicates: duplicateCheckResults.exactDuplicates,
-            totalParsed: questions.length,
+            totalParsed: questionsWithDept.length,
           }
         });
       }
@@ -1358,7 +1466,7 @@ export async function registerRoutes(
         success: true,
         uploadId: uploadRecord.id,
         questionsCreated: created.length,
-        duplicatesRemoved: questions.length - nonDuplicateQuestions.length,
+        duplicatesRemoved: questionsWithDept.length - nonDuplicateQuestions.length,
         questions: created,
       });
     } catch (error: any) {
@@ -2522,6 +2630,15 @@ export function registerBlueprintRoutes(app: Express) {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null && departmentId) return;
+        const blueprints = await storage.getBlueprintsByDepartment(tenantId, departmentId);
+        return res.json(blueprints);
+      }
+      
       const blueprints = await storage.getBlueprintsByTenant(tenantId);
       res.json(blueprints);
     } catch (error: any) {
@@ -2548,9 +2665,16 @@ export function registerBlueprintRoutes(app: Express) {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const { departmentId } = req.body;
+      if (!departmentId) {
+        return res.status(400).json({ error: "departmentId is required" });
+      }
+      const deptId = await validateDepartmentAccess(req, res, departmentId);
+      if (deptId === null) return;
       const blueprint = await storage.createBlueprint({
         ...req.body,
         tenantId,
+        departmentId,
       });
       res.json(blueprint);
     } catch (error: any) {
@@ -2909,6 +3033,15 @@ export function registerWorkflowRoutes(app: Express) {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null && departmentId) return;
+        const questions = await storage.getPendingQuestionsForDepartment(tenantId, departmentId);
+        return res.json(questions);
+      }
+      
       const questions = await storage.getPendingQuestionsForReview(tenantId);
       res.json(questions);
     } catch (error: any) {
@@ -3954,6 +4087,15 @@ export function registerPaperGenerationRoutes(app: Express) {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      if (departmentId) {
+        const deptId = await validateDepartmentAccess(req, res, departmentId);
+        if (deptId === null && departmentId) return;
+        const blueprints = await storage.getBlueprintsByDepartment(tenantId, departmentId);
+        return res.json(blueprints);
+      }
+      
       const blueprints = await storage.getBlueprintsByTenant(tenantId);
       res.json(blueprints);
     } catch (error: any) {
@@ -3965,7 +4107,12 @@ export function registerPaperGenerationRoutes(app: Express) {
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
-      const { totalMarks, sections, ...rest } = req.body;
+      const { totalMarks, sections, departmentId, ...rest } = req.body;
+      if (!departmentId) {
+        return res.status(400).json({ error: "departmentId is required" });
+      }
+      const deptId = await validateDepartmentAccess(req, res, departmentId);
+      if (deptId === null) return;
       const duration = totalMarks === 40 ? 90 : totalMarks === 80 ? 180 : 120;
       const blueprint = await storage.createBlueprint({
         ...rest,
@@ -3973,6 +4120,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         sections,
         duration,
         tenantId,
+        departmentId,
       });
       res.json(blueprint);
     } catch (error: any) {

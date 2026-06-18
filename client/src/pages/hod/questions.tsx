@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
+import { DepartmentSelector } from "@/components/department-selector";
 import { useLocation } from "wouter";
 import { PageLayout, PageHeader, PageContent, ContentCard } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, CheckCircle, XCircle, BookOpen, Image as ImageIcon, FileText } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { MathText } from "@/components/math-text";
 import logoImg from "@/assets/logo.png";
@@ -59,6 +61,7 @@ const difficultyColors: Record<string, string> = {
 
 export default function HODQuestionsPage() {
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -67,8 +70,10 @@ export default function HODQuestionsPage() {
   const [approvalComments, setApprovalComments] = useState("");
   const [rejectionComments, setRejectionComments] = useState("");
 
+  const deptParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: questions = [], isLoading } = useQuery<Question[]>({
-    queryKey: ["/api/hod/questions/pending"],
+    queryKey: ["/api/hod/questions/pending", activeDepartmentId],
+    queryFn: () => authFetch(`/api/hod/questions/pending${deptParam}`),
   });
 
   const { data: passages = [] } = useQuery<Passage[]>({

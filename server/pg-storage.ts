@@ -141,6 +141,11 @@ export class PgStorage implements IStorage {
       ));
     if (!user) return null;
 
+    // Fetch user's department assignments
+    const deptAssignments = await db.select().from(userDepartments)
+      .where(eq(userDepartments.userId, user.id));
+    const departmentIds = deptAssignments.map(a => a.departmentId);
+
     const authUser: AuthUser = {
       id: user.id,
       tenantId: user.tenantId,
@@ -156,6 +161,8 @@ export class PgStorage implements IStorage {
       userCode: user.userCode,
       wingId: user.wingId,
       subjects: user.subjects,
+      departmentIds,
+      activeDepartmentId: departmentIds[0] || undefined,
     };
     return { user: authUser, token: `token-${user.id}-${Date.now()}` };
   }
@@ -2517,6 +2524,40 @@ export class PgStorage implements IStorage {
     await db.delete(userDepartments)
       .where(and(eq(userDepartments.userId, userId), eq(userDepartments.departmentId, departmentId)));
     return true;
+  }
+
+  // =====================================================
+  // DEPARTMENT-SCOPED QUERIES
+  // =====================================================
+
+  async getQuestionsByDepartment(tenantId: string, departmentId: string): Promise<Question[]> {
+    return db.select().from(questions)
+      .where(and(eq(questions.tenantId, tenantId), eq(questions.departmentId, departmentId)));
+  }
+
+  async getBlueprintsByDepartment(tenantId: string, departmentId: string): Promise<Blueprint[]> {
+    return db.select().from(blueprints)
+      .where(and(eq(blueprints.tenantId, tenantId), eq(blueprints.departmentId, departmentId)));
+  }
+
+  async getTestsByDepartment(tenantId: string, departmentId: string): Promise<Test[]> {
+    return db.select().from(tests)
+      .where(and(eq(tests.tenantId, tenantId), eq(tests.departmentId, departmentId)));
+  }
+
+  async getPendingQuestionsForDepartment(tenantId: string, departmentId: string): Promise<Question[]> {
+    return db.select().from(questions)
+      .where(and(
+        eq(questions.tenantId, tenantId),
+        eq(questions.departmentId, departmentId),
+        eq(questions.status, "pending_approval")
+      ));
+  }
+
+  async isUserInDepartment(userId: string, departmentId: string): Promise<boolean> {
+    const [assignment] = await db.select().from(userDepartments)
+      .where(and(eq(userDepartments.userId, userId), eq(userDepartments.departmentId, departmentId)));
+    return !!assignment;
   }
 }
 

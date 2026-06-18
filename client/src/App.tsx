@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SchoolProvider } from "@/lib/school-context";
+import { DepartmentProvider } from "@/lib/department-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -294,10 +295,12 @@ function App() {
       <ThemeProvider defaultTheme="system" storageKey="prashnakosh-theme">
         <TooltipProvider>
           <AuthProvider>
-            <SchoolProvider>
-              <Toaster />
-              <Router />
-            </SchoolProvider>
+            <DepartmentProvider>
+              <SchoolProvider>
+                <Toaster />
+                <Router />
+              </SchoolProvider>
+            </DepartmentProvider>
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

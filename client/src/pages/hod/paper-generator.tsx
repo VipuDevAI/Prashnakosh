@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
 import { useLocation } from "wouter";
 import { PageLayout, PageHeader, PageContent, ContentCard, GridContainer, PageFooter } from "@/components/page-layout";
 import { CoinButton } from "@/components/coin-button";
@@ -15,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, FileText, Send, CheckCircle, XCircle, Download, AlertTriangle, Image, Loader2, Copy, Layers, ShieldCheck, BarChart3, Users } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImg from "@/assets/logo.png";
 
@@ -113,6 +114,7 @@ const workflowStateLabels: Record<string, { label: string; color: string }> = {
 
 export default function HODPaperGeneratorPage() {
   const { user } = useAuth();
+  const { activeDepartmentId } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedFormat, setSelectedFormat] = useState<"A4" | "Legal">("A4");
@@ -130,8 +132,10 @@ export default function HODPaperGeneratorPage() {
   const [allowOverlap, setAllowOverlap] = useState(false);
   const [setsApproved, setSetsApproved] = useState(false);
 
+  const deptParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: tests = [], isLoading } = useQuery<Test[]>({
-    queryKey: ['/api/tests'],
+    queryKey: ['/api/tests', activeDepartmentId],
+    queryFn: () => authFetch(`/api/tests${deptParam}`),
   });
 
   // Validate multi-set capacity

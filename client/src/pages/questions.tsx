@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
+import { DepartmentSelector } from "@/components/department-selector";
 import { PageLayout, PageHeader, PageContent, ContentCard, GridContainer } from "@/components/page-layout";
 import { CoinButton } from "@/components/coin-button";
 import { Button } from "@/components/ui/button";
@@ -33,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, authFetch } from "@/lib/queryClient";
 import {
   ArrowLeft, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2,
   Upload, FileText, BookOpen
@@ -58,6 +60,7 @@ const difficultyLevels: { value: DifficultyLevel; label: string }[] = [
 
 export default function QuestionsPage() {
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,8 +68,10 @@ export default function QuestionsPage() {
   const [filterType, setFilterType] = useState<string>("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+  const deptQueryParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: questions = [], isLoading } = useQuery<Question[]>({
-    queryKey: ["/api/questions"],
+    queryKey: ["/api/questions", activeDepartmentId],
+    queryFn: () => authFetch(`/api/questions${deptQueryParam}`),
   });
 
   const filteredQuestions = questions.filter((q) => {
@@ -93,8 +98,11 @@ export default function QuestionsPage() {
           <div>
             <h1 className="text-xl font-bold">Question Bank</h1>
             <p className="text-sm text-muted-foreground">
-              Manage your questions
+              {activeDepartment ? `${activeDepartment.className} - ${activeDepartment.subjectName}` : "Manage your questions"}
             </p>
+          </div>
+          <div className="ml-auto">
+            <DepartmentSelector />
           </div>
         </div>
       </PageHeader>

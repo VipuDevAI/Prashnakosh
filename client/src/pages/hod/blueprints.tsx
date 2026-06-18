@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
+import { DepartmentSelector } from "@/components/department-selector";
 import { useLocation } from "wouter";
 import { PageLayout, PageHeader, PageContent, ContentCard } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
@@ -10,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, CheckCircle, FileText, BookOpen, Target, Layers } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImg from "@/assets/logo.png";
 
@@ -56,13 +58,16 @@ const difficultyColors: Record<string, string> = {
 
 export default function HODBlueprintsPage() {
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
+  const deptParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: blueprints = [], isLoading } = useQuery<Blueprint[]>({
-    queryKey: ["/api/blueprints"],
+    queryKey: ["/api/blueprints", activeDepartmentId],
+    queryFn: () => authFetch(`/api/blueprints${deptParam}`),
   });
 
   const approveMutation = useMutation({

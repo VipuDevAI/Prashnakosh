@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, authFetch } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
 import { PageLayout, PageHeader, PageContent, ContentCard, GridContainer, PageFooter } from "@/components/page-layout";
 import { CoinButton } from "@/components/coin-button";
@@ -50,9 +50,12 @@ import { BRAND } from "@/lib/brand";
 import { AppFooter } from "@/components/app-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
+import { useDepartment } from "@/lib/department-context";
+import { DepartmentSelector } from "@/components/department-selector";
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
 
   if (!user) {
@@ -61,6 +64,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
+    localStorage.removeItem("safal_active_department");
     logout();
     window.location.href = "/";
   };
@@ -94,6 +98,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <DepartmentSelector />
             <ThemeToggle />
             <Button variant="ghost" size="icon" disabled title="Notifications coming soon" data-testid="button-notifications" className="hidden sm:flex">
               <Bell className="w-5 h-5" />
@@ -128,7 +133,11 @@ export default function DashboardPage() {
       <PageContent>
         <div className="mb-4 sm:mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground">Welcome, {user.name}</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening today</p>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            {activeDepartment 
+              ? `Current Department: ${activeDepartment.className} - ${activeDepartment.subjectName}`
+              : "Here's what's happening today"}
+          </p>
         </div>
 
         {user.role === "teacher" && <TeacherDashboard />}
@@ -147,6 +156,7 @@ export default function DashboardPage() {
 function TeacherDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { activeDepartment, activeDepartmentId } = useDepartment();
   const { toast } = useToast();
   const [selectedWing, setSelectedWing] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
@@ -162,7 +172,10 @@ function TeacherDashboard() {
   const selectedWingObj = activeWings.find(w => w.id === selectedWing);
   const availableGrades = selectedWingObj?.grades || [];
 
-  const teacherSubject = (user as any)?.department || "Not Assigned";
+  // Show department subject instead of generic "Not Assigned"
+  const teacherSubject = activeDepartment 
+    ? `${activeDepartment.className} - ${activeDepartment.subjectName}`
+    : (user as any)?.department || "No department selected";
   const canProceed = selectedWing;
 
   return (
@@ -950,24 +963,31 @@ interface HODQuestion {
 function HODDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const { toast } = useToast();
 
-  const hodSubject = (user as any)?.subjects?.join(", ") || "Not Assigned";
+  const hodSubject = activeDepartment 
+    ? `${activeDepartment.className} - ${activeDepartment.subjectName}`
+    : (user as any)?.subjects?.join(", ") || "Not Assigned";
   const hodWing = (user as any)?.wingId ? "Senior Secondary (11-12)" : "Not Assigned";
 
   // State for question preview dialog
   const [selectedQuestion, setSelectedQuestion] = useState<HODQuestion | null>(null);
   const [showQuestionDialog, setShowQuestionDialog] = useState(false);
 
-  // Fetch questions pending HOD review
+  const deptParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
+  
+  // Fetch questions pending HOD review (filtered by department)
   const { data: pendingQuestions = [] } = useQuery<HODQuestion[]>({
-    queryKey: ['/api/hod/questions/pending'],
+    queryKey: ['/api/hod/questions/pending', activeDepartmentId],
+    queryFn: () => authFetch(`/api/hod/questions/pending${deptParam}`),
     enabled: !!user?.id,
   });
 
-  // Fetch ALL questions for HOD (approved ones)
+  // Fetch ALL questions for HOD (filtered by department)
   const { data: allQuestions = [] } = useQuery<HODQuestion[]>({
-    queryKey: ['/api/questions'],
+    queryKey: ['/api/questions', activeDepartmentId],
+    queryFn: () => authFetch(`/api/questions${deptParam}`),
     enabled: !!user?.id,
   });
 
@@ -985,14 +1005,15 @@ function HODDashboard() {
     enabled: !!user?.id,
   });
 
-  // Fetch blueprints for HOD
+  // Fetch blueprints for HOD (filtered by department)
   const { data: hodBlueprints = [] } = useQuery<{
     id: string;
     name: string;
     subject: string;
     grade: string;
   }[]>({
-    queryKey: ['/api/blueprints'],
+    queryKey: ['/api/blueprints', activeDepartmentId],
+    queryFn: () => authFetch(`/api/blueprints${deptParam}`),
     enabled: !!user?.id,
   });
 

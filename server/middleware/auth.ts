@@ -39,6 +39,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ error: "User not found or inactive" });
   }
 
+  // Fetch user's department assignments
+  const deptAssignments = await storage.getUserDepartments(userId);
+  const departmentIds = deptAssignments.map(a => a.departmentId);
+
   const authUser: AuthUser = {
     id: user.id,
     tenantId: user.tenantId,
@@ -47,6 +51,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     role: user.role,
     grade: user.grade || undefined,
     avatar: user.avatar,
+    departmentIds,
+    activeDepartmentId: departmentIds[0] || undefined,
   };
 
   tokenUserCache.set(token, { user: authUser, expiry: Date.now() + CACHE_TTL });

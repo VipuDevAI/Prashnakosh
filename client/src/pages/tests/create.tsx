@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useDepartment } from "@/lib/department-context";
 import { useLocation } from "wouter";
 import { PageLayout, PageHeader, PageContent, ContentCard, PageFooter } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, FileText, Clock, Target, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import logoImg from "@/assets/logo.png";
 
 interface Blueprint {
@@ -26,6 +27,7 @@ interface Blueprint {
 
 export default function TestCreatePage() {
   const { user } = useAuth();
+  const { activeDepartmentId, activeDepartment } = useDepartment();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   
@@ -35,8 +37,10 @@ export default function TestCreatePage() {
   const [examDate, setExamDate] = useState("");
   const [paperSize, setPaperSize] = useState("A4");
 
+  const deptParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: blueprints = [], isLoading: loadingBlueprints } = useQuery<Blueprint[]>({
-    queryKey: ['/api/blueprints'],
+    queryKey: ['/api/blueprints', activeDepartmentId],
+    queryFn: () => authFetch(`/api/blueprints${deptParam}`),
   });
 
   const createTestMutation = useMutation({

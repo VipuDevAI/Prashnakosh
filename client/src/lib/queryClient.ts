@@ -73,3 +73,16 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/** Fetch with auth token and throw on non-OK status */
+export async function authFetch(url: string): Promise<any> {
+  const token = localStorage.getItem("safal_token");
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
