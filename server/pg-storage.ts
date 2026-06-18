@@ -272,6 +272,29 @@ export class PgStorage implements IStorage {
     return db.select().from(questions).where(eq(questions.tenantId, tenantId));
   }
 
+  async getQuestionsPaginated(tenantId: string, limit: number, offset: number): Promise<Question[]> {
+    return db.select().from(questions)
+      .where(eq(questions.tenantId, tenantId))
+      .orderBy(desc(questions.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getQuestionCount(tenantId: string, departmentId?: string): Promise<number> {
+    const conditions = [eq(questions.tenantId, tenantId)];
+    if (departmentId) conditions.push(eq(questions.departmentId, departmentId));
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(questions)
+      .where(and(...conditions));
+    return Number(result[0]?.count || 0);
+  }
+
+  async getQuestionsByCreator(tenantId: string, createdBy: string): Promise<Question[]> {
+    return db.select().from(questions)
+      .where(and(eq(questions.tenantId, tenantId), eq(questions.createdBy, createdBy)))
+      .orderBy(desc(questions.createdAt));
+  }
+
   async getPracticeQuestions(tenantId: string, subject?: string, lesson?: string): Promise<Question[]> {
     let conditions = [eq(questions.tenantId, tenantId), eq(questions.isPractice, true)];
     if (subject) conditions.push(eq(questions.subject, subject));
@@ -924,7 +947,9 @@ export class PgStorage implements IStorage {
   }> {
     const usersData = await this.getUsersByTenant(tenantId);
     const students = usersData.filter(u => u.role === "student");
-    const questionsData = await this.getQuestionsByTenant(tenantId);
+    // SQL-level count instead of loading all questions into memory
+    const questionCountResult = await db.select({ count: sql<number>`count(*)` }).from(questions).where(eq(questions.tenantId, tenantId));
+    const totalQuestionCount = Number(questionCountResult[0]?.count || 0);
     const testsData = await this.getTestsByTenant(tenantId);
     const allAttempts = await db.select().from(attempts).where(eq(attempts.tenantId, tenantId));
 
@@ -953,7 +978,7 @@ export class PgStorage implements IStorage {
 
     return {
       totalStudents: students.length,
-      totalQuestions: questionsData.length,
+      totalQuestions: totalQuestionCount,
       totalTests: testsData.length,
       averageScore,
       subjectPerformance,
@@ -1096,11 +1121,20 @@ export class PgStorage implements IStorage {
   }
 
   async getSubjectsByTenant(tenantId: string): Promise<{ id: string; name: string; classLevel: string }[]> {
-    const questionsData = await this.getQuestionsByTenant(tenantId);
+    // SQL-level aggregation instead of loading all questions into memory
+    const rows = await db
+      .select({
+        subject: questions.subject,
+        grade: questions.grade,
+      })
+      .from(questions)
+      .where(eq(questions.tenantId, tenantId))
+      .groupBy(questions.subject, questions.grade);
+
     const subjectMap = new Map<string, Set<string>>();
-    for (const q of questionsData) {
-      if (!subjectMap.has(q.subject)) subjectMap.set(q.subject, new Set());
-      subjectMap.get(q.subject)!.add(q.grade);
+    for (const row of rows) {
+      if (!subjectMap.has(row.subject)) subjectMap.set(row.subject, new Set());
+      subjectMap.get(row.subject)!.add(row.grade);
     }
     return Array.from(subjectMap.entries()).map(([subject, grades]) => ({
       id: subject.toLowerCase().replace(/\s+/g, "-"),
@@ -2182,10 +2216,13 @@ export class PgStorage implements IStorage {
     tenantId: string,
     content: string,
     options?: string[],
-    subject?: string
+    subject?: string,
+    departmentId?: string
   ): Promise<DuplicateCheckResponse> {
-    // Get existing questions for this tenant
-    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    // Department-scoped duplicate check instead of full tenant load
+    const existingQuestions = departmentId
+      ? await this.getQuestionsByDepartment(tenantId, departmentId)
+      : await this.getQuestionsByTenant(tenantId);
     
     const detector = new DuplicateDetectionService(existingQuestions);
     return detector.checkSingleQuestion({
@@ -2201,9 +2238,13 @@ export class PgStorage implements IStorage {
    */
   async checkBulkQuestionDuplicates(
     tenantId: string,
-    questionsToCheck: { content: string; options?: string[] }[]
+    questionsToCheck: { content: string; options?: string[] }[],
+    departmentId?: string
   ): Promise<BulkDuplicateCheckResult> {
-    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    // Department-scoped duplicate check instead of full tenant load
+    const existingQuestions = departmentId
+      ? await this.getQuestionsByDepartment(tenantId, departmentId)
+      : await this.getQuestionsByTenant(tenantId);
     const detector = new DuplicateDetectionService(existingQuestions);
     
     return detector.checkBulkQuestions(
@@ -2257,11 +2298,14 @@ export class PgStorage implements IStorage {
   /**
    * Find duplicates in existing question pool (for cleanup)
    */
-  async findDuplicatesInTenant(tenantId: string): Promise<{
+  async findDuplicatesInTenant(tenantId: string, departmentId?: string): Promise<{
     duplicateGroups: { hash: string; questions: Question[] }[];
     totalDuplicates: number;
   }> {
-    const existingQuestions = await this.getQuestionsByTenant(tenantId);
+    // Department-scoped instead of full tenant load
+    const existingQuestions = departmentId
+      ? await this.getQuestionsByDepartment(tenantId, departmentId)
+      : await this.getQuestionsByTenant(tenantId);
     const detector = new DuplicateDetectionService(existingQuestions);
     return detector.findDuplicatesInPool();
   }
@@ -2361,14 +2405,17 @@ export class PgStorage implements IStorage {
   /**
    * Get lesson-wise question statistics for HOD dashboard
    */
-  async getLessonQuestionStats(tenantId: string, subject: string, grade?: string): Promise<{
+  async getLessonQuestionStats(tenantId: string, subject: string, grade?: string, departmentId?: string): Promise<{
     lesson: string;
     total: number;
     byType: Record<string, number>;
     byDifficulty: Record<string, number>;
     byStatus: Record<string, number>;
   }[]> {
-    const pool = await this.getQuestionsByTenant(tenantId);
+    // Department-scoped query instead of full tenant load
+    const pool = departmentId
+      ? await this.getQuestionsByDepartment(tenantId, departmentId)
+      : await this.getQuestionsByTenant(tenantId);
     const filtered = pool.filter(q => 
       q.subject === subject && 
       (!grade || q.grade === grade) &&

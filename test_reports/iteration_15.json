@@ -1,0 +1,150 @@
+{
+  "summary": "Memory Bottleneck Fix Testing Complete - All 18 backend tests passed. Key changes verified: getQuestionsByTenant removed from hot paths, replaced with department-filtered SQL queries (getQuestionsByDepartment), SQL COUNT for analytics (getQuestionCount), and pagination (getQuestionsPaginated). Frontend loads correctly with department filter and paginated responses handled properly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_memory_bottleneck_fix.py",
+    "/app/test_reports/pytest/pytest_memory_bottleneck.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "pg-storage.ts: getQuestionsPaginated (line 275-280) correctly uses SQL LIMIT/OFFSET for pagination",
+    "pg-storage.ts: getQuestionCount (line 283-290) uses SQL COUNT(*) instead of loading all questions",
+    "pg-storage.ts: getQuestionsByCreator (line 292-296) filters by createdBy at SQL level",
+    "pg-storage.ts: getAnalytics (line 951) uses SQL COUNT for totalQuestions instead of loading all questions",
+    "pg-storage.ts: getSubjectsByTenant (line 1125-1143) uses SQL GROUP BY instead of loading all questions",
+    "routes.ts: GET /api/questions (line 281-307) returns array for departmentId filter, paginated for admin",
+    "routes.ts: GET /api/teacher/questions (line 1872-1880) uses getQuestionsByCreator",
+    "routes.ts: GET /api/export/questions (line 1188-1220) uses department-scoped query",
+    "questions.tsx: Handles both array and paginated response formats (line 72-78)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_memory_bottleneck_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "test_credentials": {
+    "super_admin": {
+      "schoolCode": "SUPERADMIN",
+      "email": "superadmin@safal.com",
+      "password": "SuperAdmin@123"
+    },
+    "hod": {
+      "schoolCode": "MVMCHN",
+      "email": "hod.science@mvm.com",
+      "password": "Hod@12345"
+    },
+    "teacher": {
+      "schoolCode": "MVMCHN",
+      "email": "teacher.science@mvm.com",
+      "password": "Teacher@123"
+    },
+    "student": {
+      "schoolCode": "MVMCHN",
+      "email": "student1@mvm.com",
+      "password": "Student@123"
+    }
+  },
+  "seed_data_creation": "Used existing seeded data. Department 3bedf6c1-d838-4851-a27d-9774fa2b027a has 22 questions (15 approved, 7 pending).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Memory bottleneck fix fully implemented and tested. Key architectural change: getQuestionsByTenant is no longer called in hot paths. All routes use department-filtered queries (getQuestionsByDepartment), SQL aggregation (COUNT, GROUP BY), or pagination (getQuestionsPaginated). Total questions in DB: 1872. Department IX_Science has 22 questions. Frontend correctly handles both array and paginated response formats.",
+  "verified_features": {
+    "login_all_roles": {
+      "status": "PASS",
+      "roles_tested": ["super_admin", "hod", "teacher", "student"],
+      "expiresAt_field": "Returned in all login responses"
+    },
+    "questions_with_department_id": {
+      "status": "PASS",
+      "endpoint": "GET /api/questions?departmentId=X",
+      "returns": "Array of department questions (not paginated)"
+    },
+    "questions_without_department_id": {
+      "status": "PASS",
+      "endpoint": "GET /api/questions",
+      "returns": "Paginated response {questions, pagination} for admin/super_admin"
+    },
+    "teacher_questions": {
+      "status": "PASS",
+      "endpoint": "GET /api/teacher/questions",
+      "returns": "Only questions created by logged-in teacher"
+    },
+    "analytics_total_questions": {
+      "status": "PASS",
+      "endpoint": "GET /api/analytics",
+      "returns": "totalQuestions using SQL COUNT (not loading all questions)"
+    },
+    "academic_coverage": {
+      "status": "PASS",
+      "endpoint": "GET /api/departments/:id/academic-coverage",
+      "returns": "Coverage data with sections, lessons, topics breakdown"
+    },
+    "hod_lesson_stats": {
+      "status": "PASS",
+      "endpoint": "GET /api/hod/lesson-stats?departmentId=X&subject=Y",
+      "returns": "Lesson stats for department"
+    },
+    "validate_multiset": {
+      "status": "PASS",
+      "endpoint": "POST /api/tests/:id/validate-multiset",
+      "returns": "Capacity analysis with sectionAnalysis"
+    },
+    "check_duplicate": {
+      "status": "PASS",
+      "endpoint": "POST /api/questions/check-duplicate",
+      "returns": "Duplicate check result with departmentId filter"
+    },
+    "export_questions": {
+      "status": "PASS",
+      "endpoint": "GET /api/export/questions?departmentId=X",
+      "returns": "CSV export with department-scoped questions"
+    },
+    "session_expiry": {
+      "status": "PASS",
+      "expired_token_response": "401 with SESSION_EXPIRED code",
+      "valid_token_access": "Protected endpoints accessible"
+    },
+    "hod_dashboard": {
+      "status": "PASS",
+      "tabs": ["Review Questions", "Blueprint Manager", "Generate Paper", "Send for Approval"],
+      "stats": "Total Questions: 22, Pending: 7, Approved: 15"
+    },
+    "questions_page": {
+      "status": "PASS",
+      "department_filter": "Working with IX Science department",
+      "handles_paginated_response": "Frontend correctly handles both array and paginated formats"
+    },
+    "blueprint_coverage_page": {
+      "status": "PASS",
+      "shows": "Department overview, coverage percentages, section/lesson breakdown"
+    }
+  },
+  "api_endpoints_tested": [
+    "POST /api/auth/login - All 4 roles",
+    "GET /api/questions?departmentId=X - Returns array",
+    "GET /api/questions - Returns paginated for admin",
+    "GET /api/teacher/questions - Returns teacher's questions only",
+    "GET /api/analytics - Returns totalQuestions via SQL COUNT",
+    "GET /api/departments/:id/academic-coverage - Returns coverage data",
+    "GET /api/hod/lesson-stats?departmentId=X&subject=Y - Returns lesson stats",
+    "POST /api/tests/:id/validate-multiset - Returns capacity analysis",
+    "POST /api/questions/check-duplicate - Returns duplicate check with departmentId",
+    "GET /api/export/questions?departmentId=X - Returns CSV export",
+    "GET /api/hod/questions/pending - Returns pending questions",
+    "GET /api/blueprints - Returns blueprints list",
+    "GET /api/my-departments - Returns user's departments"
+  ],
+  "known_limitations": {
+    "s3_upload": "S3/image upload not tested (missing AWS keys per instructions)"
+  }
+}

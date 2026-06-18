@@ -71,7 +71,11 @@ export default function QuestionsPage() {
   const deptQueryParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: questions = [], isLoading } = useQuery<Question[]>({
     queryKey: ["/api/questions", activeDepartmentId],
-    queryFn: () => authFetch(`/api/questions${deptQueryParam}`),
+    queryFn: async () => {
+      const data = await authFetch(`/api/questions${deptQueryParam}`);
+      // Handle both flat array and paginated response formats
+      return Array.isArray(data) ? data : (data.questions || []);
+    },
   });
 
   const filteredQuestions = questions.filter((q) => {

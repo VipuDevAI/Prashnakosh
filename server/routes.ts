@@ -283,18 +283,25 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const departmentId = req.query.departmentId as string | undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
+      const offset = (page - 1) * limit;
       
       // For teacher/hod: department filtering is mandatory if they have departments
       if (departmentId) {
         const deptId = await validateDepartmentAccess(req, res, departmentId);
-        if (deptId === null && departmentId) return; // access denied was sent
+        if (deptId === null && departmentId) return;
         const questions = await storage.getQuestionsByDepartment(tenantId, departmentId);
         return res.json(questions);
       }
       
-      // Admin/super_admin can see all tenant questions without department filter
-      const questions = await storage.getQuestionsByTenant(tenantId);
-      res.json(questions);
+      // Admin/super_admin: paginated query instead of full tenant load
+      const allQuestions = await storage.getQuestionsPaginated(tenantId, limit, offset);
+      const totalCount = await storage.getQuestionCount(tenantId);
+      res.json({
+        questions: allQuestions,
+        pagination: { page, limit, total: totalCount, totalPages: Math.ceil(totalCount / limit) }
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1182,7 +1189,12 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
-      const questions = await storage.getQuestionsByTenant(tenantId);
+      const departmentId = req.query.departmentId as string | undefined;
+      
+      // Department-scoped export instead of full tenant load
+      const questions = departmentId
+        ? await storage.getQuestionsByDepartment(tenantId, departmentId)
+        : await storage.getQuestionsPaginated(tenantId, 10000, 0);
       
       const rows = ["ID,Subject,Lesson,Topic,Type,Content,Correct Answer,Marks,Difficulty"];
       for (const q of questions) {
@@ -1255,7 +1267,8 @@ export async function registerRoutes(
       // === DUPLICATE DETECTION: Check BEFORE saving ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
         tenantId,
-        questionsInput.map((q: any) => ({ content: q.content, options: q.options || undefined }))
+        questionsInput.map((q: any) => ({ content: q.content, options: q.options || undefined })),
+        departmentId
       );
 
       // Filter out exact duplicates unless force upload
@@ -1426,7 +1439,8 @@ export async function registerRoutes(
       // === DUPLICATE DETECTION: Check BEFORE saving ===
       const duplicateCheckResults = await storage.checkBulkQuestionDuplicates(
         tenantId,
-        questionsWithDept.map(q => ({ content: q.content, options: q.options || undefined }))
+        questionsWithDept.map(q => ({ content: q.content, options: q.options || undefined })),
+        departmentId
       );
 
       // Filter out exact duplicates
@@ -1554,7 +1568,8 @@ export async function registerRoutes(
         parseResult.questions.map(q => ({
           content: q.content,
           options: q.options || undefined,
-        }))
+        })),
+        departmentId
       );
 
       res.json({
@@ -1669,7 +1684,8 @@ export async function registerRoutes(
         validQuestions.map(q => ({
           content: q.content,
           options: q.options || undefined,
-        }))
+        })),
+        departmentId
       );
 
       // Filter out exact duplicates unless force upload
@@ -1742,7 +1758,7 @@ export async function registerRoutes(
       if (!tenantId) return;
       const user = req.user as AuthUser;
 
-      const { content, type, subject, lesson, chapter, grade, options, correctAnswer, marks, difficulty, imageUrl, passageId } = req.body;
+      const { content, type, subject, lesson, chapter, grade, options, correctAnswer, marks, difficulty, imageUrl, passageId, departmentId } = req.body;
 
       if (!content || content.length < 10) {
         return res.status(400).json({ error: "Question content is required (minimum 10 characters)" });
@@ -1783,7 +1799,8 @@ export async function registerRoutes(
         tenantId,
         content,
         type === "mcq" ? options : undefined,
-        subject
+        subject,
+        departmentId
       );
 
       if (duplicateCheck.status === 'exact_duplicate') {
@@ -1858,11 +1875,8 @@ export async function registerRoutes(
       if (!tenantId) return;
       const user = req.user as AuthUser;
 
-      const allQuestions = await storage.getQuestionsByTenant(tenantId);
-      
-      const myQuestions = allQuestions.filter((q: any) => 
-        q.createdBy === user.id
-      );
+      // SQL-level filter by createdBy instead of loading all tenant questions
+      const myQuestions = await storage.getQuestionsByCreator(tenantId, user.id);
 
       const sortedQuestions = myQuestions.sort((a: any, b: any) => {
         const statusOrder: Record<string, number> = { pending_approval: 0, active: 1, rejected: 2 };
@@ -1885,13 +1899,13 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
 
-      const { content, options, subject } = req.body;
+      const { content, options, subject, departmentId } = req.body;
 
       if (!content || content.length < 10) {
         return res.status(400).json({ error: "Question content is required (minimum 10 characters)" });
       }
 
-      const result = await storage.checkQuestionDuplicate(tenantId, content, options, subject);
+      const result = await storage.checkQuestionDuplicate(tenantId, content, options, subject, departmentId);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1904,7 +1918,7 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
 
-      const { questions } = req.body;
+      const { questions, departmentId } = req.body;
 
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
         return res.status(400).json({ error: "Questions array is required" });
@@ -1914,7 +1928,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Maximum 500 questions per batch" });
       }
 
-      const result = await storage.checkBulkQuestionDuplicates(tenantId, questions);
+      const result = await storage.checkBulkQuestionDuplicates(tenantId, questions, departmentId);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1927,7 +1941,8 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
 
-      const result = await storage.findDuplicatesInTenant(tenantId);
+      const departmentId = req.query.departmentId as string | undefined;
+      const result = await storage.findDuplicatesInTenant(tenantId, departmentId);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1944,7 +1959,7 @@ export async function registerRoutes(
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
 
-      const { subject, grade } = req.query;
+      const { subject, grade, departmentId } = req.query;
 
       if (!subject) {
         return res.status(400).json({ error: "Subject is required" });
@@ -1953,7 +1968,8 @@ export async function registerRoutes(
       const stats = await storage.getLessonQuestionStats(
         tenantId, 
         subject as string, 
-        grade as string | undefined
+        grade as string | undefined,
+        departmentId as string | undefined
       );
       res.json(stats);
     } catch (error: any) {
@@ -1966,9 +1982,9 @@ export async function registerRoutes(
     try {
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
-      const { subject, grade } = req.query;
+      const { subject, grade, departmentId: deptId } = req.query;
       if (!subject) return res.status(400).json({ error: "Subject is required" });
-      const stats = await storage.getLessonQuestionStats(tenantId, subject as string, grade as string | undefined);
+      const stats = await storage.getLessonQuestionStats(tenantId, subject as string, grade as string | undefined, deptId as string | undefined);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

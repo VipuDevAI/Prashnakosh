@@ -83,6 +83,9 @@ export interface IStorage {
   getQuestion(id: string): Promise<Question | undefined>;
   getQuestionsByIds(ids: string[]): Promise<Question[]>;
   getQuestionsByTenant(tenantId: string): Promise<Question[]>;
+  getQuestionsPaginated(tenantId: string, limit: number, offset: number): Promise<Question[]>;
+  getQuestionCount(tenantId: string, departmentId?: string): Promise<number>;
+  getQuestionsByCreator(tenantId: string, createdBy: string): Promise<Question[]>;
   getPracticeQuestions(tenantId: string, subject?: string, lesson?: string): Promise<Question[]>;
   getAssessmentQuestions(tenantId: string, subject: string, grade?: string): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
