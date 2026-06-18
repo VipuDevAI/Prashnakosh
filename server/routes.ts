@@ -3700,8 +3700,13 @@ export function registerPaperGenerationRoutes(app: Express) {
       
       const setCount = req.body.setCount || 3;
       
-      // Get all available questions for this tenant/subject/grade
-      const allQuestions = await storage.getQuestionsByTenant(test.tenantId);
+      // Get approved questions filtered by department for accurate validation
+      let allQuestions: Question[];
+      if (blueprint.departmentId || test.departmentId) {
+        allQuestions = await storage.getQuestionsByDepartment(test.tenantId, (blueprint.departmentId || test.departmentId)!);
+      } else {
+        allQuestions = await storage.getQuestionsByTenant(test.tenantId);
+      }
       const approvedQuestions = allQuestions.filter(q => q.status === 'approved' && !q.isDeleted);
       
       const validation = validateBlueprintCapacity(blueprint, approvedQuestions, setCount);
