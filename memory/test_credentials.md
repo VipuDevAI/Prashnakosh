@@ -26,6 +26,13 @@
 - User ID: `32dfe62c-cce7-44d0-9c5c-13df3cdf061f`
 - Departments: IX_Science, X_Science
 
+### Student (Rahul Sharma)
+- School Code: `MVMCHN`
+- Email: `student1@mvm.com`
+- Password: `Student@123`
+- User ID: `2aa87359-8317-4a6c-aac2-1c4064e0d9bb`
+- Grade: 9
+
 ## Department IDs
 - IX_Science: `3bedf6c1-d838-4851-a27d-9774fa2b027a`
 - X_Science: `85ab55f2-1145-41bf-b6c7-c61ee0813dae`
@@ -41,6 +48,9 @@
   - Section B: Short Answer, 2 marks, 15 required
   - Section C: Long Answer, 5 marks, 6 required
 
+## Test
+- IX Sci Mock 2026: `ec3919f4-90ec-464e-9081-d1f408b953f1`
+
 ## Test Data (IX_Science Department)
 - Total questions: ~22
 - Approved: ~15
@@ -48,3 +58,11 @@
 - Section A: 12 approved / 20 required (60%)
 - Section B: 3 approved / 15 required (20%)
 - Section C: 0 approved / 6 required (0%)
+
+## S3 Environment Variables (Required for image upload)
+```
+AWS_S3_BUCKET=<bucket-name>
+AWS_S3_REGION=<region>
+AWS_ACCESS_KEY_ID=<key>
+AWS_SECRET_ACCESS_KEY=<secret>
+```
