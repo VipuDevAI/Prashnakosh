@@ -1,0 +1,116 @@
+{
+  "theme_and_archetype": {
+    "theme": "dark",
+    "archetype": "5 (Luxury)",
+    "description": "A premium academic question bank. Requires a professional 'command center' feel combined with high-end aesthetics. Deep dark cosmic backgrounds, translucent glass cards, restrained neon indigo/gold accents, and high data hierarchy."
+  },
+  "typography": {
+    "font_families": {
+      "headings": "'Outfit', sans-serif",
+      "body": "'Manrope', sans-serif"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm tracking-wide",
+      "overline": "text-xs uppercase tracking-[0.2em]"
+    },
+    "hindi_text": "Use default system fallback but ensure it's wrapped in the primary heading styles."
+  },
+  "colors": {
+    "background": {
+      "base": "#0A0518",
+      "gradient_cosmic": "bg-gradient-to-br from-[#0B0A1F] via-[#16113A] to-[#0A0518]",
+      "gradient_overlay": "bg-black/40"
+    },
+    "surface": {
+      "glass_base": "bg-white/5",
+      "glass_hover": "bg-white/10",
+      "glass_heavy": "bg-[#0B0A1F]/80",
+      "border": "border-white/10"
+    },
+    "primary": {
+      "DEFAULT": "#4F46E5",
+      "hover": "#6366F1",
+      "glow": "drop-shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+    },
+    "accent": {
+      "gold": "#D4AF37",
+      "gold_hover": "#FADB5F",
+      "gold_glow": "drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#94A3B8",
+      "muted": "#64748B",
+      "inverse": "#000000"
+    }
+  },
+  "spacing_and_layout": {
+    "bento_grid": {
+      "dashboard": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+    },
+    "padding": {
+      "generous": "p-8 md:p-12",
+      "card_internal": "p-6"
+    },
+    "border_radius": {
+      "card": "rounded-2xl",
+      "inner": "rounded-xl",
+      "button": "rounded-lg"
+    }
+  },
+  "components": {
+    "sidebar": {
+      "style": "fixed vertical, glass_heavy background, backdrop-blur-xl, border-r border-white/10",
+      "active_state": "bg-white/10 border-l-2 border-[#D4AF37] text-white"
+    },
+    "glass_card": {
+      "style": "backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+      "hover": "hover:bg-white/10 hover:-translate-y-1 transition-all duration-300"
+    },
+    "buttons": {
+      "primary": "bg-[#4F46E5] text-white hover:bg-[#6366F1] shadow-lg",
+      "accent": "bg-[#D4AF37] text-black hover:bg-[#FADB5F] font-medium"
+    },
+    "charts": {
+      "library": "recharts",
+      "colors": ["#4F46E5", "#D4AF37", "#9333EA", "#38BDF8"],
+      "gridlines": "stroke-white/10"
+    }
+  },
+  "images": {
+    "cosmic_background_1": {
+      "url": "https://images.unsplash.com/photo-1614852206732-6728910dc175",
+      "description": "Purple and blue light illustration, use for Login screen background with dark overlay."
+    },
+    "cosmic_background_2": {
+      "url": "https://images.pexels.com/photos/6985132/pexels-photo-6985132.jpeg",
+      "description": "Dynamic gradient with vivid blues and purples, alternative abstract background."
+    },
+    "university_architectural": {
+      "url": "https://images.pexels.com/photos/7507821/pexels-photo-7507821.jpeg",
+      "description": "Premium university architecture, use for decorative image in settings or feature panels."
+    },
+    "student_studying": {
+      "url": "https://images.unsplash.com/photo-1690788210614-9052cffd8a14",
+      "description": "Student taking exam in the dark, useful for mock test empty states or banners."
+    }
+  },
+  "testing": {
+    "rules": "All interactive elements (buttons, links, inputs, form submits, navigation items) MUST include a 'data-testid' attribute using kebab-case role-based naming (e.g., 'login-submit-button', 'sidebar-nav-dashboard')."
+  },
+  "instructions_to_main_agent": [
+    "Set up Tailwind CSS configuration to include the custom colors and extended spacing/border-radius.",
+    "Implement the Layout wrapper applying the dark cosmic gradient ('bg-gradient-to-br from-[#0B0A1F] via-[#16113A] to-[#0A0518]') to the main body/root.",
+    "Create a reusable GlassCard component that implements 'backdrop-blur-xl bg-white/5 border border-white/10'. Do not use plain white or flat grey screens anywhere.",
+    "Build a premium dark sidebar navigation using Lucide icons. Highlight active tabs with Gold (#D4AF37).",
+    "Design the Login Page using the cosmic_background_1 image behind a heavy glassmorphism card. Include the Hindi text 'प्रश्नकोश', tagline 'Jignyasa • Knowledge • Excellence', and footer text 'Secure • Reliable • Built for Education'.",
+    "Develop the Dashboard using a Bento grid layout for statistics (e.g., total questions, coverage), a Recharts donut chart for Academic Coverage, and a recent activity feed.",
+    "Use JavaScript (.js or .jsx) exclusively, not TypeScript (.tsx).",
+    "Include the global footer: 'Powered by SmartGenEduX @ 2026 | Prashnakosh Beta'."
+  ]
+}
