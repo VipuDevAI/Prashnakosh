@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { BrandFooter } from "@/components/BrandLogo";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -139,13 +140,8 @@ export function PageFooter() {
       "border-t border-white/[0.06]",
       "bg-black/20 backdrop-blur-sm mt-auto"
     )}>
-      <div className="flex flex-col items-center gap-1 max-w-7xl mx-auto text-center">
-        <span>
-          Powered by{" "}
-          <span className="font-semibold text-[#D4AF37]/60">SmartGenEduX</span>
-          {" "}@ 2026
-        </span>
-        <span className="text-[10px] uppercase tracking-widest text-white/15">Prashnakosh Beta</span>
+      <div className="max-w-7xl mx-auto">
+        <BrandFooter />
       </div>
     </footer>
   );

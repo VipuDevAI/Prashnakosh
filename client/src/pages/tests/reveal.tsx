@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Eye, EyeOff, Lock, FileText, Calendar, Clock } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface Test {
   id: string;
@@ -68,7 +68,7 @@ export default function TestRevealPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="Question Bank" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">Test Reveal</h1>
             <p className="text-sm text-muted-foreground">View Locked Papers After Exam</p>

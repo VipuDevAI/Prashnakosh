@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, BookOpen, FileText, Upload, CheckCircle,
   TrendingUp, Printer, ClipboardList, BarChart3, Settings, LogOut,
-  ChevronLeft, ChevronRight, Users, Shield, Bell, Menu, X, BookOpen as Logo
+  ChevronLeft, ChevronRight, Users, Shield, Bell, Menu, X
 } from "lucide-react";
+import { BrandLogo, BrandMark } from "@/components/BrandLogo";
 
 interface NavItem {
   label: string;
@@ -44,14 +45,11 @@ function SidebarNav({ collapsed, onCollapse }: { collapsed: boolean; onCollapse:
       collapsed ? "w-[72px]" : "w-[240px]"
     )}>
       {/* Logo area */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-white/[0.06] flex-shrink-0">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#4F46E5] to-[#9333EA] flex items-center justify-center flex-shrink-0">
-          <Logo className="w-5 h-5 text-white" />
-        </div>
-        {!collapsed && (
-          <span className="text-lg font-semibold text-[#D4AF37] tracking-tight whitespace-nowrap" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            Prashnakosh
-          </span>
+      <div className="flex items-center px-4 h-16 border-b border-white/[0.06] flex-shrink-0">
+        {collapsed ? (
+          <BrandMark size="sm" />
+        ) : (
+          <BrandLogo size="sm" showTagline={false} />
         )}
       </div>
 
@@ -164,9 +162,7 @@ export function AppShell({ children }: AppShellProps) {
           <button onClick={() => setMobileOpen(true)} className="text-white/60 hover:text-white">
             <Menu className="w-6 h-6" />
           </button>
-          <span className="text-lg font-semibold text-[#D4AF37]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            Prashnakosh
-          </span>
+          <BrandLogo size="xs" showTagline={false} />
         </div>
 
         {/* Desktop top bar */}

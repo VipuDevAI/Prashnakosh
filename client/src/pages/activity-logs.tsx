@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Clock, User, FileText, AlertCircle } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface ActivityLog {
   id: string;
@@ -59,7 +59,7 @@ export default function ActivityLogsPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="Question Bank" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">Activity Logs</h1>
             <p className="text-sm text-muted-foreground">Audit Trail</p>

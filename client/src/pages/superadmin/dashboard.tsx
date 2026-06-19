@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AppLogo } from "@/components/app-logo";
+import { BrandMark } from "@/components/BrandLogo";
 import { AppFooter } from "@/components/app-footer";
 import { Building2, Settings, HardDrive, LogOut, Shield, Users, Sparkles, Library, FileUp } from "lucide-react";
 
@@ -23,7 +23,7 @@ export default function SuperAdminDashboard() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
         <div className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <AppLogo size="lg" showText={false} />
+            <BrandMark size="lg" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Prashnakosh</h1>
               <p className="text-sm text-white/80">Super Admin Control Center</p>

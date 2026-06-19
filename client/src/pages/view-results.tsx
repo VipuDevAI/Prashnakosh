@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Award, BarChart3, BookOpen, CheckCircle, Clock, Download, Eye, FileText, TrendingUp, XCircle } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface Result {
   id: string;
@@ -81,7 +81,7 @@ export default function ViewResultsPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="Question Bank" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">View Results</h1>
             <p className="text-sm text-muted-foreground">Your Test Performance</p>

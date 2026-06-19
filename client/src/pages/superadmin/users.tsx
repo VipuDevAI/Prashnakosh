@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/BrandLogo";
 import { AppFooter } from "@/components/app-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -329,11 +329,7 @@ export default function SuperAdminUsersPage() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/superadmin")} data-testid="btn-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img 
-              src={BRAND.logo} 
-              alt={BRAND.name}
-              className="h-12 object-contain"
-            />
+            <BrandMark size="lg" />
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Users Management</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Create users for each school</p>

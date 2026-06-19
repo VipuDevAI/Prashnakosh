@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().optional(),
@@ -76,13 +76,10 @@ export default function ChangePasswordPage() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img 
-              src={logoImg} 
-              alt="Question Bank" 
-              className="w-28 h-28 mx-auto mb-4 object-contain drop-shadow-lg"
-              data-testid="img-logo"
-            />
-            <h1 className="text-3xl font-bold text-[#0F172A] dark:text-[#F1F5F9]">Question Bank</h1>
+            <div className="flex justify-center mb-4">
+              <BrandMark size="xl" />
+            </div>
+            <h1 className="text-3xl font-bold text-[#0F172A] dark:text-[#F1F5F9]">Prashnakosh</h1>
             <p className="text-[#475569] dark:text-[#94A3B8] mt-2 text-base">Assessment & Practice Platform</p>
           </div>
 

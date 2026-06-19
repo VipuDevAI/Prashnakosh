@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Users, BookOpen, TrendingUp, TrendingDown, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 interface SchoolSnapshot {
   totalStudents: number;
   testsThisMonth: number;
@@ -148,7 +148,7 @@ export default function PrincipalAnalyticsDashboard() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back-dashboard">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="School SAFAL" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">School Analytics Dashboard</h1>
             <p className="text-sm text-muted-foreground">Read-only overview of school performance</p>

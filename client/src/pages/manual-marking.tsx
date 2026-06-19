@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Check, CheckCircle, Edit2, FileText, Save, User, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface Submission {
   id: string;
@@ -167,7 +167,7 @@ export default function ManualMarkingPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="Question Bank" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">Manual Marking</h1>
             <p className="text-sm text-muted-foreground">Grade Subjective Answers</p>

@@ -16,7 +16,7 @@ import { ArrowLeft, CheckCircle, XCircle, BookOpen, Image as ImageIcon, FileText
 import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { MathText } from "@/components/math-text";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface Question {
   id: string;
@@ -177,7 +177,7 @@ export default function HODQuestionsPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="School SAFAL" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">Question Approval</h1>
             <p className="text-sm text-muted-foreground">Review and approve teacher-submitted questions</p>

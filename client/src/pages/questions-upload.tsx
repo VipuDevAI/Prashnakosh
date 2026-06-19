@@ -14,7 +14,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, AlertCircle, Check, Download, FileSpreadsheet, Upload, X, HelpCircle, BookOpen, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import logoImg from "@/assets/logo.png";
 
 interface UploadRow {
   row: number;

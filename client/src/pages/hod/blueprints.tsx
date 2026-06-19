@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, CheckCircle, FileText, BookOpen, Target, Layers } from "lucide-react";
 import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import logoImg from "@/assets/logo.png";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface BlueprintSection {
   name: string;
@@ -122,7 +122,7 @@ export default function HODBlueprintsPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <img src={logoImg} alt="School SAFAL" className="w-10 h-10 object-contain" />
+          <BrandMark size="md" />
           <div>
             <h1 className="text-xl font-bold">Blueprint Review</h1>
             <p className="text-sm text-muted-foreground">Review and approve exam blueprints</p>
