@@ -14,10 +14,10 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 - [x] Multi-tenant school system with department isolation
 - [x] Word document upload + parsing into question bank
 - [x] Blueprint creation and management
-- [x] Question approval workflow (Teacher → HOD → Principal)
+- [x] Question approval workflow (Teacher -> HOD -> Principal)
 - [x] Academic Coverage Dashboard
 - [x] Multi-Set Paper Generation with lesson balancing
-- [x] Mock Test E2E (start → attempt → submit → auto-grade → results)
+- [x] Mock Test E2E (start -> attempt -> submit -> auto-grade -> results)
 - [x] Single Source of Truth: Mock Tests & Offline Papers share selectQuestionsUnified()
 - [x] Premium Dark Cosmic UI (Glassmorphism, AppShell sidebar)
 - [x] Token Expiry (Teacher/HOD 24h, Student 3h)
@@ -25,7 +25,16 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 - [x] Memory Bottleneck Fix (SQL-level filtering, pagination, COUNT/DISTINCT)
 - [x] Rate Limiting (login 10/min, exam submit 5/min, paper gen 3/min, general 120/min)
 - [x] Connection Pool Configuration (max=20, idle timeout=30s, connection timeout=10s)
-- [x] Health Check Endpoint (GET /api/health — DB latency, pool stats, memory usage)
+- [x] Health Check Endpoint (GET /api/health)
+- [x] **Branding Correction (June 19, 2026)**: Official Prashnakosh logo across all pages via BrandLogo.tsx. Favicon, manifest, apple-touch-icon updated. Browser tab = "Prashnakosh Beta". Footer = "Powered by SmartGenEduX @ 2026 / Prashnakosh Beta".
+
+## Branding Assets
+- Logo: `/app/client/public/assets/logo/logo.png` (1024x1024, official emblem)
+- Favicon: `/app/client/public/favicon.png` + `/app/client/public/favicon.ico`
+- Apple Touch Icon: `/app/client/public/apple-touch-icon.png`
+- PWA Manifest: `/app/client/public/manifest.json`
+- Component: `/app/client/src/components/BrandLogo.tsx` (BrandLogo, BrandMark, BrandFooter)
+- Constants: `/app/client/src/lib/brand.ts`
 
 ## Load Test Results (June 2026)
 
@@ -41,47 +50,15 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 | Heap Memory | 80MB | 80MB | 80MB |
 | RSS Memory | 215MB | 215MB | 215MB |
 
-## Recommended Server Specifications
-
-### 500 Students (School Wing)
-- CPU: 2 vCPU
-- RAM: 4 GB
-- Storage: 20 GB SSD
-- PostgreSQL: 15+
-- Node.js: 20+
-- OS: Ubuntu 22.04 LTS
-
-### 1000 Students (Full School)
-- CPU: 4 vCPU
-- RAM: 8 GB
-- Storage: 50 GB SSD
-- PostgreSQL: 15+ (max_connections=100)
-- Node.js: 20+ (DB_POOL_MAX=30)
-
-### 7000 Students (Multi-School / District)
-- CPU: 8 vCPU
-- RAM: 16 GB
-- Storage: 100 GB SSD (NVMe preferred)
-- PostgreSQL: 15+ (max_connections=200, shared_buffers=4GB)
-- Node.js: 20+ (DB_POOL_MAX=50, consider PM2 cluster mode with 4 workers)
-- Reverse proxy: Nginx with rate limiting per-IP
-
-## Production Rate Limits (per IP)
-- Login: 10 req/min
-- Exam submit: 5 req/min
-- Paper generation: 3 req/min
-- General API: 120 req/min
-
 ## Pending Issues
-- **P0 BLOCKED**: S3 image upload — code complete, missing AWS credentials
-- **P2**: `chapter` column NOT NULL constraint
+- **P0 BLOCKED**: S3 image upload -- code complete, missing AWS credentials
+- **P2**: `chapter` column NOT NULL constraint cleanup
 
 ## Upcoming Tasks
-1. Blueprint Versioning UI
-2. Design System deep application to all pages
-3. Admin Maintenance (post-pilot)
-4. HTML Storage Migration (post-pilot)
-5. PDF Enhancements (post-pilot)
+1. Blueprint Versioning UI (P0)
+2. Admin Maintenance (P1, post-pilot): Soft Delete, Hard Wipe, Syllabus Migration, Archive Department
+3. HTML Storage Migration (P2, post-pilot)
+4. PDF Enhancements (P2, post-pilot)
 
 ## DO NOT
 - Do NOT refactor routes.ts until after pilot
