@@ -11,6 +11,8 @@ import type { Attempt, AuthUser, WorkflowState, UserRole, BlueprintSection } fro
 import { requireAuth, requireRole } from "./middleware/auth";
 import { requireTenant, getTenantId, requireTenantId, TenantRequest } from "./middleware/tenant";
 import { uploadExamFile, getSignedDownloadUrl, deleteExamFile, initS3, isS3Configured, canUpload, canDownload } from "./services/s3-storage";
+import rateLimit from "express-rate-limit";
+import { getPoolStats, pool as dbPool } from "./db";
 import { 
   requireEditableState, 
   requireDownloadableState, 
@@ -22,6 +24,43 @@ import {
 import { validateBlueprintCapacity } from "./lib/question-selection-engine";
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// === MODULE-LEVEL RATE LIMITERS ===
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: "Too many login attempts. Please try again after 1 minute." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
+});
+
+const examSubmitLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: "Too many submissions. Please wait before retrying." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
+});
+
+export const paperGenLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { error: "Paper generation rate limit reached. Please wait 1 minute." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
+});
+
+const generalApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { error: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
+});
 
 if (process.env.AWS_S3_BUCKET && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
   initS3({
@@ -55,8 +94,46 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  // Apply general rate limit to all API routes (per-IP: 120/min in production, high for load test)
+  // In production, set this back to 120 per user IP
+  app.use("/api/", generalApiLimiter);
+
+  // === HEALTH CHECK ===
+  const startTime = Date.now();
+  app.get("/api/health", async (_req, res) => {
+    const poolStats = getPoolStats();
+    const memUsage = process.memoryUsage();
+    let dbOk = false;
+    let dbLatencyMs = 0;
+    try {
+      const start = Date.now();
+      await dbPool.query("SELECT 1");
+      dbLatencyMs = Date.now() - start;
+      dbOk = true;
+    } catch {
+      dbOk = false;
+    }
+    const status = dbOk ? "healthy" : "degraded";
+    res.status(dbOk ? 200 : 503).json({
+      status,
+      uptime: Math.floor((Date.now() - startTime) / 1000),
+      database: {
+        connected: dbOk,
+        latencyMs: dbLatencyMs,
+        pool: poolStats,
+      },
+      memory: {
+        heapUsedMB: Math.round(memUsage.heapUsed / 1048576),
+        heapTotalMB: Math.round(memUsage.heapTotal / 1048576),
+        rssMB: Math.round(memUsage.rss / 1048576),
+        externalMB: Math.round(memUsage.external / 1048576),
+      },
+      nodeVersion: process.version,
+    });
+  });
+
   // Auth routes
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
       const { schoolCode, email, password } = req.body;
       if (!schoolCode || !email || !password) {
@@ -537,7 +614,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/mock/start", requireAuth, requireTenant, async (req, res) => {
+  app.post("/api/mock/start", requireAuth, requireTenant, examSubmitLimiter, async (req, res) => {
     try {
       const { testId } = req.body;
       const tenantId = requireTenantId(req, res);
@@ -963,7 +1040,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/exam/submit", requireAuth, requireTenant, async (req, res) => {
+  app.post("/api/exam/submit", requireAuth, requireTenant, examSubmitLimiter, async (req, res) => {
     try {
       const { attemptId, answers } = req.body;
       const attempt = await storage.getAttempt(attemptId);
@@ -3635,7 +3712,7 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/tests/:id/select-by-blueprint", requireAuth, requireTenant, requireRole("teacher", "hod", "exam_committee", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/tests/:id/select-by-blueprint", requireAuth, requireTenant, requireRole("teacher", "hod", "exam_committee", "admin", "super_admin"), paperGenLimiter, async (req, res) => {
     try {
       const test = await storage.getTest(req.params.id);
       if (!test) {
@@ -3742,7 +3819,7 @@ export function registerPaperGenerationRoutes(app: Express) {
   // ========================================================================
   // MULTI-SET GENERATION: Generate N non-overlapping question sets
   // ========================================================================
-  app.post("/api/tests/:id/generate-multiset", requireAuth, requireTenant, requireRole("hod", "exam_committee", "admin", "super_admin"), async (req, res) => {
+  app.post("/api/tests/:id/generate-multiset", requireAuth, requireTenant, requireRole("hod", "exam_committee", "admin", "super_admin"), paperGenLimiter, async (req, res) => {
     try {
       const test = await storage.getTest(req.params.id);
       if (!test) return res.status(404).json({ error: "Test not found" });
