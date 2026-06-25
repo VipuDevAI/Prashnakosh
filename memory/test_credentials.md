@@ -1,6 +1,6 @@
 # Test Credentials
 
-## Super Admin
+## Super Admin (current preview environment)
 - **Email**: superadmin@safal.com
 - **Password**: SuperAdmin@123
 - **School Code**: SUPERADMIN
@@ -24,6 +24,14 @@
 - **Password**: Student@123
 - **School Code**: MVMCHN
 - **Session TTL**: 3 hours
+
+## Production Deployment
+Super Admin credentials are configured via `.env` before first startup:
+- `SUPER_ADMIN_SCHOOL_CODE` (default: SUPERADMIN)
+- `SUPER_ADMIN_EMAIL` (required, no default)
+- `SUPER_ADMIN_PASSWORD` (required, no default)
+- `SUPER_ADMIN_NAME` (default: Super Admin)
+The account is created once on first boot and never overwritten.
 
 ## Storage Architecture
 - **Type**: Local server filesystem
