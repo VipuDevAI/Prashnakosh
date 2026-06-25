@@ -40,8 +40,7 @@ interface School {
 interface StorageConfig {
   id?: string;
   tenantId: string;
-  s3BucketName: string | null;
-  s3FolderPath: string | null;
+  storagePath: string | null;
   maxStorageBytes: number;
   isConfigured: boolean;
 }
@@ -63,8 +62,7 @@ export default function StoragePage() {
     localStorage.getItem("superadmin_selected_school") || ""
   );
   const [formData, setFormData] = useState({
-    s3BucketName: "",
-    s3FolderPath: "",
+    storagePath: "",
     maxStorageGB: 5,
   });
 
@@ -108,15 +106,13 @@ export default function StoragePage() {
   useEffect(() => {
     if (currentConfig) {
       setFormData({
-        s3BucketName: currentConfig.s3BucketName || "",
-        s3FolderPath: currentConfig.s3FolderPath || "",
+        storagePath: currentConfig.storagePath || "",
         maxStorageGB: Math.round((currentConfig.maxStorageBytes || 5 * 1024 * 1024 * 1024) / (1024 * 1024 * 1024)),
       });
     } else if (selectedSchoolId) {
       const school = schools.find(s => s.id === selectedSchoolId);
       setFormData({
-        s3BucketName: "",
-        s3FolderPath: school?.code?.toLowerCase() || "",
+        storagePath: school?.code?.toLowerCase() || "",
         maxStorageGB: 5,
       });
     }
@@ -133,8 +129,7 @@ export default function StoragePage() {
         },
         body: JSON.stringify({
           tenantId: selectedSchoolId,
-          s3BucketName: formData.s3BucketName || null,
-          s3FolderPath: formData.s3FolderPath || null,
+          storagePath: formData.storagePath || null,
           maxStorageBytes: formData.maxStorageGB * 1024 * 1024 * 1024,
         }),
       });
@@ -168,8 +163,8 @@ export default function StoragePage() {
             </Button>
             <BrandMark size="lg" />
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">S3 Storage Configuration</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Allocate storage per school</p>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Storage Configuration</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Local server storage per school</p>
             </div>
           </div>
           <ThemeToggle />
@@ -199,8 +194,7 @@ export default function StoragePage() {
                     <TableRow className="bg-slate-50 dark:bg-slate-800">
                       <TableHead>School</TableHead>
                       <TableHead>Code</TableHead>
-                      <TableHead>S3 Bucket</TableHead>
-                      <TableHead>Folder Path</TableHead>
+                      <TableHead>Storage Path</TableHead>
                       <TableHead>Max Storage</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
@@ -224,10 +218,7 @@ export default function StoragePage() {
                             <Badge variant="outline">{school.code}</Badge>
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            {config?.s3BucketName || <span className="text-slate-400">-</span>}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {config?.s3FolderPath || <span className="text-slate-400">-</span>}
+                            {config?.storagePath || <span className="text-slate-400">-</span>}
                           </TableCell>
                           <TableCell>
                             {formatBytes(config?.maxStorageBytes || 5 * 1024 * 1024 * 1024)}
@@ -264,7 +255,7 @@ export default function StoragePage() {
             </CardTitle>
             <CardDescription>
               {selectedSchool 
-                ? `Set S3 bucket and folder for ${selectedSchool.name}` 
+                ? `Configure local storage for ${selectedSchool.name}` 
                 : "Select a school from the table above"}
             </CardDescription>
           </CardHeader>
@@ -284,25 +275,14 @@ export default function StoragePage() {
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>S3 Bucket Name</Label>
+                    <Label>Storage Path</Label>
                     <Input
-                      value={formData.s3BucketName}
-                      onChange={(e) => setFormData({ ...formData, s3BucketName: e.target.value })}
-                      placeholder="e.g., prashnakosh-prod"
-                      data-testid="input-bucket-name"
-                    />
-                    <p className="text-xs text-slate-500">The S3 bucket where files will be stored</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Folder Path</Label>
-                    <Input
-                      value={formData.s3FolderPath}
-                      onChange={(e) => setFormData({ ...formData, s3FolderPath: e.target.value })}
+                      value={formData.storagePath}
+                      onChange={(e) => setFormData({ ...formData, storagePath: e.target.value })}
                       placeholder="e.g., schools/sch001"
-                      data-testid="input-folder-path"
+                      data-testid="input-storage-path"
                     />
-                    <p className="text-xs text-slate-500">Folder prefix within the bucket (one school = one folder)</p>
+                    <p className="text-xs text-slate-500">Subfolder within the data directory for this school</p>
                   </div>
 
                   <div className="space-y-2">

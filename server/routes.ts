@@ -10,7 +10,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Head
 import type { Attempt, AuthUser, WorkflowState, UserRole, BlueprintSection } from "@shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { requireTenant, getTenantId, requireTenantId, TenantRequest } from "./middleware/tenant";
-import { uploadExamFile, getSignedDownloadUrl, deleteExamFile, initS3, isS3Configured, canUpload, canDownload } from "./services/s3-storage";
+import localStorageService, { initLocalStorage, isStorageConfigured, uploadFile as uploadLocalFile, getDownloadPath, deleteFile as deleteLocalFile, listFiles as listLocalFiles, canUpload, canDownload } from "./services/local-storage";
 import rateLimit from "express-rate-limit";
 import { getPoolStats, pool as dbPool } from "./db";
 import { 
@@ -62,14 +62,8 @@ const generalApiLimiter = rateLimit({
   validate: { trustProxy: false, xForwardedForHeader: false },
 });
 
-if (process.env.AWS_S3_BUCKET && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-  initS3({
-    bucket: process.env.AWS_S3_BUCKET,
-    region: process.env.AWS_S3_REGION || "us-east-1",
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  });
-}
+// Initialise local file storage (idempotent — creates dirs on first run)
+initLocalStorage();
 
 // =====================================================
 // DEPARTMENT ACCESS HELPER (Module-level for use by all route functions)
@@ -2145,7 +2139,7 @@ export async function registerRoutes(
     }
   });
 
-  // Teacher - Upload image for question (S3)
+  // Teacher - Upload image for question (local storage)
   app.post("/api/teacher/upload/image", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), upload.single("image"), async (req: Request, res) => {
     try {
       if (!req.file) {
@@ -2166,15 +2160,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Image size must be less than 5MB" });
       }
 
-      if (!isS3Configured()) {
-        return res.status(503).json({ error: "Image upload service not configured. Please contact administrator." });
+      if (!isStorageConfigured()) {
+        return res.status(503).json({ error: "Storage service not configured. Please contact administrator." });
       }
 
-      const filename = `question-images/${Date.now()}-${req.file.originalname}`;
-      const uploadResult = await uploadExamFile(
+      const uploadResult = await uploadLocalFile(
         tenantId,
-        "question-upload",
-        filename,
+        "question-images",
+        req.file.originalname,
         req.file.buffer,
         req.file.mimetype,
         user.role as any,
@@ -5223,7 +5216,7 @@ export function registerPaperGenerationRoutes(app: Express) {
     }
   });
 
-  // ============ S3 Storage Routes - protected with role-based access control ============
+  // ============ File Storage Routes - local filesystem, role-protected ============
   app.post("/api/storage/upload", requireAuth, requireTenant, requireRole("teacher", "hod", "admin", "super_admin"), upload.single("file"), async (req: Request, res) => {
     try {
       const tenantId = requireTenantId(req, res);
@@ -5237,8 +5230,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         return res.status(400).json({ error: "Exam ID is required" });
       }
       
-      const s3Storage = await import("./services/s3-storage");
-      const result = await s3Storage.default.uploadFile({
+      const result = await localStorageService.uploadFile({
         tenantId,
         examId,
         file: req.file.buffer,
@@ -5259,15 +5251,13 @@ export function registerPaperGenerationRoutes(app: Express) {
       if (!tenantId) return;
       const { examId, fileKey } = req.params;
       
-      const s3Storage = await import("./services/s3-storage");
-      const signedUrl = await s3Storage.default.getSignedDownloadUrl({
+      const filePath = await localStorageService.getDownloadFilePath({
         tenantId,
         examId,
         fileKey,
-        expiresIn: 300,
       });
       
-      res.json({ downloadUrl: signedUrl, expiresIn: 300 });
+      res.download(filePath);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -5279,8 +5269,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       if (!tenantId) return;
       const { examId, fileKey } = req.params;
       
-      const s3Storage = await import("./services/s3-storage");
-      await s3Storage.default.deleteFile({
+      await localStorageService.deleteFile({
         tenantId,
         examId,
         fileKey,
@@ -5298,8 +5287,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       if (!tenantId) return;
       const { examId } = req.params;
       
-      const s3Storage = await import("./services/s3-storage");
-      const files = await s3Storage.default.listFiles({
+      const files = await localStorageService.listFiles({
         tenantId,
         examId,
       });
@@ -5309,6 +5297,31 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Storage health/status endpoint
+  app.get("/api/storage/status", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
+    try {
+      const { getStorageRoot } = await import("./services/local-storage");
+      const storageRoot = getStorageRoot();
+      const subdirs = ["uploads", "exports", "backups", "logs"];
+      const status: Record<string, boolean> = {};
+      const fsMod = await import("fs");
+      const pathMod = await import("path");
+      for (const sub of subdirs) {
+        const dir = pathMod.join(storageRoot, sub);
+        status[sub] = fsMod.existsSync(dir);
+      }
+      res.json({
+        storageType: "local",
+        storageRoot,
+        configured: true,
+        directories: status,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
 
   // ============= Academic Years API =============
   app.get("/api/admin/academic-years", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
@@ -6226,7 +6239,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       const config = await storage.createOrUpdateSchoolStorageConfig(tenantId, {
         ...data,
         updatedBy: user.id,
-        isConfigured: !!(data.s3BucketName && data.s3FolderPath),
+        isConfigured: !!(data.storagePath || data.s3BucketName),
       });
       res.json(config);
     } catch (error: any) {
@@ -6510,8 +6523,7 @@ export function registerPaperGenerationRoutes(app: Express) {
             tenantId: tenant.id,
             schoolName: tenant.name,
             schoolCode: tenant.code,
-            s3BucketName: config?.s3BucketName || null,
-            s3FolderPath: config?.s3FolderPath || null,
+            storagePath: config?.s3FolderPath || tenant.id,
             maxStorageBytes: config?.maxStorageBytes || 5 * 1024 * 1024 * 1024,
             isConfigured: config?.isConfigured || false,
           };
@@ -6526,15 +6538,14 @@ export function registerPaperGenerationRoutes(app: Express) {
   app.post("/api/superadmin/storage", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
       const user = req.user as AuthUser;
-      const { tenantId, s3BucketName, s3FolderPath, maxStorageBytes } = req.body;
+      const { tenantId, storagePath, maxStorageBytes } = req.body;
       if (!tenantId) {
         return res.status(400).json({ error: "tenantId is required" });
       }
       const config = await storage.createOrUpdateSchoolStorageConfig(tenantId, {
-        s3BucketName,
-        s3FolderPath,
+        s3FolderPath: storagePath || tenantId,
         maxStorageBytes: maxStorageBytes || 5 * 1024 * 1024 * 1024,
-        isConfigured: !!(s3BucketName || s3FolderPath),
+        isConfigured: true,
         updatedBy: user.id,
       });
       res.json(config);
@@ -7183,7 +7194,7 @@ export function registerPaperGenerationRoutes(app: Express) {
         fileSize: fileSize || 0,
         mimeType,
         createdBy: currentUser.id,
-        // S3 fields will be updated when S3 is configured
+        // Local storage key for future file retrieval
         s3Key: `global/reference/grade-${grade}/${category}/${Date.now()}-${fileName}`,
       });
 

@@ -50,8 +50,7 @@ interface SchoolStorageConfig {
   tenantId: string;
   tenantName?: string;
   tenantCode?: string;
-  s3BucketName?: string;
-  s3FolderPath?: string;
+  storagePath?: string;
   maxStorageBytes?: number;
   isConfigured?: boolean;
   usage?: StorageUsage;
@@ -155,7 +154,7 @@ export default function StorageGovernancePage() {
           <div>
             <h1 className="text-xl font-bold">Storage Governance</h1>
             <p className="text-sm text-muted-foreground">
-              Manage S3 storage configuration and monitor usage
+              Manage local storage configuration and monitor usage
             </p>
           </div>
         </div>
@@ -178,7 +177,7 @@ export default function StorageGovernancePage() {
           <TabsContent value="overview">
             <ContentCard 
               title="Storage Configuration Overview" 
-              description="S3 bucket and folder assignments for all schools"
+              description="Storage path assignments for all schools"
             >
               {allConfigsLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -195,8 +194,7 @@ export default function StorageGovernancePage() {
                       <TableRow>
                         <TableHead>School</TableHead>
                         <TableHead>Code</TableHead>
-                        <TableHead>S3 Bucket</TableHead>
-                        <TableHead>Folder Path</TableHead>
+                        <TableHead>Storage Path</TableHead>
                         <TableHead>Storage Used</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -218,12 +216,7 @@ export default function StorageGovernancePage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm">
-                              {config.s3BucketName || <span className="text-muted-foreground">Not set</span>}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm font-mono">
-                              {config.s3FolderPath || <span className="text-muted-foreground">Not set</span>}
+                              {config.storagePath || <span className="text-muted-foreground">Not set</span>}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -360,14 +353,14 @@ export default function StorageGovernancePage() {
                     </Card>
                   </div>
 
-                  {/* S3 Configuration Card */}
+                  {/* Storage Configuration Card */}
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2">
                             <Cloud className="w-5 h-5" />
-                            S3 Storage Configuration
+                            Local Storage Configuration
                           </CardTitle>
                           <CardDescription>
                             Bucket and folder path for {selectedSchool.name}
@@ -390,15 +383,9 @@ export default function StorageGovernancePage() {
                     <CardContent>
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="p-4 rounded-lg border bg-muted/50">
-                          <Label className="text-xs text-muted-foreground">S3 Bucket Name</Label>
-                          <p className="font-medium mt-1">
-                            {storageConfig?.s3BucketName || <span className="text-muted-foreground">Not configured</span>}
-                          </p>
-                        </div>
-                        <div className="p-4 rounded-lg border bg-muted/50">
-                          <Label className="text-xs text-muted-foreground">Folder Path</Label>
+                          <Label className="text-xs text-muted-foreground">Storage Path</Label>
                           <p className="font-mono font-medium mt-1">
-                            {storageConfig?.s3FolderPath || <span className="text-muted-foreground">Not configured</span>}
+                            {storageConfig?.storagePath || <span className="text-muted-foreground">Not configured</span>}
                           </p>
                         </div>
                         <div className="p-4 rounded-lg border bg-muted/50">
@@ -474,16 +461,14 @@ function StorageConfigDialog({
 }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    s3BucketName: "",
-    s3FolderPath: "",
+    storagePath: "",
     maxStorageBytes: 5 * 1024 * 1024 * 1024, // 5GB
   });
 
   useEffect(() => {
     if (config) {
       setFormData({
-        s3BucketName: config.s3BucketName || "",
-        s3FolderPath: config.s3FolderPath || config.tenantCode?.toLowerCase() || "",
+        storagePath: config.storagePath || config.tenantCode?.toLowerCase() || "",
         maxStorageBytes: config.maxStorageBytes || 5 * 1024 * 1024 * 1024,
       });
     }
@@ -522,34 +507,21 @@ function StorageConfigDialog({
             Configure Storage for {config.tenantName}
           </DialogTitle>
           <DialogDescription>
-            Set up S3 bucket and folder path for this school
+            Configure local storage path for this school
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>S3 Bucket Name</Label>
+            <Label>Storage Path</Label>
             <Input
-              value={formData.s3BucketName}
-              onChange={(e) => setFormData({ ...formData, s3BucketName: e.target.value })}
-              placeholder="e.g., prashnakosh-prod"
-              data-testid="input-bucket-name"
-            />
-            <p className="text-xs text-muted-foreground">
-              The S3 bucket where files will be stored
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Folder Path</Label>
-            <Input
-              value={formData.s3FolderPath}
-              onChange={(e) => setFormData({ ...formData, s3FolderPath: e.target.value })}
+              value={formData.storagePath}
+              onChange={(e) => setFormData({ ...formData, storagePath: e.target.value })}
               placeholder="e.g., schools/sch001"
-              data-testid="input-folder-path"
+              data-testid="input-storage-path"
             />
             <p className="text-xs text-muted-foreground">
-              Folder prefix within the bucket (one school = one folder)
+              Subfolder within the server data directory for this school
             </p>
           </div>
 

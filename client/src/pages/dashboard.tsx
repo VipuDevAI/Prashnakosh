@@ -2461,36 +2461,24 @@ function AdminDashboard() {
 
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle>Storage Configuration (S3/Cloud)</CardTitle>
+              <CardTitle>Storage Configuration (Local Server)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Storage Provider</Label>
-                  <Select>
-                    <SelectTrigger data-testid="select-storage-provider"><SelectValue placeholder="Select provider" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aws">AWS S3</SelectItem>
-                      <SelectItem value="do">DigitalOcean Spaces</SelectItem>
-                      <SelectItem value="firebase">Firebase</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Storage Type</Label>
+                  <Input value="Local Server Storage" disabled data-testid="select-storage-provider" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Bucket Name</Label>
-                  <Input placeholder="bucket-name" data-testid="input-bucket-name" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Access Key</Label>
-                  <Input type="password" placeholder="Access key" data-testid="input-access-key" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Secret Key</Label>
-                  <Input type="password" placeholder="Secret key" data-testid="input-secret-key" />
+                  <Label>Data Directory</Label>
+                  <Input placeholder="E:\PrashnakoshData" data-testid="input-data-dir" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Files are stored on the local server. Configure the root data path via STORAGE_ROOT environment variable.
+              </p>
               <div className="flex gap-4">
-                <Button variant="outline" disabled title="Storage configuration coming soon" data-testid="button-test-connection">Test Connection</Button>
+                <Button variant="outline" disabled title="Storage configuration coming soon" data-testid="button-test-connection">Verify Storage</Button>
                 <CoinButton color="blue" disabled title="Storage configuration coming soon" data-testid="button-save-storage">Save</CoinButton>
               </div>
             </CardContent>

@@ -173,11 +173,11 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* S3 Storage */}
+          {/* Storage */}
           <Card 
             className="group cursor-pointer transition-all duration-500 border-0 bg-gradient-to-br from-slate-400 via-slate-500 to-zinc-600 dark:from-slate-600 dark:via-slate-700 dark:to-zinc-800 text-white shadow-xl shadow-slate-500/30 dark:shadow-slate-900/30 hover:shadow-2xl hover:shadow-slate-500/40 hover:scale-105 hover:-translate-y-1"
             onClick={() => navigate("/superadmin/storage")}
-            data-testid="card-s3-storage"
+            data-testid="card-storage"
           >
             <CardContent className="p-6 text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -185,10 +185,10 @@ export default function SuperAdminDashboard() {
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 group-hover:scale-110 transition-transform shadow-lg">
                   <HardDrive className="w-7 h-7" />
                 </div>
-                <h3 className="text-lg font-bold mb-1">S3 Storage</h3>
-                <p className="text-xs text-white/80 mb-3">Allocate storage buckets</p>
+                <h3 className="text-lg font-bold mb-1">Storage</h3>
+                <p className="text-xs text-white/80 mb-3">Manage local storage</p>
                 <div className="text-xs font-medium uppercase tracking-wide text-white/60">
-                  Buckets • Folders • Mapping
+                  Uploads • Exports • Backups
                 </div>
               </div>
             </CardContent>

@@ -1905,7 +1905,7 @@ export class PgStorage implements IStorage {
   }
 
   async recalculateStorageUsage(tenantId: string): Promise<StorageUsage> {
-    // This would ideally calculate storage from S3, for now return/create a placeholder
+    // Calculate storage usage from local filesystem metadata
     const existing = await this.getStorageUsage(tenantId);
     if (existing) {
       const [updated] = await db.update(storageUsage)

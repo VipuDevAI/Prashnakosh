@@ -41,7 +41,7 @@ COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/tsconfig.json ./
 
 # Create data directories
-RUN mkdir -p /data/uploads /data/exports /data/logs
+RUN mkdir -p /data/uploads /data/exports /data/backups /data/logs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
@@ -50,6 +50,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Environment
 ENV NODE_ENV=production
 ENV PORT=5000
+ENV STORAGE_ROOT=/data
 
 EXPOSE 5000
 

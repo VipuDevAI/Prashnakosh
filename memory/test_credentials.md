@@ -25,10 +25,8 @@
 - **School Code**: MVMCHN
 - **Session TTL**: 3 hours
 
-## S3 Environment Variables (MISSING - Blocking Image Upload)
-```
-AWS_S3_BUCKET=<bucket>
-AWS_S3_REGION=<region>
-AWS_ACCESS_KEY_ID=<key>
-AWS_SECRET_ACCESS_KEY=<secret>
-```
+## Storage Architecture
+- **Type**: Local server filesystem
+- **Root Path**: Configurable via `STORAGE_ROOT` env var (default: `./data`)
+- **Production Default**: `E:\PrashnakoshData` (Windows) or `/data` (Docker)
+- **Subdirectories**: uploads, exports, backups, logs, postgres

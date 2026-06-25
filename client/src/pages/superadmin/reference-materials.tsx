@@ -482,7 +482,7 @@ export default function ReferenceMaterialsPage() {
                         data-testid="input-filename"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Note: Actual file upload to S3 will be enabled after S3 is configured.
+                        Note: File upload stores files on the local server data volume.
                       </p>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
