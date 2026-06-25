@@ -1,213 +1,228 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { loginSchema, type LoginInput } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { LogIn, Loader2, Shield, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LogIn, Loader2, Eye, EyeOff, Shield, FileText, BarChart3 } from "lucide-react";
 import { BrandLogo, BrandFooter } from "@/components/BrandLogo";
 
 export default function LoginPage() {
-  const [location, navigate] = useLocation();
-  const { user, login, isAuthenticated, isLoading } = useAuth();
-  const { toast } = useToast();
+  const { login, user, isLoading } = useAuth();
+  const [, navigate] = useLocation();
+  const [schoolCode, setSchoolCode] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      if (user.role === "super_admin") {
-        navigate("/superadmin");
-      } else {
-        navigate("/dashboard");
-      }
+    if (!isLoading && user) {
+      navigate(user.role === "super_admin" ? "/superadmin/dashboard" : "/dashboard");
     }
-  }, [isAuthenticated, isLoading, navigate, user]);
+  }, [isLoading, navigate, user]);
 
-  // Show session expired toast if redirected
-  useEffect(() => {
-    if (window.location.search.includes("expired=1")) {
-      toast({ title: "Session expired", description: "Please log in again to continue.", variant: "destructive" });
-      window.history.replaceState({}, "", "/");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!schoolCode.trim() || !email.trim() || !password.trim()) {
+      setError("All fields are required");
+      return;
     }
-  }, [toast]);
-
-  const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { schoolCode: "", email: "", password: "" },
-  });
-
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginInput) => {
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      if (!data?.user) {
-        toast({ title: "Login failed", description: data?.error || "Invalid credentials", variant: "destructive" });
-        return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schoolCode: schoolCode.trim(),
+          email: email.trim(),
+          password: password
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Invalid credentials. Please try again.");
       }
+      
+      const data = await response.json();
       login(data.user, data.token, data.expiresAt);
-      toast({ title: "Welcome back!", description: `Logged in as ${data.user.name}` });
-    },
-    onError: (error: any) => {
-      toast({ title: "Login failed", description: error.message || "Please check your credentials", variant: "destructive" });
-    },
-  });
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center cosmic-bg">
-        <Loader2 className="w-8 h-8 animate-spin text-[#D4AF37]" />
+      <div className="min-h-screen flex items-center justify-center bg-[#060918]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#C9A84C]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen cosmic-bg relative overflow-hidden flex" data-testid="login-page">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[#4F46E5]/8 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[#9333EA]/8 blur-[100px] animate-pulse" style={{ animationDelay: "2s" }} />
-        <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[#D4AF37]/5 blur-[80px] animate-pulse" style={{ animationDelay: "4s" }} />
-      </div>
+    <div className="min-h-screen flex bg-[#060918] relative overflow-hidden" data-testid="login-page">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+        backgroundSize: '40px 40px'
+      }} />
 
-      {/* Left Panel — Branding */}
-      <div className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 z-10">
+      {/* Left panel - Branding (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 xl:p-16">
+        {/* Top branding */}
         <div>
           <BrandLogo size="xl" showTagline variant="default" />
-          <p className="text-5xl font-light text-white/90 mt-8 leading-tight tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            <span className="text-[#D4AF37]">Jignyasa</span> &bull; Knowledge &bull; Excellence
-          </p>
-          <p className="text-lg text-white/50 mt-4 max-w-lg leading-relaxed">
-            The premium academic assessment platform for schools and educational institutions. Create, manage, and deliver examinations with precision.
-          </p>
         </div>
 
-        <div className="space-y-6">
-          {[
-            { icon: <Shield className="w-5 h-5" />, title: "Secure Question Bank", desc: "Department-isolated, role-based access control" },
-            { icon: <GraduationCap className="w-5 h-5" />, title: "Blueprint-Driven Papers", desc: "Generate Set A/B/C with lesson-balanced distribution" },
-            { icon: <GraduationCap className="w-5 h-5" />, title: "Online Mock Tests", desc: "Auto-graded assessments with instant results" },
-          ].map((f, i) => (
-            <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
-              <div className="p-2.5 rounded-lg bg-[#4F46E5]/10 text-[#818CF8] flex-shrink-0">{f.icon}</div>
-              <div>
-                <h3 className="text-white font-medium text-sm">{f.title}</h3>
-                <p className="text-white/40 text-xs mt-0.5">{f.desc}</p>
+        {/* Center content */}
+        <div className="flex-1 flex flex-col justify-center max-w-xl">
+          <h2 className="text-4xl xl:text-5xl font-light text-white/90 leading-tight tracking-tight" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            The Academic
+            <br />
+            <span className="font-bold bg-gradient-to-r from-[#C9A84C] to-[#E8DCAA] bg-clip-text text-transparent">
+              Assessment Engine
+            </span>
+          </h2>
+          <p className="text-white/40 mt-6 text-lg leading-relaxed max-w-md">
+            Build question banks. Create blueprints. Generate quarterly examination papers with precision.
+          </p>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-3 mt-10">
+            {[
+              { icon: <Shield className="w-4 h-4" />, label: "Department Isolation" },
+              { icon: <FileText className="w-4 h-4" />, label: "Blueprint-Driven Papers" },
+              { icon: <BarChart3 className="w-4 h-4" />, label: "Coverage Analytics" },
+            ].map((f) => (
+              <div
+                key={f.label}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/50 text-sm backdrop-blur-sm"
+              >
+                {f.icon}
+                <span>{f.label}</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <div className="text-white/30 text-xs">
-          Secure &bull; Reliable &bull; Built for Education
+        {/* Bottom */}
+        <div className="text-white/20 text-sm">
+          Trusted by Maharishi Vidya Mandir &amp; partner institutions
         </div>
       </div>
 
-      {/* Right Panel — Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 z-10">
-        <div className="w-full max-w-md" data-testid="login-form-container">
+      {/* Right panel - Login form */}
+      <div className="w-full lg:w-[45%] flex items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-[420px]">
           {/* Mobile branding */}
-          <div className="lg:hidden text-center mb-8">
-            <BrandLogo size="lg" showTagline variant="full" className="justify-center" />
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <BrandLogo size="lg" variant="full" />
           </div>
 
-          {/* Glass login card */}
-          <div className="glass-card p-8 space-y-6" data-testid="login-card">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                Welcome Back
-              </h2>
-              <p className="text-white/40 text-sm mt-1">Sign in to your account</p>
+          {/* Login card */}
+          <div className="bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 sm:p-10" data-testid="login-card">
+            <div className="mb-8">
+              <h3 className="text-2xl font-semibold text-white tracking-tight" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                Sign in
+              </h3>
+              <p className="text-white/40 mt-2 text-sm">
+                Enter your credentials to access the platform
+              </p>
             </div>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-5" data-testid="login-form">
-                <FormField
-                  control={form.control}
-                  name="schoolCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">School Code</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter school code"
-                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
-                          data-testid="login-school-code"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <form onSubmit={handleSubmit} className="space-y-5" data-testid="login-form">
+              {/* School Code */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                  School Code
+                </label>
+                <Input
+                  data-testid="login-school-code"
+                  type="text"
+                  placeholder="e.g. MVMCHN"
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                  className="h-12 bg-white/[0.06] border-white/[0.1] text-white placeholder:text-white/20 rounded-xl focus:border-[#C9A84C]/50 focus:ring-[#C9A84C]/20 transition-colors"
+                  autoComplete="organization"
+                  autoFocus
                 />
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="email"
-                          placeholder="Enter your email"
-                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
-                          data-testid="login-email"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                  Email Address
+                </label>
+                <Input
+                  data-testid="login-email"
+                  type="email"
+                  placeholder="you@school.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-white/[0.06] border-white/[0.1] text-white placeholder:text-white/20 rounded-xl focus:border-[#C9A84C]/50 focus:ring-[#C9A84C]/20 transition-colors"
+                  autoComplete="email"
                 />
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white/60 text-xs uppercase tracking-wider">Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Enter your password"
-                          className="bg-white/[0.05] border-white/10 text-white placeholder:text-white/25 h-11 rounded-lg focus:border-[#4F46E5] focus:ring-[#4F46E5]/20"
-                          data-testid="login-password"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    data-testid="login-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 bg-white/[0.06] border-white/[0.1] text-white placeholder:text-white/20 rounded-xl pr-12 focus:border-[#C9A84C]/50 focus:ring-[#C9A84C]/20 transition-colors"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
-                <Button
-                  type="submit"
-                  disabled={loginMutation.isPending}
-                  className="w-full h-12 bg-gradient-to-r from-[#4F46E5] to-[#6366F1] hover:from-[#6366F1] hover:to-[#818CF8] text-white font-semibold rounded-lg shadow-lg shadow-[#4F46E5]/25 transition-all duration-300 hover:shadow-[#4F46E5]/40 hover:-translate-y-0.5"
-                  data-testid="login-submit-button"
-                >
-                  {loginMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <LogIn className="w-5 h-5 mr-2" />
-                      Sign In
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
+              {/* Error */}
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm" data-testid="login-error">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                data-testid="login-submit-button"
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 rounded-xl text-base font-semibold text-[#0a0a1b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer hover:brightness-110 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #C9A84C 0%, #E8DCAA 50%, #C9A84C 100%)", boxShadow: "0 4px 20px rgba(201,168,76,0.3)" }}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign In
+                  </>
+                )}
+              </button>
+            </form>
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-8">
+          <div className="mt-8">
             <BrandFooter />
           </div>
         </div>

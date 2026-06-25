@@ -12,12 +12,12 @@ interface BrandLogoProps {
 }
 
 const logoSizes: Record<BrandSize, string> = {
-  xs: "w-6 h-6",
-  sm: "w-8 h-8",
-  md: "w-10 h-10",
-  lg: "w-14 h-14",
-  xl: "w-20 h-20",
-  "2xl": "w-28 h-28",
+  xs: "w-7 h-7",
+  sm: "w-9 h-9",
+  md: "w-11 h-11",
+  lg: "w-16 h-16",
+  xl: "w-24 h-24",
+  "2xl": "w-32 h-32",
 };
 
 const textSizes: Record<BrandSize, string> = {
@@ -56,9 +56,7 @@ export function BrandLogo({
     >
       <div
         className={cn(
-          "relative rounded-full overflow-hidden flex-shrink-0",
-          "shadow-[0_2px_12px_rgba(0,0,0,0.2)]",
-          "ring-1 ring-white/10",
+          "relative flex-shrink-0",
           "transition-transform hover:scale-105",
           logoSizes[size]
         )}
@@ -66,7 +64,7 @@ export function BrandLogo({
         <img
           src={logoImage}
           alt="Prashnakosh"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain drop-shadow-lg"
           draggable={false}
         />
       </div>
@@ -74,25 +72,28 @@ export function BrandLogo({
         <div className={cn(variant === "full" ? "text-center" : "flex flex-col")}>
           <span
             className={cn(
-              "font-semibold text-[#D4AF37] tracking-tight leading-tight",
+              "font-bold tracking-wide leading-tight",
+              "bg-gradient-to-r from-[#1a1f5c] via-[#2d3494] to-[#1a1f5c] bg-clip-text text-transparent",
+              "dark:from-white dark:via-[#E8DCAA] dark:to-white",
               textSizes[size]
             )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
+            style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
           >
-            प्रश्नकोश
+            PRASHNAKOSH
           </span>
           <span
             className={cn(
-              "font-medium text-white/80 tracking-tight leading-tight",
+              "font-medium tracking-[0.25em] uppercase leading-tight",
+              "text-[#C9A84C]",
               taglineSizes[size]
             )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
+            style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
           >
-            Prashnakosh
+            Jignyasa
           </span>
           {showTagline && (
-            <span className={cn("text-white/30 mt-0.5", taglineSizes[size])}>
-              Jignyasa &bull; Knowledge &bull; Excellence
+            <span className={cn("text-white/30 mt-1", taglineSizes[size])}>
+              Knowledge &bull; Excellence &bull; Innovation
             </span>
           )}
         </div>
@@ -105,9 +106,7 @@ export function BrandMark({ size = "md", className }: { size?: BrandSize; classN
   return (
     <div
       className={cn(
-        "relative rounded-full overflow-hidden flex-shrink-0",
-        "shadow-[0_2px_12px_rgba(0,0,0,0.2)]",
-        "ring-1 ring-white/10",
+        "relative flex-shrink-0",
         "transition-transform hover:scale-105",
         logoSizes[size],
         className
@@ -117,7 +116,7 @@ export function BrandMark({ size = "md", className }: { size?: BrandSize; classN
       <img
         src={logoImage}
         alt="Prashnakosh"
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain drop-shadow-lg"
         draggable={false}
       />
     </div>
@@ -125,14 +124,15 @@ export function BrandMark({ size = "md", className }: { size?: BrandSize; classN
 }
 
 export function BrandFooter({ className }: { className?: string }) {
+  const year = new Date().getFullYear();
   return (
     <div className={cn("flex flex-col items-center gap-1", className)} data-testid="brand-footer">
       <span className="text-white/30 text-sm">
         Powered by{" "}
-        <span className="font-semibold text-[#D4AF37]/60">SmartGenEduX</span>
-        {" "}@ 2026
+        <span className="font-semibold text-[#C9A84C]/70">SmartGenEduX</span>
+        {" "}&copy; {year}
       </span>
-      <span className="text-[10px] uppercase tracking-widest text-white/15">
+      <span className="text-[10px] uppercase tracking-[0.3em] text-white/15">
         Prashnakosh Beta
       </span>
     </div>

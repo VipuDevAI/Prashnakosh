@@ -38,7 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, authFetch } from "@/lib/queryClient";
 import {
   ArrowLeft, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2,
-  Upload, FileText, BookOpen
+  Upload, FileText, BookOpen, Loader2
 } from "lucide-react";
 import type { Question, QuestionType, DifficultyLevel } from "@shared/schema";
 
@@ -67,6 +67,7 @@ export default function QuestionsPage() {
   const [filterSubject, setFilterSubject] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const deptQueryParam = activeDepartmentId ? `?departmentId=${activeDepartmentId}` : "";
   const { data: questions = [], isLoading } = useQuery<Question[]>({
@@ -210,7 +211,7 @@ export default function QuestionsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredQuestions.map((question) => (
-                    <QuestionRow key={question.id} question={question} />
+                    <QuestionRow key={question.id} question={question} onEdit={setEditingQuestion} />
                   ))}
                 </TableBody>
               </Table>
@@ -218,11 +219,31 @@ export default function QuestionsPage() {
           )}
         </ContentCard>
       </PageContent>
+
+      {/* Edit Question Dialog */}
+      {editingQuestion && (
+        <Dialog open={!!editingQuestion} onOpenChange={(open) => !open && setEditingQuestion(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Question</DialogTitle>
+              <DialogDescription>Modify question details and save changes</DialogDescription>
+            </DialogHeader>
+            <EditQuestionForm
+              question={editingQuestion}
+              onSuccess={() => {
+                setEditingQuestion(null);
+                toast({ title: "Question updated successfully" });
+              }}
+              onCancel={() => setEditingQuestion(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </PageLayout>
   );
 }
 
-function QuestionRow({ question }: { question: Question }) {
+function QuestionRow({ question, onEdit }: { question: Question; onEdit: (q: Question) => void }) {
   const { toast } = useToast();
 
   const approveMutation = useMutation({
@@ -304,6 +325,7 @@ function QuestionRow({ question }: { question: Question }) {
           <Button
             size="icon"
             variant="ghost"
+            onClick={() => onEdit(question)}
             data-testid={`button-edit-${question.id}`}
           >
             <Edit className="w-4 h-4" />
@@ -531,6 +553,196 @@ function QuestionForm({ onSuccess }: { onSuccess: () => void }) {
         >
           Create Question
         </CoinButton>
+      </div>
+    </form>
+  );
+}
+
+
+function EditQuestionForm({ question, onSuccess, onCancel }: { question: Question; onSuccess: () => void; onCancel: () => void }) {
+  const [formData, setFormData] = useState({
+    content: question.content || "",
+    type: question.type as QuestionType,
+    options: (question.options as string[]) || ["", "", "", ""],
+    correctAnswer: question.correctAnswer || "",
+    explanation: question.explanation || "",
+    hint: question.hint || "",
+    subject: question.subject || "",
+    chapter: question.chapter || "",
+    topic: question.topic || "",
+    section: question.section || "",
+    lesson: question.lesson || "",
+    difficulty: (question.difficulty || "medium") as DifficultyLevel,
+    marks: question.marks || 1,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const data = {
+        ...formData,
+        options: formData.type === "mcq" || formData.type === "true_false" ? formData.options.filter(Boolean) : undefined,
+      };
+      return apiRequest("PATCH", `/api/questions/${question.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      // Error handled by caller
+    },
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }} className="space-y-4" data-testid="edit-question-form">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Section</Label>
+          <Input
+            value={formData.section}
+            onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+            placeholder="e.g., A"
+            data-testid="edit-section"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Lesson</Label>
+          <Input
+            value={formData.lesson}
+            onChange={(e) => setFormData({ ...formData, lesson: e.target.value })}
+            placeholder="e.g., Chemical Bonding"
+            data-testid="edit-lesson"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Topic</Label>
+          <Input
+            value={formData.topic}
+            onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+            placeholder="e.g., Covalent Bonds"
+            data-testid="edit-topic"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Subject</Label>
+          <Input
+            value={formData.subject}
+            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+            placeholder="e.g., Chemistry"
+            data-testid="edit-subject"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Question</Label>
+        <Textarea
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          placeholder="Enter question text"
+          rows={3}
+          required
+          data-testid="edit-content"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label>Type</Label>
+          <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as QuestionType })}>
+            <SelectTrigger data-testid="edit-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {questionTypes.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Difficulty</Label>
+          <Select value={formData.difficulty} onValueChange={(v) => setFormData({ ...formData, difficulty: v as DifficultyLevel })}>
+            <SelectTrigger data-testid="edit-difficulty">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {difficultyLevels.map((d) => (
+                <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Marks</Label>
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            value={formData.marks}
+            onChange={(e) => setFormData({ ...formData, marks: parseInt(e.target.value) || 1 })}
+            data-testid="edit-marks"
+          />
+        </div>
+      </div>
+
+      {(formData.type === "mcq" || formData.type === "true_false") && (
+        <div className="space-y-2">
+          <Label>Options</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {formData.options.map((opt, i) => (
+              <Input
+                key={i}
+                value={opt}
+                onChange={(e) => {
+                  const newOptions = [...formData.options];
+                  newOptions[i] = e.target.value;
+                  setFormData({ ...formData, options: newOptions });
+                }}
+                placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                data-testid={`edit-option-${i}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label>Correct Answer</Label>
+        <Input
+          value={formData.correctAnswer}
+          onChange={(e) => setFormData({ ...formData, correctAnswer: e.target.value })}
+          placeholder="Correct answer"
+          data-testid="edit-correct-answer"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Explanation (optional)</Label>
+        <Textarea
+          value={formData.explanation}
+          onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
+          placeholder="Explain the answer"
+          rows={2}
+          data-testid="edit-explanation"
+        />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+        <Button type="button" variant="ghost" onClick={onCancel} data-testid="edit-cancel">
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending}
+          className="bg-gradient-to-r from-[#C9A84C] to-[#E8DCAA] text-[#0a0a1b] hover:from-[#d4b355] hover:to-[#f0e4b8]"
+          data-testid="edit-save"
+        >
+          {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          Save Changes
+        </Button>
       </div>
     </form>
   );

@@ -886,7 +886,7 @@ export async function registerRoutes(
       }
 
       doc.moveDown(2);
-      doc.fontSize(10).text("Powered by SmartGenEduX 2025", { align: "center" });
+      doc.fontSize(10).text("Powered by SmartGenEduX ${new Date().getFullYear()}", { align: "center" });
 
       doc.end();
     } catch (error: any) {
@@ -4043,6 +4043,8 @@ export function registerPaperGenerationRoutes(app: Express) {
       res.setHeader("Content-Disposition", `attachment; filename="${test.title.replace(/[^a-zA-Z0-9]/g, '_')}_set${setNumber}_paper.pdf"`);
       doc.pipe(res);
 
+      const currentYear = new Date().getFullYear();
+
       // Add school logo if available
       if (schoolLogoUrl) {
         try {
@@ -4056,66 +4058,101 @@ export function registerPaperGenerationRoutes(app: Express) {
         }
       }
 
-      doc.fontSize(16).font("Helvetica-Bold").text(schoolName, { align: "center" });
-      doc.moveDown(0.5);
-      doc.fontSize(14).text(test.title + setLabel, { align: "center" });
+      // School Name
+      doc.fontSize(16).font("Helvetica-Bold").text(schoolName.toUpperCase(), { align: "center" });
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").text(`Subject: ${test.subject} | Grade: ${test.grade} | Total Marks: ${test.totalMarks} | Duration: ${test.duration} min`, { align: "center" });
-      doc.moveDown();
+      doc.fontSize(13).text((test.title + setLabel).toUpperCase(), { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica").text(
+        `Subject: ${test.subject}    |    Class: ${test.grade}    |    Max. Marks: ${test.totalMarks}    |    Time: ${test.duration || 60} min`,
+        { align: "center" }
+      );
+      doc.moveDown(0.5);
       doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
-      doc.moveDown();
+      doc.moveDown(0.5);
 
-      doc.fontSize(11).text("Instructions:", { underline: true });
-      doc.fontSize(10).text("1. Read all questions carefully before answering.");
-      doc.text("2. Answers must be written neatly.");
-      doc.text("3. No electronic devices allowed.");
-      doc.moveDown();
+      // Group questions by section
+      const sectionMap = new Map<string, typeof shuffledQuestions>();
+      for (const q of shuffledQuestions) {
+        const sec = q.section || "General";
+        if (!sectionMap.has(sec)) sectionMap.set(sec, []);
+        sectionMap.get(sec)!.push(q);
+      }
 
-      let questionNum = 1;
-      
-      for (const [passageId, group] of passageGroups) {
-        if (group.passage) {
-          doc.fontSize(11).font("Helvetica-Bold").text("PASSAGE:", { underline: true });
-          doc.font("Helvetica-Oblique").fontSize(10).text(group.passage.content || "");
-          doc.moveDown();
-          doc.font("Helvetica-Bold").fontSize(10).text("Questions based on the above passage:");
-          doc.moveDown(0.5);
+      // Marks Distribution
+      if (sectionMap.size > 1) {
+        doc.fontSize(10).font("Helvetica-Bold").text("MARKS DISTRIBUTION", { underline: true });
+        doc.font("Helvetica").fontSize(9);
+        for (const [sec, qs] of sectionMap) {
+          const totalSec = qs.reduce((s, q) => s + (q.marks || 1), 0);
+          doc.text(`    Section ${sec}: ${qs.length} Questions — ${totalSec} Marks`);
         }
-        
-        for (const q of group.questions) {
-          doc.fontSize(11).font("Helvetica-Bold").text(`Q${questionNum}. ${q.content}`, { continued: false });
-          doc.font("Helvetica").fontSize(9).text(`[${q.marks} mark(s)] - ${q.difficulty}`, { align: "right" });
-          
-          if (q.type === "mcq" && q.options) {
+        doc.moveDown(0.5);
+      }
+
+      // General Instructions
+      doc.fontSize(10).font("Helvetica-Bold").text("GENERAL INSTRUCTIONS", { underline: true });
+      doc.font("Helvetica").fontSize(9);
+      doc.text("1. All questions are compulsory unless stated otherwise.");
+      doc.text("2. Read each question carefully before writing your answer.");
+      doc.text("3. Write legibly and use only blue or black ink.");
+      doc.text("4. No electronic devices or calculators allowed unless specified.");
+      doc.moveDown(0.5);
+      doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+      doc.moveDown(0.8);
+
+      // Section-wise questions
+      let questionNum = 1;
+      for (const [sectionName, sectionQuestions] of sectionMap) {
+        const sectionTotalMarks = sectionQuestions.reduce((sum, q) => sum + (q.marks || 1), 0);
+        const marksPerQ = sectionQuestions[0]?.marks || 1;
+        const allSameMarks = sectionQuestions.every(q => (q.marks || 1) === marksPerQ);
+
+        // Section header
+        doc.fontSize(12).font("Helvetica-Bold")
+          .text(`SECTION ${sectionName.toUpperCase()}`, { continued: true })
+          .font("Helvetica").fontSize(10)
+          .text(`    (${sectionTotalMarks} Marks)`, { continued: false });
+
+        if (allSameMarks) {
+          doc.fontSize(9).font("Helvetica-Oblique")
+            .text(`Each question carries ${marksPerQ} mark${marksPerQ > 1 ? "s" : ""}.`);
+        }
+        doc.moveDown(0.5);
+
+        for (const q of sectionQuestions) {
+          // Check if we need a new page
+          if (doc.y > doc.page.height - 100) {
+            doc.addPage();
+          }
+
+          const marksLabel = allSameMarks ? "" : `  [${q.marks || 1} Mark${(q.marks || 1) > 1 ? "s" : ""}]`;
+          doc.fontSize(11).font("Helvetica-Bold").text(`Q${questionNum}. `, { continued: true });
+          doc.font("Helvetica").text(`${q.content}${marksLabel}`);
+
+          if ((q.type === "mcq" || q.type === "true_false") && q.options) {
             const opts = q.options as string[];
+            doc.fontSize(10);
             opts.forEach((opt, i) => {
-              doc.fontSize(10).text(`   ${String.fromCharCode(65 + i)}) ${opt}`);
+              doc.text(`     ${String.fromCharCode(65 + i)}) ${opt}`);
             });
           }
-          doc.moveDown();
+
+          // Answer writing space (proportional to marks)
+          const lines = Math.min(Math.max((q.marks || 1) * 2, 2), 8);
+          doc.moveDown(lines * 0.3);
           questionNum++;
         }
-        doc.moveDown();
-      }
-      
-      for (const q of standaloneQuestions) {
-        doc.fontSize(11).font("Helvetica-Bold").text(`Q${questionNum}. ${q.content}`, { continued: false });
-        doc.font("Helvetica").fontSize(9).text(`[${q.marks} mark(s)] - ${q.difficulty}`, { align: "right" });
-        
-        if (q.type === "mcq" && q.options) {
-          const opts = q.options as string[];
-          opts.forEach((opt, i) => {
-            doc.fontSize(10).text(`   ${String.fromCharCode(65 + i)}) ${opt}`);
-          });
-        }
-        doc.moveDown();
-        questionNum++;
+        doc.moveDown(0.5);
       }
 
-      doc.moveDown(2);
-      doc.fontSize(8).text("--- End of Question Paper ---", { align: "center" });
-      doc.moveDown();
-      doc.text("Powered by SmartGenEduX 2025", { align: "center" });
+      // End of paper
+      doc.moveDown(1);
+      doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+      doc.moveDown(0.5);
+      doc.fontSize(10).font("Helvetica-Bold").text("— End of Question Paper —", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(7).font("Helvetica").text(`Powered by SmartGenEduX ${currentYear} | Prashnakosh`, { align: "center", color: "#888888" });
 
       doc.end();
     } catch (error: any) {
@@ -4211,7 +4248,7 @@ export function registerPaperGenerationRoutes(app: Express) {
       doc.fontSize(8).text("--- End of Answer Key ---", { align: "center" });
       doc.moveDown();
       doc.text("CONFIDENTIAL - For Examiner Use Only", { align: "center" });
-      doc.text("Powered by SmartGenEduX 2025", { align: "center" });
+      doc.text("Powered by SmartGenEduX ${new Date().getFullYear()}", { align: "center" });
 
       doc.end();
     } catch (error: any) {
@@ -4275,119 +4312,182 @@ export function registerPaperGenerationRoutes(app: Express) {
         }
       }
 
-      const schoolName = tenant?.name || "Question Bank";
+      const schoolName = tenant?.name || "School Name";
       const schoolAddress = (tenant as any)?.address || "";
+      const currentYear = new Date().getFullYear();
+
+      // Group questions by section for proper exam paper formatting
+      const sectionMap = new Map<string, typeof questions>();
+      for (const q of shuffledQuestions) {
+        const sec = q.section || "General";
+        if (!sectionMap.has(sec)) sectionMap.set(sec, []);
+        sectionMap.get(sec)!.push(q);
+      }
+
+      // Build marks distribution summary
+      const sectionSummary: string[] = [];
+      for (const [sec, qs] of sectionMap) {
+        const totalSectionMarks = qs.reduce((sum, q) => sum + (q.marks || 1), 0);
+        sectionSummary.push(`Section ${sec}: ${qs.length} Questions — ${totalSectionMarks} Marks`);
+      }
 
       const docChildren: any[] = [
+        // School Name Header
         new Paragraph({
-          text: schoolName,
-          heading: HeadingLevel.HEADING_1,
+          children: [new TextRun({ text: schoolName.toUpperCase(), bold: true, size: 32 })],
           alignment: AlignmentType.CENTER,
+          spacing: { after: 60 },
         }),
+      ];
+
+      if (schoolAddress) {
+        docChildren.push(new Paragraph({
+          children: [new TextRun({ text: schoolAddress, size: 20, italics: true })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 120 },
+        }));
+      }
+
+      // Test Title + Set Label
+      docChildren.push(
         new Paragraph({
-          text: schoolAddress,
+          children: [new TextRun({ text: (test.title + setLabel).toUpperCase(), bold: true, size: 28 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 80 },
+        }),
+        // Subject / Grade / Marks / Duration line
+        new Paragraph({
+          children: [
+            new TextRun({ text: `Subject: ${test.subject}`, size: 22 }),
+            new TextRun({ text: `    Class: ${test.grade}`, size: 22 }),
+            new TextRun({ text: `    Max. Marks: ${test.totalMarks}`, size: 22 }),
+            new TextRun({ text: `    Time: ${test.duration || 60} min`, size: 22 }),
+          ],
           alignment: AlignmentType.CENTER,
           spacing: { after: 200 },
         }),
+        // Horizontal rule
         new Paragraph({
-          text: test.title + setLabel,
-          heading: HeadingLevel.HEADING_2,
+          children: [new TextRun({ text: "─".repeat(80), size: 16, color: "999999" })],
           alignment: AlignmentType.CENTER,
-        }),
-        new Paragraph({
-          children: [
-            new TextRun({ text: `Subject: ${test.subject} | Grade: ${test.grade} | Total Marks: ${test.totalMarks} | Duration: ${test.duration} min`, size: 22 }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 400 },
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: "Instructions:", bold: true })],
-          spacing: { before: 200, after: 100 },
-        }),
-        new Paragraph({ text: "1. Read all questions carefully before answering." }),
-        new Paragraph({ text: "2. Answers must be written neatly." }),
-        new Paragraph({ text: "3. No electronic devices allowed." }),
-        new Paragraph({ text: "", spacing: { after: 300 } }),
-      ];
+          spacing: { after: 100 },
+        })
+      );
 
-      let questionNum = 1;
-      
-      for (const [passageId, group] of passageGroups) {
-        if (group.passage) {
-          docChildren.push(
-            new Paragraph({
-              children: [new TextRun({ text: "PASSAGE:", bold: true, underline: {} })],
-              spacing: { before: 300, after: 100 },
-            }),
-            new Paragraph({
-              children: [new TextRun({ text: group.passage.content || "", italics: true })],
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: [new TextRun({ text: "Questions based on the above passage:", bold: true })],
-              spacing: { after: 100 },
-            })
-          );
+      // Marks Distribution
+      if (sectionSummary.length > 1) {
+        docChildren.push(
+          new Paragraph({
+            children: [new TextRun({ text: "MARKS DISTRIBUTION", bold: true, size: 22, underline: {} })],
+            spacing: { before: 100, after: 80 },
+          })
+        );
+        for (const line of sectionSummary) {
+          docChildren.push(new Paragraph({
+            children: [new TextRun({ text: `    ${line}`, size: 20 })],
+            spacing: { after: 40 },
+          }));
         }
-        
-        for (const q of group.questions) {
+      }
+
+      // General Instructions
+      docChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: "GENERAL INSTRUCTIONS", bold: true, size: 22, underline: {} })],
+          spacing: { before: 200, after: 80 },
+        }),
+        new Paragraph({ children: [new TextRun({ text: "1. All questions are compulsory unless stated otherwise.", size: 20 })], spacing: { after: 40 } }),
+        new Paragraph({ children: [new TextRun({ text: "2. Read each question carefully before writing your answer.", size: 20 })], spacing: { after: 40 } }),
+        new Paragraph({ children: [new TextRun({ text: "3. Write legibly and use only blue or black ink.", size: 20 })], spacing: { after: 40 } }),
+        new Paragraph({ children: [new TextRun({ text: "4. No electronic devices or calculators allowed unless specified.", size: 20 })], spacing: { after: 40 } }),
+        new Paragraph({
+          children: [new TextRun({ text: "─".repeat(80), size: 16, color: "999999" })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        })
+      );
+
+      // Section-wise questions
+      let questionNum = 1;
+      for (const [sectionName, sectionQuestions] of sectionMap) {
+        const sectionTotalMarks = sectionQuestions.reduce((sum, q) => sum + (q.marks || 1), 0);
+        const marksPerQ = sectionQuestions[0]?.marks || 1;
+        const allSameMarks = sectionQuestions.every(q => (q.marks || 1) === marksPerQ);
+
+        // Section header
+        docChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `SECTION ${sectionName.toUpperCase()}`, bold: true, size: 26 }),
+              new TextRun({ text: `    (${sectionTotalMarks} Marks)`, size: 22, italics: true }),
+            ],
+            spacing: { before: 400, after: 80 },
+          })
+        );
+
+        // Section instruction
+        if (allSameMarks) {
+          docChildren.push(new Paragraph({
+            children: [new TextRun({
+              text: `Each question carries ${marksPerQ} mark${marksPerQ > 1 ? "s" : ""}.`,
+              size: 20, italics: true
+            })],
+            spacing: { after: 200 },
+          }));
+        }
+
+        // Questions in this section
+        for (const q of sectionQuestions) {
+          // Question text with marks
+          const marksLabel = allSameMarks ? "" : `  [${q.marks || 1} Mark${(q.marks || 1) > 1 ? "s" : ""}]`;
           docChildren.push(
             new Paragraph({
               children: [
-                new TextRun({ text: `Q${questionNum}. ${q.content}`, bold: true }),
-                new TextRun({ text: `  [${q.marks} mark(s)]`, italics: true }),
+                new TextRun({ text: `Q${questionNum}. `, bold: true, size: 22 }),
+                new TextRun({ text: q.content, size: 22 }),
+                ...(marksLabel ? [new TextRun({ text: marksLabel, italics: true, size: 20 })] : []),
               ],
-              spacing: { before: 200, after: 100 },
+              spacing: { before: 200, after: 80 },
             })
           );
 
-          if (q.type === "mcq" && q.options) {
+          // MCQ options
+          if ((q.type === "mcq" || q.type === "true_false") && q.options) {
             const opts = q.options as string[];
             opts.forEach((opt, i) => {
               docChildren.push(
-                new Paragraph({ text: `   ${String.fromCharCode(65 + i)}) ${opt}` })
+                new Paragraph({
+                  children: [new TextRun({ text: `     ${String.fromCharCode(65 + i)}) ${opt}`, size: 22 })],
+                  spacing: { after: 20 },
+                })
               );
             });
           }
 
-          docChildren.push(new Paragraph({ text: "", spacing: { after: 150 } }));
+          // Answer writing space (proportional to marks)
+          const answerLines = Math.min(Math.max((q.marks || 1) * 2, 2), 10);
+          for (let i = 0; i < answerLines; i++) {
+            docChildren.push(new Paragraph({ text: "", spacing: { after: 80 } }));
+          }
+
           questionNum++;
         }
       }
-      
-      for (const q of standaloneQuestions) {
-        docChildren.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: `Q${questionNum}. ${q.content}`, bold: true }),
-              new TextRun({ text: `  [${q.marks} mark(s)]`, italics: true }),
-            ],
-            spacing: { before: 200, after: 100 },
-          })
-        );
 
-        if (q.type === "mcq" && q.options) {
-          const opts = q.options as string[];
-          opts.forEach((opt, i) => {
-            docChildren.push(
-              new Paragraph({ text: `   ${String.fromCharCode(65 + i)}) ${opt}` })
-            );
-          });
-        }
-
-        docChildren.push(new Paragraph({ text: "", spacing: { after: 150 } }));
-        questionNum++;
-      }
-
+      // End of paper
       docChildren.push(
         new Paragraph({
-          text: "--- End of Question Paper ---",
+          children: [new TextRun({ text: "─".repeat(80), size: 16, color: "999999" })],
           alignment: AlignmentType.CENTER,
-          spacing: { before: 400 },
+          spacing: { before: 400, after: 100 },
         }),
         new Paragraph({
-          text: "Powered by SmartGenEduX 2025",
+          children: [new TextRun({ text: "— End of Question Paper —", bold: true, size: 22 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 100 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `Powered by SmartGenEduX ${currentYear}`, size: 16, color: "888888" })],
           alignment: AlignmentType.CENTER,
         })
       );
@@ -4397,12 +4497,18 @@ export function registerPaperGenerationRoutes(app: Express) {
           properties: {},
           headers: {
             default: new Header({
-              children: [new Paragraph({ text: schoolName, alignment: AlignmentType.CENTER })],
+              children: [new Paragraph({
+                children: [new TextRun({ text: `${schoolName} — ${test.title}${setLabel}`, size: 16, color: "888888" })],
+                alignment: AlignmentType.CENTER,
+              })],
             }),
           },
           footers: {
             default: new Footer({
-              children: [new Paragraph({ text: "Powered by SmartGenEduX 2025", alignment: AlignmentType.CENTER })],
+              children: [new Paragraph({
+                children: [new TextRun({ text: `Powered by SmartGenEduX ${currentYear} | Prashnakosh`, size: 16, color: "888888" })],
+                alignment: AlignmentType.CENTER,
+              })],
             }),
           },
           children: docChildren,
@@ -4531,7 +4637,7 @@ export function registerPaperGenerationRoutes(app: Express) {
           },
           footers: {
             default: new Footer({
-              children: [new Paragraph({ text: "Powered by SmartGenEduX 2025", alignment: AlignmentType.CENTER })],
+              children: [new Paragraph({ text: "Powered by SmartGenEduX ${new Date().getFullYear()}", alignment: AlignmentType.CENTER })],
             }),
           },
           children: docChildren,

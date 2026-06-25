@@ -279,6 +279,9 @@ function Router() {
       <Route path="/superadmin">
         <ProtectedRoute component={SuperAdminDashboard} />
       </Route>
+      <Route path="/superadmin/dashboard">
+        <ProtectedRoute component={SuperAdminDashboard} />
+      </Route>
       <Route path="/superadmin/schools">
         <ProtectedRoute component={SuperAdminSchools} />
       </Route>
