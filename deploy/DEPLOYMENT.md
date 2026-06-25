@@ -93,14 +93,19 @@ notepad .env
 
 Fill in all values:
 
-| Variable | What to enter |
-|----------|---------------|
-| `GHCR_USER` | Your GitHub username |
-| `GHCR_TOKEN` | The Personal Access Token from Step 3 |
-| `IMAGE_TAG` | `latest` (or a specific version like `v1.0.0`) |
-| `DB_PASSWORD` | A strong password (e.g., `Prashna$K0sh2026!Db`) |
-| `SESSION_SECRET` | A 64-character random string (see below) |
-| `DATA_DIR` | `E:\PrashnakoshData` (or another drive with space) |
+| Variable | Required | What to enter |
+|----------|----------|---------------|
+| `GHCR_USER` | Yes | Your GitHub username |
+| `GHCR_TOKEN` | Yes | The Personal Access Token from Step 3 |
+| `IMAGE_TAG` | No | `latest` (default) or a specific version like `v1.0.0` |
+| `DB_PASSWORD` | Yes | A strong database password (e.g., `Prashna$K0sh2026!Db`) |
+| `SESSION_SECRET` | Yes | A 64-character random string (see below) |
+| `DATA_DIR` | No | `E:\PrashnakoshData` (default) or another drive with space |
+| `SUPER_ADMIN_SCHOOL_CODE` | No | School code for Super Admin login (default: `SUPERADMIN`) |
+| `SUPER_ADMIN_SCHOOL_NAME` | No | Display name for the Super Admin tenant (default: `Prashnakosh Central`) |
+| `SUPER_ADMIN_EMAIL` | Yes | The email address for the Super Admin login |
+| `SUPER_ADMIN_PASSWORD` | Yes | The password for the Super Admin login |
+| `SUPER_ADMIN_NAME` | No | Display name (default: `Super Admin`) |
 
 Generate SESSION_SECRET in PowerShell:
 ```powershell
@@ -133,6 +138,13 @@ scripts\health.bat
 Then open in a browser: **https://localhost**
 
 Accept the self-signed certificate warning (click Advanced → Proceed). This is expected for internal deployments.
+
+Login with:
+- **School Code**: The value you set for `SUPER_ADMIN_SCHOOL_CODE` in `.env` (default: `SUPERADMIN`)
+- **Email**: The value you set for `SUPER_ADMIN_EMAIL` in `.env`
+- **Password**: The value you set for `SUPER_ADMIN_PASSWORD` in `.env`
+
+The Super Admin account is created automatically on first startup. It will **not** be recreated or overwritten on subsequent restarts.
 
 ---
 

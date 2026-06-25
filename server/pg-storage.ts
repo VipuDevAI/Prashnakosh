@@ -108,7 +108,8 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export class PgStorage implements IStorage {
   async authenticateUser(email: string, password: string, schoolCode: string): Promise<{ user: AuthUser; token: string } | null> {
-    if (schoolCode === "SUPERADMIN" || schoolCode === "") {
+    const saSchoolCode = process.env.SUPER_ADMIN_SCHOOL_CODE || "SUPERADMIN";
+    if (schoolCode === saSchoolCode || schoolCode === "SUPERADMIN" || schoolCode === "") {
       const [superAdmin] = await db.select().from(users)
         .where(and(
           eq(users.email, email),
@@ -2666,35 +2667,42 @@ export class PgStorage implements IStorage {
 // =====================================================
 async function seedSuperAdmin() {
   try {
-    // Check if super admin already exists
+    const saEmail = process.env.SUPER_ADMIN_EMAIL || "superadmin@safal.com";
+    const saPassword = process.env.SUPER_ADMIN_PASSWORD || "SuperAdmin@123";
+    const saName = process.env.SUPER_ADMIN_NAME || "Super Admin";
+    const saSchoolCode = process.env.SUPER_ADMIN_SCHOOL_CODE || "SUPERADMIN";
+    const saSchoolName = process.env.SUPER_ADMIN_SCHOOL_NAME || "Prashnakosh Central";
+
+    // Check if ANY super_admin user already exists — never overwrite
     const [existingSuperAdmin] = await db.select().from(users)
-      .where(eq(users.email, "superadmin@safal.com"));
-    
-    if (!existingSuperAdmin) {
-      console.log("[pg-storage] Creating Super Admin user...");
-      await db.insert(users).values({
-        id: "user-superadmin",
-        tenantId: null,
-        email: "superadmin@safal.com",
-        password: "SuperAdmin@123",
-        name: "Super Admin",
-        role: "super_admin",
-        grade: null,
-        section: null,
-        wingId: null,
-        subjects: [],
-        avatar: null,
-        parentOf: null,
-        active: true,
-        assignedQuestions: {},
-        sessionToken: null,
-      });
-      console.log("[pg-storage] Super Admin user created successfully");
-    } else {
-      console.log("[pg-storage] Super Admin user already exists");
+      .where(eq(users.role, "super_admin"));
+
+    if (existingSuperAdmin) {
+      console.log("[seed] Super Admin already exists — skipping seed");
+      return;
     }
+
+    console.log(`[seed] Creating Super Admin (${saEmail}, school code: ${saSchoolCode})...`);
+    await db.insert(users).values({
+      id: "user-superadmin",
+      tenantId: null,
+      email: saEmail,
+      password: saPassword,
+      name: saName,
+      role: "super_admin",
+      grade: null,
+      section: null,
+      wingId: null,
+      subjects: [],
+      avatar: null,
+      parentOf: null,
+      active: true,
+      assignedQuestions: {},
+      sessionToken: null,
+    });
+    console.log("[seed] Super Admin created successfully");
   } catch (error) {
-    console.error("[pg-storage] Error seeding Super Admin:", error);
+    console.error("[seed] Error seeding Super Admin:", error);
   }
 }
 

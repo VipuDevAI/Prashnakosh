@@ -959,7 +959,11 @@ function HODDashboard() {
   // Fetch ALL questions for HOD (filtered by department)
   const { data: allQuestions = [] } = useQuery<HODQuestion[]>({
     queryKey: ['/api/questions', activeDepartmentId],
-    queryFn: () => authFetch(`/api/questions${deptParam}`),
+    queryFn: async () => {
+      const response = await authFetch(`/api/questions${deptParam}`);
+      // API returns {questions: [...], pagination: {...}}, extract questions array
+      return response?.questions || response || [];
+    },
     enabled: !!user?.id,
   });
 

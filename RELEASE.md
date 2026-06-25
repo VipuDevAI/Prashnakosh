@@ -137,14 +137,19 @@ notepad .env
 
 Fill in every value:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GHCR_USER` | GitHub username with package access | `smartgenedux-admin` |
-| `GHCR_TOKEN` | Personal Access Token (read:packages) | `ghp_xxxxxxxxxxxxxxxxxxxx` |
-| `IMAGE_TAG` | Docker image version | `latest` |
-| `DB_PASSWORD` | PostgreSQL password (choose a strong one) | `Prashna$K0sh2026!Db` |
-| `SESSION_SECRET` | 64-character random string (see below) | *(auto-generated)* |
-| `DATA_DIR` | Root path for all persistent data | `E:\PrashnakoshData` |
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `GHCR_USER` | Yes | GitHub username with package access | `smartgenedux-admin` |
+| `GHCR_TOKEN` | Yes | Personal Access Token (read:packages) | `ghp_xxxxxxxxxxxxxxxxxxxx` |
+| `IMAGE_TAG` | No | Docker image version (default: `latest`) | `latest` |
+| `DB_PASSWORD` | Yes | PostgreSQL password (choose a strong one) | `Prashna$K0sh2026!Db` |
+| `SESSION_SECRET` | Yes | 64-character random string (see below) | *(auto-generated)* |
+| `DATA_DIR` | No | Root path for all persistent data (default: `E:\PrashnakoshData`) | `E:\PrashnakoshData` |
+| `SUPER_ADMIN_SCHOOL_CODE` | No | School code for Super Admin login (default: `SUPERADMIN`) | `SUPERADMIN` |
+| `SUPER_ADMIN_SCHOOL_NAME` | No | Display name for Super Admin tenant (default: `Prashnakosh Central`) | `Prashnakosh Central` |
+| `SUPER_ADMIN_EMAIL` | Yes | Email for the Super Admin account | `admin@school.edu` |
+| `SUPER_ADMIN_PASSWORD` | Yes | Password for the Super Admin account | *(choose a strong password)* |
+| `SUPER_ADMIN_NAME` | No | Display name for Super Admin user (default: `Super Admin`) | `Super Admin` |
 
 Generate `SESSION_SECRET` in PowerShell:
 
@@ -181,15 +186,16 @@ Expected output: three containers running, application healthy, database ready.
 
 ## 4. Default Credentials
 
-The Super Admin account is created automatically on first startup.
+The Super Admin account is created automatically on first startup using the values from `.env`. The account is **only created once** — subsequent restarts will never overwrite or recreate it.
 
-| Field | Value |
-|-------|-------|
-| **School Code** | `SUPERADMIN` |
-| **Email** | `superadmin@safal.com` |
-| **Password** | `SuperAdmin@123` |
+| Field | Source |
+|-------|--------|
+| **School Code** | `SUPER_ADMIN_SCHOOL_CODE` in `.env` (default: `SUPERADMIN`) |
+| **Email** | `SUPER_ADMIN_EMAIL` in `.env` (required — no default) |
+| **Password** | `SUPER_ADMIN_PASSWORD` in `.env` (required — no default) |
+| **Display Name** | `SUPER_ADMIN_NAME` in `.env` (default: `Super Admin`) |
 
-> **SECURITY ACTION REQUIRED**: After first login, the Super Admin should immediately create a new admin account with a strong password and disable or change the default credentials.
+> **There are no hardcoded credentials in the application.** Every deployment configures its own Super Admin through `.env` before first startup.
 
 ---
 
@@ -201,7 +207,7 @@ Perform these steps immediately after installation:
 |---|--------|-------|
 | 1 | Open `https://localhost` in a browser | Server |
 | 2 | Accept the self-signed certificate warning (Advanced → Proceed) | Browser |
-| 3 | Login with School Code: `SUPERADMIN`, Email: `superadmin@safal.com`, Password: `SuperAdmin@123` | Login page |
+| 3 | Login with the School Code, Email, and Password you configured in `.env` | Login page |
 | 4 | Verify the Super Admin dashboard loads | Dashboard |
 | 5 | Navigate to **Schools** → Create a school (e.g., name: "Maharishi Vidya Mandir", code: "MVMCHN") | Schools page |
 | 6 | Navigate to **Users** → Create an Admin user for the school | Users page |
@@ -481,6 +487,7 @@ Complete every item before declaring the deployment production-ready.
 - [ ] `GHCR_USER` and `GHCR_TOKEN` are valid and can pull images
 - [ ] `DB_PASSWORD` is a strong, unique password (not the example value)
 - [ ] `SESSION_SECRET` is a randomly generated 64-character string
+- [ ] `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` are set
 - [ ] `DATA_DIR` points to a drive with adequate free space
 - [ ] `scripts\install.bat` completed without errors
 - [ ] All three containers are running (`docker compose ps`)
@@ -503,7 +510,7 @@ Complete every item before declaring the deployment production-ready.
 
 ### Security
 
-- [ ] Default Super Admin password has been changed or a new admin account has been created
+- [ ] Super Admin credentials in `.env` use a strong, unique password
 - [ ] SSL certificate is in place (self-signed or CA-signed)
 - [ ] Server is not exposed to the public internet (LAN-only access)
 - [ ] `.env` file permissions are restricted to the administrator account
