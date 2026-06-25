@@ -1033,6 +1033,19 @@ export async function registerRoutes(
       if (attempt.studentId !== req.user!.id) {
         return res.status(403).json({ error: "Access denied" });
       }
+
+      // Server-side timer validation: check wall clock
+      if (attempt.startedAt) {
+        const test = await storage.getTest(attempt.testId);
+        const maxDurationSec = ((test?.duration || 60) * 60) + 120; // 2 min grace
+        const elapsedSec = Math.floor((Date.now() - new Date(attempt.startedAt).getTime()) / 1000);
+        if (elapsedSec > maxDurationSec && attempt.status === "in_progress") {
+          // Auto-submit — time exceeded server-side
+          const submitResult = await storage.submitExam(attemptId, answers || {});
+          return res.json({ success: true, autoSubmitted: true, reason: "Time exceeded (server validation)" });
+        }
+      }
+
       const result = await storage.saveExamState(attemptId, answers, questionStatuses, markedForReview, timeRemaining);
       res.json({ success: true });
     } catch (error: any) {

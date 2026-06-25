@@ -229,6 +229,27 @@ export function ExamEngine({
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [attemptId, test.createdBy, test.tenantId, toast]);
 
+  // Anti-cheating: prevent copy, paste, cut, right-click during exam
+  useEffect(() => {
+    const prevent = (e: Event) => {
+      e.preventDefault();
+      toast({ title: "Action Blocked", description: "Copy/Paste is disabled during examinations.", variant: "destructive" });
+    };
+    const preventContext = (e: Event) => {
+      e.preventDefault();
+    };
+    document.addEventListener("copy", prevent);
+    document.addEventListener("paste", prevent);
+    document.addEventListener("cut", prevent);
+    document.addEventListener("contextmenu", preventContext);
+    return () => {
+      document.removeEventListener("copy", prevent);
+      document.removeEventListener("paste", prevent);
+      document.removeEventListener("cut", prevent);
+      document.removeEventListener("contextmenu", preventContext);
+    };
+  }, [toast]);
+
   useEffect(() => {
     if (currentQuestion) {
       setQuestionStatuses(prev => ({

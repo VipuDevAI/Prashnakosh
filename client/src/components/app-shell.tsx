@@ -45,7 +45,10 @@ function SidebarNav({ collapsed, onCollapse }: { collapsed: boolean; onCollapse:
       collapsed ? "w-[72px]" : "w-[240px]"
     )}>
       {/* Logo area */}
-      <div className="flex items-center px-4 h-16 border-b border-white/[0.06] flex-shrink-0">
+      <div className={cn(
+        "flex items-center border-b border-white/[0.06] flex-shrink-0",
+        collapsed ? "justify-center px-3 h-16" : "px-4 h-16"
+      )}>
         {collapsed ? (
           <BrandMark size="sm" />
         ) : (

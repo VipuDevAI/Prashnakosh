@@ -11,31 +11,31 @@ interface BrandLogoProps {
   variant?: "default" | "compact" | "full";
 }
 
-const logoSizes: Record<BrandSize, string> = {
-  xs: "w-7 h-7",
-  sm: "w-9 h-9",
-  md: "w-11 h-11",
-  lg: "w-16 h-16",
-  xl: "w-24 h-24",
-  "2xl": "w-32 h-32",
+const logoSizes: Record<BrandSize, number> = {
+  xs: 28,
+  sm: 36,
+  md: 44,
+  lg: 56,
+  xl: 80,
+  "2xl": 110,
 };
 
 const textSizes: Record<BrandSize, string> = {
-  xs: "text-sm",
-  sm: "text-base",
-  md: "text-lg",
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-base",
   lg: "text-xl",
   xl: "text-2xl",
   "2xl": "text-3xl",
 };
 
-const taglineSizes: Record<BrandSize, string> = {
-  xs: "text-[9px]",
-  sm: "text-[10px]",
-  md: "text-xs",
-  lg: "text-sm",
-  xl: "text-base",
-  "2xl": "text-lg",
+const subTextSizes: Record<BrandSize, string> = {
+  xs: "text-[8px]",
+  sm: "text-[9px]",
+  md: "text-[10px]",
+  lg: "text-xs",
+  xl: "text-sm",
+  "2xl": "text-base",
 };
 
 export function BrandLogo({
@@ -45,36 +45,32 @@ export function BrandLogo({
   className,
   variant = "default",
 }: BrandLogoProps) {
+  const px = logoSizes[size];
+
   return (
     <div
       className={cn(
-        "flex items-center",
+        "flex items-center select-none",
         variant === "full" ? "flex-col text-center gap-3" : "gap-3",
         className
       )}
       data-testid="brand-logo"
     >
-      <div
-        className={cn(
-          "relative flex-shrink-0",
-          "transition-transform hover:scale-105",
-          logoSizes[size]
-        )}
-      >
-        <img
-          src={logoImage}
-          alt="Prashnakosh"
-          className="w-full h-full object-contain drop-shadow-lg"
-          draggable={false}
-        />
-      </div>
+      <img
+        src={logoImage}
+        alt="Prashnakosh"
+        width={px}
+        height={px}
+        className="flex-shrink-0 object-contain"
+        draggable={false}
+        style={{ width: px, height: px }}
+      />
       {showText && (
-        <div className={cn(variant === "full" ? "text-center" : "flex flex-col")}>
+        <div className={cn(variant === "full" ? "text-center" : "flex flex-col justify-center min-w-0")}>
           <span
             className={cn(
-              "font-bold tracking-wide leading-tight",
-              "bg-gradient-to-r from-[#1a1f5c] via-[#2d3494] to-[#1a1f5c] bg-clip-text text-transparent",
-              "dark:from-white dark:via-[#E8DCAA] dark:to-white",
+              "font-bold tracking-wide leading-none whitespace-nowrap",
+              "text-white",
               textSizes[size]
             )}
             style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
@@ -83,16 +79,16 @@ export function BrandLogo({
           </span>
           <span
             className={cn(
-              "font-medium tracking-[0.25em] uppercase leading-tight",
+              "font-medium tracking-[0.2em] uppercase leading-none mt-0.5 whitespace-nowrap",
               "text-[#C9A84C]",
-              taglineSizes[size]
+              subTextSizes[size]
             )}
             style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
           >
-            Jignyasa
+            JIGNYASA
           </span>
           {showTagline && (
-            <span className={cn("text-white/30 mt-1", taglineSizes[size])}>
+            <span className={cn("text-white/25 mt-1 whitespace-nowrap", subTextSizes[size])}>
               Knowledge &bull; Excellence &bull; Innovation
             </span>
           )}
@@ -103,36 +99,31 @@ export function BrandLogo({
 }
 
 export function BrandMark({ size = "md", className }: { size?: BrandSize; className?: string }) {
+  const px = logoSizes[size];
   return (
-    <div
-      className={cn(
-        "relative flex-shrink-0",
-        "transition-transform hover:scale-105",
-        logoSizes[size],
-        className
-      )}
+    <img
+      src={logoImage}
+      alt="Prashnakosh"
+      width={px}
+      height={px}
+      className={cn("flex-shrink-0 object-contain", className)}
+      draggable={false}
+      style={{ width: px, height: px }}
       data-testid="brand-mark"
-    >
-      <img
-        src={logoImage}
-        alt="Prashnakosh"
-        className="w-full h-full object-contain drop-shadow-lg"
-        draggable={false}
-      />
-    </div>
+    />
   );
 }
 
 export function BrandFooter({ className }: { className?: string }) {
   const year = new Date().getFullYear();
   return (
-    <div className={cn("flex flex-col items-center gap-1", className)} data-testid="brand-footer">
-      <span className="text-white/30 text-sm">
+    <div className={cn("flex flex-col items-center gap-0.5", className)} data-testid="brand-footer">
+      <span className="text-white/25 text-xs">
         Powered by{" "}
-        <span className="font-semibold text-[#C9A84C]/70">SmartGenEduX</span>
+        <span className="font-semibold text-[#C9A84C]/60">SmartGenEduX</span>
         {" "}&copy; {year}
       </span>
-      <span className="text-[10px] uppercase tracking-[0.3em] text-white/15">
+      <span className="text-[9px] uppercase tracking-[0.3em] text-white/12 font-medium">
         Prashnakosh Beta
       </span>
     </div>

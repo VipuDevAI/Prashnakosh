@@ -819,6 +819,11 @@ export class PgStorage implements IStorage {
     const attempt = await this.getAttempt(attemptId);
     if (!attempt) throw new Error("Attempt not found");
 
+    // RESUBMISSION PREVENTION: Block if already submitted
+    if (attempt.status === "submitted" || attempt.status === "marked") {
+      throw new Error("This exam has already been submitted. Resubmission is not allowed.");
+    }
+
     const questionsData = attempt.assignedQuestionIds
       ? await this.getQuestionsByIds(attempt.assignedQuestionIds)
       : [];
