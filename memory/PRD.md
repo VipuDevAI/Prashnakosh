@@ -10,7 +10,8 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 - **Backend**: Node.js + Express.js + TypeScript
 - **Database**: PostgreSQL (Drizzle ORM)
 - **Storage**: Local server filesystem (configurable via STORAGE_ROOT)
-- **Deployment**: Docker (multi-stage build, pkg-compiled binary)
+- **Deployment**: Docker image from GHCR (private registry pull, no source code on server)
+- **CI/CD**: GitHub Actions builds and pushes to `ghcr.io/smartgenedux/prashnakosh`
 
 ## Completed Features
 - [x] Premium UI/UX with Prashnakosh Jignyasa shield logo branding
