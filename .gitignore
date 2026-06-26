@@ -234,3 +234,8 @@ android-sdk/ -e
 credentials.json
 *.key
 .credentials
+
+
+# Allow .env.example to be committed (template for deployment)
+!.env.example
+!deploy/.env.example
