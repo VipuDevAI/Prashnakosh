@@ -12,12 +12,12 @@ interface BrandLogoProps {
 }
 
 const logoSizes: Record<BrandSize, number> = {
-  xs: 28,
-  sm: 36,
-  md: 44,
-  lg: 56,
-  xl: 80,
-  "2xl": 110,
+  xs: 34,
+  sm: 42,
+  md: 52,
+  lg: 64,
+  xl: 96,
+  "2xl": 128,
 };
 
 const textSizes: Record<BrandSize, string> = {
@@ -76,16 +76,6 @@ export function BrandLogo({
             style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
           >
             PRASHNAKOSH
-          </span>
-          <span
-            className={cn(
-              "font-medium tracking-[0.2em] uppercase leading-none mt-0.5 whitespace-nowrap",
-              "text-[#C9A84C]",
-              subTextSizes[size]
-            )}
-            style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}
-          >
-            JIGNYASA
           </span>
           {showTagline && (
             <span className={cn("text-white/25 mt-1 whitespace-nowrap", subTextSizes[size])}>

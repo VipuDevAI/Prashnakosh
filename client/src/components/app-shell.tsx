@@ -29,7 +29,8 @@ const navItems: NavItem[] = [
   { label: "Paper Gen", href: "/hod/generate-paper", icon: <Printer className="w-5 h-5" />, roles: ["hod", "admin", "super_admin"] },
   { label: "Mock Tests", href: "/tests", icon: <ClipboardList className="w-5 h-5" /> },
   { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-5 h-5" />, roles: ["hod", "admin", "super_admin"] },
-  { label: "Users", href: "/admin/users", icon: <Users className="w-5 h-5" />, roles: ["admin", "super_admin"] },
+  { label: "Users", href: "/admin/users", icon: <Users className="w-5 h-5" />, roles: ["admin"] },
+  { label: "Users", href: "/superadmin/users", icon: <Users className="w-5 h-5" />, roles: ["super_admin"] },
 ];
 
 function SidebarNav({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: (v: boolean) => void }) {
