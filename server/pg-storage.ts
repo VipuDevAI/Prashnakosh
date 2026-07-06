@@ -2706,7 +2706,7 @@ async function seedSuperAdmin() {
   }
 }
 
-// Seed on module load
-seedSuperAdmin();
+// Exported for explicit invocation from server/index.ts AFTER migrations
+export { seedSuperAdmin };
 
 export const pgStorage = new PgStorage();

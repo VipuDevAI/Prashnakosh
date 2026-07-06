@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { runMigrations } from "./migrate";
+import { seedSuperAdmin } from "./pg-storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -60,6 +62,23 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // 1. Apply database migrations (idempotent — safe on every startup)
+  try {
+    await runMigrations();
+  } catch (err: any) {
+    console.error("[startup] Migration failed:", err.message);
+    process.exit(1);
+  }
+
+  // 2. Seed Super Admin (only creates if none exists)
+  try {
+    await seedSuperAdmin();
+  } catch (err: any) {
+    console.error("[startup] Seed failed:", err.message);
+    // Non-fatal — app can still start, admin can be created manually
+  }
+
+  // 3. Register routes
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

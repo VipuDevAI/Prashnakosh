@@ -20,6 +20,9 @@ COPY . .
 # Build frontend (Vite)
 RUN cd client && npx vite build
 
+# Generate database migrations (idempotent — uses committed migrations if present)
+RUN npx drizzle-kit generate 2>/dev/null || true
+
 # Build backend (TypeScript → JavaScript)
 RUN npx tsc --outDir dist/server --rootDir . --skipLibCheck || true
 RUN npx esbuild server/index.ts --bundle --platform=node --outfile=dist/server.js --external:pg-native --external:bufferutil --external:utf-8-validate
@@ -37,6 +40,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server ./server
+COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/tsconfig.json ./
 
