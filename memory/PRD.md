@@ -24,9 +24,14 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 - [x] Section-wise grouped DOCX and PDF paper exports
 - [x] Exam engine hardening (anti-cheating, server-side timer, resubmission prevention)
 - [x] Local server storage architecture (replaced S3)
-- [x] Docker production deployment (Dockerfile, docker-compose.prod.yml, Nginx)
-- [x] Windows management scripts (install, update, backup, restore, health, seed)
+- [x] Docker production deployment (Dockerfile, docker-compose.yml, Nginx)
+- [x] GHCR private registry deployment (no source code on server)
+- [x] Windows management scripts (install, update, rollback, backup, restore, health, seed)
 - [x] Storage status health endpoint
+- [x] Configurable Super Admin credentials via .env
+- [x] Drizzle ORM database migrations (auto-run on startup, idempotent)
+- [x] Idempotent seed (creates Super Admin only on first boot)
+- [x] GitHub Actions CI/CD for automated image builds
 - [x] Question editing dialog
 - [x] Coverage analytics
 
