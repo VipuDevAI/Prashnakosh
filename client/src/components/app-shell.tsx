@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-5 h-5" />, roles: ["hod", "admin", "super_admin"] },
   { label: "Users", href: "/admin/users", icon: <Users className="w-5 h-5" />, roles: ["admin"] },
   { label: "Users", href: "/superadmin/users", icon: <Users className="w-5 h-5" />, roles: ["super_admin"] },
+  { label: "Settings", href: "/superadmin/settings", icon: <Settings className="w-5 h-5" />, roles: ["super_admin"] },
 ];
 
 function SidebarNav({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: (v: boolean) => void }) {

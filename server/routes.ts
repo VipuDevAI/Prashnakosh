@@ -6317,6 +6317,23 @@ export function registerPaperGenerationRoutes(app: Express) {
         principalPhone,
         active: true,
       });
+
+      // Auto-seed default wings for the new school
+      const defaultWings = [
+        { name: "primary", displayName: "Primary Wing (1-5)", grades: ["1","2","3","4","5"], sortOrder: 1, isActive: true },
+        { name: "middle", displayName: "Middle Wing (6-8)", grades: ["6","7","8"], sortOrder: 2, isActive: true },
+        { name: "secondary", displayName: "Secondary Wing (9-10)", grades: ["9","10"], sortOrder: 3, isActive: true },
+        { name: "senior_secondary", displayName: "Senior Secondary Wing (11-12)", grades: ["11","12"], sortOrder: 4, isActive: true },
+      ];
+      for (const wing of defaultWings) {
+        try {
+          await storage.createWing({ tenantId: tenant.id, ...wing });
+          console.log(`[school-create] Seeded wing: ${wing.name} for tenant ${tenant.id}`);
+        } catch (err: any) {
+          console.error(`[school-create] Failed to seed wing ${wing.name}:`, err.message);
+        }
+      }
+
       res.status(201).json(tenant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

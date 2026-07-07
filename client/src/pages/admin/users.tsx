@@ -286,21 +286,65 @@ function UserRow({ userData }: { userData: User }) {
   );
 }
 
+interface WingOption {
+  id: string;
+  name: string;
+  displayName: string;
+}
+
+const COMMON_SUBJECTS = [
+  "Mathematics", "Science", "English", "Hindi", "Social Studies",
+  "Physics", "Chemistry", "Biology", "Computer Science", "Economics",
+  "Commerce", "Tamil", "Sanskrit", "French", "History", "Geography",
+];
+
 function UserForm({ user, onSuccess }: { user?: User; onSuccess: () => void }) {
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
+  const { selectedSchool, isSuperAdmin } = useSchoolContext();
+  const targetTenantId = isSuperAdmin ? selectedSchool?.id : authUser?.tenantId;
+
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
     password: "",
     role: (user?.role as UserRole) || "student",
+    wingId: (user as any)?.wingId || "",
+    subjects: ((user as any)?.subjects as string[]) || [] as string[],
+    grade: user?.grade || "",
+    section: user?.section || "",
   });
+
+  const { data: wings = [] } = useQuery<WingOption[]>({
+    queryKey: ["/api/wings", targetTenantId],
+    queryFn: async () => {
+      const res = await fetch("/api/wings", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("safal_token")}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!targetTenantId,
+  });
+
+  const needsWing = formData.role === "teacher" || formData.role === "hod";
+  const needsSubjects = formData.role === "teacher";
+  const needsGrade = formData.role === "student";
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const data = {
-        ...formData,
-        password: formData.password || undefined,
+      const data: Record<string, any> = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
       };
+      if (formData.password) data.password = formData.password;
+      if (needsWing) data.wingId = formData.wingId || null;
+      if (needsSubjects) data.subjects = formData.subjects;
+      if (needsGrade) {
+        data.grade = formData.grade;
+        data.section = formData.section || null;
+      }
       if (user) {
         return apiRequest("PATCH", `/api/users/${user.id}`, data);
       }
@@ -318,11 +362,28 @@ function UserForm({ user, onSuccess }: { user?: User; onSuccess: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (needsWing && !formData.wingId) {
+      toast({ title: "Wing is required for this role", variant: "destructive" });
+      return;
+    }
+    if (needsSubjects && formData.subjects.length === 0) {
+      toast({ title: "At least one subject is required for teachers", variant: "destructive" });
+      return;
+    }
     mutation.mutate();
   };
 
+  const toggleSubject = (subject: string) => {
+    setFormData(prev => ({
+      ...prev,
+      subjects: prev.subjects.includes(subject)
+        ? prev.subjects.filter(s => s !== subject)
+        : [...prev.subjects, subject],
+    }));
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
       <div className="space-y-2">
         <Label>Name</Label>
         <Input
@@ -362,7 +423,7 @@ function UserForm({ user, onSuccess }: { user?: User; onSuccess: () => void }) {
         <Label>Role</Label>
         <Select
           value={formData.role}
-          onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}
+          onValueChange={(value: UserRole) => setFormData({ ...formData, role: value, wingId: "", subjects: [], grade: "", section: "" })}
         >
           <SelectTrigger data-testid="select-user-role">
             <SelectValue />
@@ -376,6 +437,81 @@ function UserForm({ user, onSuccess }: { user?: User; onSuccess: () => void }) {
           </SelectContent>
         </Select>
       </div>
+
+      {needsWing && (
+        <div className="space-y-2">
+          <Label>Wing <span className="text-red-500">*</span></Label>
+          {wings.length === 0 ? (
+            <p className="text-sm text-amber-600 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800" data-testid="no-wings-warning">
+              No wings configured. Please ask Super Admin to create wings in Settings first.
+            </p>
+          ) : (
+            <Select value={formData.wingId} onValueChange={(v) => setFormData({ ...formData, wingId: v })}>
+              <SelectTrigger data-testid="select-user-wing">
+                <SelectValue placeholder="Select wing" />
+              </SelectTrigger>
+              <SelectContent>
+                {wings.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.displayName || w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+
+      {needsSubjects && (
+        <div className="space-y-2">
+          <Label>Subjects <span className="text-red-500">*</span></Label>
+          <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto p-2 border rounded bg-card" data-testid="subjects-grid">
+            {COMMON_SUBJECTS.map((subject) => (
+              <label key={subject} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={formData.subjects.includes(subject)}
+                  onChange={() => toggleSubject(subject)}
+                  className="w-3.5 h-3.5 rounded"
+                />
+                {subject}
+              </label>
+            ))}
+          </div>
+          {formData.subjects.length > 0 && (
+            <p className="text-xs text-muted-foreground">{formData.subjects.length} selected</p>
+          )}
+        </div>
+      )}
+
+      {needsGrade && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Grade</Label>
+            <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
+              <SelectTrigger data-testid="select-user-grade">
+                <SelectValue placeholder="Select grade" />
+              </SelectTrigger>
+              <SelectContent>
+                {["1","2","3","4","5","6","7","8","9","10","11","12"].map(g => (
+                  <SelectItem key={g} value={g}>Class {g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Section</Label>
+            <Select value={formData.section} onValueChange={(v) => setFormData({ ...formData, section: v })}>
+              <SelectTrigger data-testid="select-user-section">
+                <SelectValue placeholder="Section" />
+              </SelectTrigger>
+              <SelectContent>
+                {["A","B","C","D","E"].map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       <CoinButton
         type="submit"
