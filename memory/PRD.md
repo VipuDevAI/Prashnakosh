@@ -1,6 +1,6 @@
 # Prashnakosh - Product Requirements Document
 **Version**: RC1
-**Last Updated**: 2026-06-25
+**Last Updated**: 2026-07-07
 
 ## Product Overview
 Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under a Department Model. Designed for school deployment (on-premise, self-hosted via Docker on Windows 10 Pro).
@@ -54,9 +54,14 @@ Prashnakosh is a Question Bank + Blueprint + Mock Test platform operating under 
 - departments, questions, blueprints, tests, attempts
 - schoolStorageConfigs, fileMetadata, referenceMaterials
 
+## Recent Fixes (2026-07-07)
+- [x] Wing blocker fix: Settings link added to SuperAdmin sidebar
+- [x] Admin user form enhanced with wing/subjects/grade selection
+- [x] Auto-seed default wings (Primary, Middle, Secondary, Senior Secondary) on school creation
+- [x] Seeded default wings for existing schools (MVMCHN, SCH001)
+
 ## Backlog (P1/P2 — NOT release-blocking)
-- P0: Blueprint Versioning UI
-- P1: Hindi/Devanagari PDF rendering (Unicode fonts)
+- P1: Master Blueprint CMS (Centralized blueprint library for CBSE templates)
 - P1: Configurable answer writing space in papers
 - P1: Dynamic academic year references
 - P1: Admin maintenance features (soft delete, hard wipe, archive)
